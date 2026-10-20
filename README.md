@@ -1,6 +1,6 @@
 # Epx
 
-An Ernest library over [epx](https://github.com/tonyrog/epx), the pixel library for Erlang: pixmaps and their pixels, drawing into them, and the windows and the events of a backend. It is a library and not a program: a program adds it to its load path, as `make lib` of a repository begun from [`ernest-template`](https://github.com/joagre/ernest-template) does. It is not written yet; [`docs/plan.md`](docs/plan.md) says where it stands.
+An Ernest library over [epx](https://github.com/tonyrog/epx), the pixel library for Erlang: a 2-D library of pixmaps and their pixels, and nothing of epx's windows and events. It is a library and not a program: a program adds it to its load path, as `make lib` of a repository begun from [`ernest-template`](https://github.com/joagre/ernest-template) does. It is not written yet; [`docs/plan.md`](docs/plan.md) says where it stands.
 
 ## Building
 
