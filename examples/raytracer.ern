@@ -20,12 +20,21 @@
 // reason on standard error and status 1, and so does a file it cannot
 // write.
 //
+// With the word `show` after the other arguments, it opens a window of the
+// picture's size and shows the empty picture in it before the workers
+// start, and each worker shows each row it writes, so that the rows are
+// seen filling the picture as the workers trace them. It then writes the
+// file and leaves the window on the screen until Enter is pressed. The
+// window's close button does nothing. Without the word it opens no window,
+// which is how `make test` runs it.
+//
 // What to look at:
 //
 // - The pure half beside the acting half: `Vector`, `Ray` and `Color` with
 //   their operations, and `pixelRay`, `trace`, `nearest`, `hitSphere`,
 //   `hitFloor` and `shade`, compute a pixel's color; `main`, `write`,
-//   `start`, `awaitWorkers` and `renderRow` act.
+//   `start`, `awaitWorkers`, `renderRow`, `showRows` and `closeOnEnter`
+//   act.
 // - A pixmap is changed in place and shared by every process that holds it
 //   (`Epx`'s page, *In place and shared*): each worker captures the one
 //   pixmap and writes each of its rows with one `Epx.putPixels`
@@ -35,18 +44,25 @@
 // - `spawnMonitored` starts each worker watched from its start, and `main`
 //   receives a `Down` for each (report §6.9); one whose reason is not
 //   `Returned` ends the program.
+// - A window is shown in by any process that holds it (`Epx.Screen`'s
+//   page): each worker captures the window with the pixmap and shows its
+//   row with `Epx.Screen.showArea`. `write` shows the pixmap first, from
+//   one process, before the workers start, since the first show of a
+//   pixmap attaches it, which two processes must not do at once.
 // - `Float.sqrt` answers `None` below zero (report Appendix E.9), which
 //   `hitSphere` reads as the ray missing the ball.
 // - `Vector` declares its own `+` and `-`, and `Color` its `+` and `*`
 //   (report §4.8).
 //
 // Run it from the repository's root once `make` has built the library,
-// with one worker and with eight, and compare the times the shell gives:
+// with one worker and with eight, and compare the times the shell gives;
+// and with the word `show` on a machine with a screen:
 //
-//     LOAD="--load-path build --load-path lib/epx/ebin"
+//     LOAD="--load-path build --load-path lib/epx/ebin --load-path lib/tree_db/ebin"
 //     ern build $LOAD examples/raytracer.ern
 //     time ern run $LOAD examples/raytracer.erc build/raytracer.ppm 1
 //     time ern run $LOAD examples/raytracer.erc build/raytracer.ppm 8
+//     ern run $LOAD examples/raytracer.erc build/raytracer.ppm 8 show
 //
 
 // A point or a direction in the scene: `x` grows to the right, `y` upward,
@@ -181,35 +197,47 @@ let longitudeBands : Int = 16
 
 export fn main() : Unit receiving Down =
     match commandLine(Os.arguments) {
-        Some(#(name, count)) ->
-            write(name, count)
+        Some(#(name, count, false)) ->
+            write(name, count, None)
+      | Some(#(name, count, true)) -> {
+            let window = Epx.Screen.open(0, 0, width, height);
+            write(name, count, Some(window));
+            closeOnEnter(window)
+        }
       | None -> {
-            Io.printlnError("usage: raytracer file.ppm [workers]");
+            Io.printlnError("usage: raytracer file.ppm [workers] [show]");
             Os.exit(2)
         }
     }
 
-// The file named and the count of workers, 1 where none is given, or
-// `None` for no file, more than a count, or a count that is not a whole
-// number above 0.
-fn commandLine(arguments : List(String)) : Optional(#(String, Int)) =
+// The file named, the count of workers, 1 where none is given, and whether
+// the word `show` ends the arguments; or `None` for no file, a word after
+// the count other than `show`, or a count that is not a whole number above
+// 0.
+fn commandLine(arguments : List(String)) : Optional(#(String, Int, Bool)) =
     match arguments {
-        [name] ->
-            Some(#(name, 1))
-      | [name, count] ->
-            match String.toInt(count) {
-                Some(workers) when workers > 0 -> Some(#(name, workers))
-              | _ -> None
-            }
-      | _ ->
-            None
+        [name] -> Some(#(name, 1, false))
+      | [name, "show"] -> Some(#(name, 1, true))
+      | [name, count] -> counted(name, count, false)
+      | [name, count, "show"] -> counted(name, count, true)
+      | _ -> None
     }
 
-// The picture traced by `count` workers and written to the file, or why it
-// could not be, on standard error.
-fn write(name : String, count : Int) : Unit receiving Down = {
+// The arguments with the count read, or `None` where it is not a whole
+// number above 0.
+fn counted(name : String, count : String, shown : Bool) : Optional(#(String, Int, Bool)) =
+    match String.toInt(count) {
+        Some(workers) when workers > 0 -> Some(#(name, workers, shown))
+      | _ -> None
+    }
+
+// The picture traced by `count` workers, shown in the window as it is
+// traced where there is one, and written to the file, or why it could not
+// be, on standard error.
+fn write(name : String, count : Int, window : Optional(Epx.Screen.Window)) : Unit receiving Down = {
     let pixmap = Epx.create(width, height, Epx.Rgb);
-    List.forEach(List.range(0, count - 1), fn(index) = start(pixmap, index, count));
+    showRows(window, pixmap, 0, height);
+    List.forEach(List.range(0, count - 1), fn(index) = start(pixmap, window, index, count));
     awaitWorkers(count);
     match Fs.write(Path(name), Epx.toPpm(pixmap), 5000) {
         Right(_) ->
@@ -223,10 +251,14 @@ fn write(name : String, count : Int) : Unit receiving Down = {
 
 // Worker `index` of `count`, which renders the rows `y` with
 // `y % count == index` into the pixmap, started and watched from its start.
-fn start(pixmap : Epx.Pixmap, index : Int, count : Int) : Unit receiving Down = {
+fn start(pixmap : Epx.Pixmap,
+         window : Optional(Epx.Screen.Window),
+         index : Int,
+         count : Int) : Unit receiving Down = {
     let rows = List.filter(List.range(0, height - 1), fn(y) = y % count == index);
     let _ =
-        spawnMonitored(fn() = List.forEach(rows, fn(y) = renderRow(pixmap, y)), fn(down) = down);
+        spawnMonitored(fn() = List.forEach(rows, fn(y) = renderRow(pixmap, window, y)),
+                       fn(down) = down);
     Unit
 }
 
@@ -244,11 +276,31 @@ fn awaitWorkers(count : Int) : Unit receiving Down =
         }
     }
 
-// The row `y` traced a pixel at a time and written into the pixmap with
-// one `Epx.putPixels`.
-fn renderRow(pixmap : Epx.Pixmap, y : Int) : Unit = {
+// The row `y` traced a pixel at a time, written into the pixmap with one
+// `Epx.putPixels`, and shown in the window where there is one.
+fn renderRow(pixmap : Epx.Pixmap, window : Optional(Epx.Screen.Window), y : Int) : Unit = {
     let pixels = List.map(List.range(0, width - 1), fn(x) = pixel(trace(pixelRay(x, y), rays)));
-    Epx.putPixels(pixmap, 0, y, width, 1, Epx.Rgb, Bytes.join(pixels, <<>>))
+    Epx.putPixels(pixmap, 0, y, width, 1, Epx.Rgb, Bytes.join(pixels, <<>>));
+    showRows(window, pixmap, y, 1)
+}
+
+// The `count` rows from `y` of the pixmap shown in the window, where there
+// is one.
+fn showRows(window : Optional(Epx.Screen.Window),
+            pixmap : Epx.Pixmap,
+            y : Int,
+            count : Int) : Unit =
+    match window {
+        Some(shown) -> Epx.Screen.showArea(shown, pixmap, 0, y, width, count)
+      | None -> Unit
+    }
+
+// The window left on the screen until a line, or the end of standard
+// input, is read, and then closed.
+fn closeOnEnter(window : Epx.Screen.Window) : Unit = {
+    Io.println("press Enter to close");
+    let _ = Io.readLine();
+    Epx.Screen.close(window)
 }
 
 // The color as the pixel's three bytes in the format `Rgb`. A channel above

@@ -1,0 +1,340 @@
+/// Windows on the screen, each showing a pixmap as it is drawn, over epx's
+/// windows and the backend that draws them.
+///
+/// Use it to watch a picture while a program draws it: a window shows a
+/// pixmap, or a rectangle of one, each time `show` or `showArea` is called.
+/// A picture to keep is written to a file with `Epx.toPpm`: a window keeps
+/// nothing once it is closed.
+///
+/// A program puts epx's `ebin` directory on its load path when it is run,
+/// as for `Epx`, and beside it the `ebin` of tree_db, an application epx's
+/// own lists among those it needs. `open` starts epx's application, which
+/// opens the display `DISPLAY` names; where none can be opened, `open`
+/// faults.
+///
+/// **A window's life.** A window lives while a process holds it, and the
+/// host frees it and takes it off the screen once none does; a window
+/// still open when the program ends goes with the program. `close` takes it
+/// off the screen at once. It stays on the node that made it.
+///
+/// **Shown later.** `show` and `showArea` hand the rectangle to epx's
+/// backend and answer before it is on the screen. The backend draws the
+/// rectangles in the order it is given them, and reads the pixmap's pixels
+/// as it draws: a write made after `show` answered may be shown with it,
+/// and a write another process makes meanwhile may be seen half done. Any
+/// process that holds a window and a pixmap may show the one in the other.
+///
+/// **No flicker.** The backend draws into a copy of the window kept off the
+/// screen and puts the copy on the screen whole, so that a picture shown a
+/// row at a time does not flicker, and a window covered and uncovered keeps
+/// its picture.
+///
+/// **The close button.** A window reads no key and no button. Its close
+/// button does not close it: epx sends the process that opened the window
+/// a message no Ernest type names. A `receive` whose patterns each name a
+/// constructor leaves that message in the mailbox, and one whose pattern is
+/// a variable takes it as a message of the mailbox's type, so a program
+/// opens a window in a process that receives nothing, or whose patterns
+/// each name a constructor, and closes it with `close`.
+///
+/// **Bounds.** A window's coordinates are from -32767 to 32767, and its
+/// width and height from 1 to 32767, one below 1 being 1. The place is
+/// asked of the window manager, which may put the window elsewhere. A
+/// pixmap in `Rgba` or `Abgr` is not shown: `show` and `showArea` fault on
+/// it.
+///
+/// **A call's cost.** A call answers at once. The backend copies the whole
+/// window to the screen for each rectangle shown, and rectangles shown
+/// faster than it draws them wait in its queue. A window's copy off the
+/// screen takes four bytes a pixel of the display's memory, and a window
+/// whose copy the display cannot allocate shows nothing.
+///
+/// **Trying it.** A window is shown only where there is a screen. No test
+/// of the library opens one, and the examples below are tried by hand on a
+/// machine with a screen.
+///
+/// ## Examples
+///
+/// A pixmap filled and shown in a window of its size until Enter is
+/// pressed:
+///
+/// ```ernest
+/// {
+///     let pixmap = Epx.create(320, 200, Epx.Rgb);
+///     Epx.fill(pixmap, Epx.rgb(0, 96, 160));
+///     let window = Epx.Screen.open(100, 100, 320, 200);
+///     Epx.Screen.show(window, pixmap);
+///     Io.println("press Enter to close");
+///     let _ = Io.readLine();
+///     Epx.Screen.close(window)
+/// }
+/// ```
+///
+/// A picture drawn and shown a row at a time:
+///
+/// ```ernest
+/// {
+///     let pixmap = Epx.create(256, 256, Epx.Rgb);
+///     let window = Epx.Screen.open(100, 100, 256, 256);
+///     Epx.Screen.show(window, pixmap);
+///     List.forEach(List.range(0, 255), fn(y) = {
+///         Epx.fillArea(pixmap, 0, y, 256, 1, Epx.rgb(y, 0, 255 - y));
+///         Epx.Screen.showArea(window, pixmap, 0, y, 256, 1)
+///     });
+///     let _ = Io.readLine();
+///     Epx.Screen.close(window)
+/// }
+/// ```
+///
+/// ## See also
+///
+/// `Epx` for the pixmaps a window shows, and `Epx.toPpm` for a picture
+/// kept as a file.
+///
+/// since 0.2.0
+
+//
+// Types
+//
+
+/// A window on the screen, in which a pixmap is shown, held by epx outside
+/// any process.
+///
+/// ### Examples
+///
+/// ```ernest
+/// Epx.Screen.open(0, 0, 640, 480)
+/// ```
+export foreign type Window
+
+//
+// Opening and closing a window
+//
+
+/// A new window on the screen at `x`, `y`, `width` pixels wide and `height`
+/// high, starting epx's application where it is not running. A width or a
+/// height below 1 is 1. The place is asked of the window manager, which may
+/// put the window elsewhere. What the window shows before a pixmap is shown
+/// in it is not stated.
+///
+/// ### Errors
+///
+/// Faults on a coordinate outside -32767 to 32767, with the cause `a
+/// window's coordinate is beyond 32767`, and on a width or a height above
+/// 32767, with the cause `a window's width or height is beyond 32767`.
+/// Faults where no display can be opened, `DISPLAY` unset or naming no X
+/// server, with epx's cause: `foreign function epx:window_attach/1 raised
+/// error:badarg`.
+///
+/// ### Examples
+///
+/// ```ernest
+/// Epx.Screen.open(100, 100, 400, 300)
+/// ```
+export fn open(x : Int, y : Int, width : Int, height : Int) : Window = {
+    let left = place(x);
+    let top = place(y);
+    let columns = size(width);
+    let rows = size(height);
+    let _ = rawStart();
+    // No event flag: epx sends the window's maker no key and no button,
+    // its close button alone excepted (design §11, epx_bugs.md 16).
+    let window = rawCreate(left, top, columns, rows);
+    let _ = rawAttach(window);
+    window
+}
+
+foreign fn rawStart() : Foreign.Term =
+    "epx:start/0"
+
+foreign fn rawCreate(x : Int, y : Int, width : Int, height : Int) : Window =
+    "epx:window_create/4"
+
+foreign fn rawAttach(window : Window) : Foreign.Term =
+    "epx:window_attach/1"
+
+/// Takes the window off the screen. Nothing brings it back: a pixmap shown
+/// in it afterwards is not seen, and a second `close` does nothing.
+///
+/// ### Examples
+///
+/// ```ernest
+/// Epx.Screen.close(Epx.Screen.open(100, 100, 400, 300))
+/// ```
+export fn close(window : Window) : Unit = {
+    // Unmapped and not detached: a draw epx takes after a detach crashes
+    // the node (design §11, epx_bugs.md 17).
+    let _ = rawAdjust(window, [#(Foreign.atom("show"), false)]);
+    Unit
+}
+
+foreign fn rawAdjust(window : Window, parameters : List(#(Foreign.Term, Bool))) : Foreign.Term =
+    "epx:window_adjust/2"
+
+//
+// Showing a pixmap
+//
+
+/// Shows the pixmap in the window, each of its pixels at the window's pixel
+/// of the same column and row. Only the part within the pixmap's clip is
+/// shown, and a pixel outside the window is not. It answers before the
+/// pixmap is on the screen.
+///
+/// ### Errors
+///
+/// Faults on a pixmap in `Rgba` or `Abgr`, with the cause `a window shows
+/// no pixmap in Rgba or Abgr`, and on one that foreign code made in a
+/// format `Epx.Format` does not name, with the cause `the pixmap's format is
+/// none of Format's`. Faults where two processes show one pixmap for its
+/// first time at once, in the one that comes second, with epx's cause:
+/// `foreign function epx:pixmap_attach/1 raised error:badarg`.
+///
+/// ### Examples
+///
+/// ```ernest
+/// {
+///     let pixmap = Epx.create(400, 300, Epx.Rgb);
+///     Epx.fill(pixmap, Epx.rgb(255, 255, 255));
+///     Epx.Screen.show(Epx.Screen.open(100, 100, 400, 300), pixmap)
+/// }
+/// ```
+export fn show(window : Window, pixmap : Epx.Pixmap) : Unit =
+    showArea(window, pixmap, 0, 0, Epx.width(pixmap), Epx.height(pixmap))
+
+/// Shows the rectangle of the pixmap at `x`, `y` in the window, at the same
+/// place: the pixmap's pixel at `x + i`, `y + j` at the window's pixel at
+/// `x + i`, `y + j`. Only the part of the rectangle within the pixmap's
+/// clip is shown, and a pixel outside the window is not. A width or a
+/// height below 0 is 0. It answers before the rectangle is on the screen.
+///
+/// ### Errors
+///
+/// Faults on a coordinate outside -16777216 to 16777216, with the cause `a
+/// coordinate is beyond 16777216`, and on a width or a height above
+/// 16777216, with the cause `a width or height is beyond 16777216`. Faults
+/// on a pixmap in `Rgba` or `Abgr`, with the cause `a window shows no
+/// pixmap in Rgba or Abgr`, and on one that foreign code made in a format
+/// `Epx.Format` does not name, with the cause `the pixmap's format is none
+/// of Format's`. Faults where two processes show one pixmap for its first
+/// time at once, in the one that comes second, with epx's cause: `foreign
+/// function epx:pixmap_attach/1 raised error:badarg`.
+///
+/// ### Examples
+///
+/// ```ernest
+/// {
+///     let pixmap = Epx.create(400, 300, Epx.Rgb);
+///     let window = Epx.Screen.open(100, 100, 400, 300);
+///     Epx.fillArea(pixmap, 0, 10, 400, 1, Epx.rgb(255, 255, 255));
+///     Epx.Screen.showArea(window, pixmap, 0, 10, 400, 1)
+/// }
+/// ```
+export fn showArea(window : Window,
+                   pixmap : Epx.Pixmap,
+                   x : Int,
+                   y : Int,
+                   width : Int,
+                   height : Int) : Unit = {
+    let left = coordinate(x);
+    let top = coordinate(y);
+    let columns = extent(width);
+    let rows = extent(height);
+    attach(pixmap);
+    let _ =
+        rawDraw(pixmap,
+                window,
+                left,
+                top,
+                left,
+                top,
+                withinReach(left, columns),
+                withinReach(top, rows));
+    Unit
+}
+
+// The pixmap attached to epx's backend where it is not, once its format is
+// one the window shows (design §11, epx_bugs.md 18).
+fn attach(pixmap : Epx.Pixmap) : Unit =
+    match Epx.format(pixmap) {
+        Epx.Rgba ->
+            fault("a window shows no pixmap in Rgba or Abgr")
+      | Epx.Abgr ->
+            fault("a window shows no pixmap in Rgba or Abgr")
+      | _ ->
+            if rawBackend(pixmap, Foreign.atom("backend")) == Foreign.atom("undefined") then {
+                let _ = rawAttachPixmap(pixmap);
+                Unit
+            } else
+                Unit
+    }
+
+foreign fn rawBackend(pixmap : Epx.Pixmap, key : Foreign.Term) : Foreign.Term =
+    "epx:pixmap_info_/2"
+
+foreign fn rawAttachPixmap(pixmap : Epx.Pixmap) : Foreign.Term =
+    "epx:pixmap_attach/1"
+
+foreign fn rawDraw(pixmap : Epx.Pixmap,
+                   window : Window,
+                   sourceX : Int,
+                   sourceY : Int,
+                   targetX : Int,
+                   targetY : Int,
+                   width : Int,
+                   height : Int) : Foreign.Term =
+    "epx:pixmap_draw/8"
+
+//
+// What crosses to epx
+//
+
+// The farthest a window's coordinate goes, and the most columns and rows
+// it has: the X protocol holds a window's place in 16 bits, and the
+// display makes no copy off the screen larger (design §11, epx_bugs.md
+// 19).
+let windowLimit : Int = 32767
+
+// A window's coordinate as epx takes it, once it is within the limit
+// (design §12).
+fn place(value : Int) : Int =
+    if value < -windowLimit || value > windowLimit then
+        fault("a window's coordinate is beyond 32767")
+    else
+        value
+
+// A window's width or height as epx takes it: one below 1 is 1, and one
+// past the limit faults (design §12).
+fn size(value : Int) : Int =
+    if value > windowLimit then
+        fault("a window's width or height is beyond 32767")
+    else if value < 1 then
+        1
+    else
+        value
+
+// A rectangle's width or height from `start` cut where it would reach past
+// the last column or row a window has, so that no row is drawn past 65535,
+// which the X protocol takes back into the window (design §11, epx_bugs.md
+// 20).
+fn withinReach(start : Int, span : Int) : Int =
+    Int.max(0, Int.min(start + span, windowLimit) - start)
+
+// The checks `Epx` makes of a coordinate and of a width or a height, which
+// it keeps private: the same rules and causes (design §5, §12).
+
+// The farthest from 0 a coordinate, a width or a height goes (design §4).
+let limit : Int = 16777216
+
+// A coordinate as epx takes it, once it is within the limit (design §4).
+fn coordinate(value : Int) : Int =
+    if value < -limit || value > limit then fault("a coordinate is beyond 16777216") else value
+
+// A width or a height as epx takes it: one below 0 is 0, and one past the
+// limit faults (design §4).
+fn extent(value : Int) : Int =
+    if value > limit then
+        fault("a width or height is beyond 16777216")
+    else if value < 0 then
+        0
+    else
+        value

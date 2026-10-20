@@ -12,6 +12,12 @@
 // is called and ends with status 2; a file it cannot write is reported on
 // standard error, and it ends with status 1.
 //
+// With the word `show` after the file, it opens a window of the picture's
+// size before it draws, shows the face in it once drawn, writes the file,
+// and leaves the window on the screen until Enter is pressed. The window's
+// close button does nothing. Without the word it opens no window, which is
+// how `make test` runs it.
+//
 // What to look at:
 //
 // - A context holds what a drawing function draws with (`Epx.Gc`'s page,
@@ -27,15 +33,21 @@
 //   own.
 // - `hours`, `minutes` and `seconds` take the time apart, and `pointAt`
 //   places a point on the dial: pure arithmetic beside the parts that act,
-//   `main`, `write`, `face`, `drawTick`, `drawHand` and `drawSecondHand`.
+//   `main`, `picture`, `write`, `face`, `drawTick`, `drawHand`,
+//   `drawSecondHand` and `closeOnEnter`.
 // - `Epx.toPpm` makes the bytes of the file, and `Fs.write` writes them,
 //   its failure a value (report Appendix E.17).
+// - `Epx.Screen.show` shows the pixmap in a window (`Epx.Screen`'s page),
+//   and `closeOnEnter` waits for a line on standard input before it closes
+//   the window, a wait on what the program means.
 //
-// Run it from the repository's root once `make` has built the library:
+// Run it from the repository's root once `make` has built the library,
+// and with the word `show` on a machine with a screen:
 //
-//     LOAD="--load-path build --load-path lib/epx/ebin"
+//     LOAD="--load-path build --load-path lib/epx/ebin --load-path lib/tree_db/ebin"
 //     ern build $LOAD examples/clock_face.ern
 //     ern run $LOAD examples/clock_face.erc build/clock_face.ppm
+//     ern run $LOAD examples/clock_face.erc build/clock_face.ppm show
 //
 
 // The picture's width and height in pixels, the dial's center, and its
@@ -58,19 +70,30 @@ let second : Epx.Color = Epx.rgb(200, 30, 30)
 export fn main() : Unit =
     match Os.arguments {
         [name] ->
-            write(name, Clock.now())
+            write(name, picture(Clock.now()))
+      | [name, "show"] -> {
+            let window = Epx.Screen.open(0, 0, size, size);
+            let pixmap = picture(Clock.now());
+            Epx.Screen.show(window, pixmap);
+            write(name, pixmap);
+            closeOnEnter(window)
+        }
       | _ -> {
-            Io.printlnError("usage: clock_face file.ppm");
+            Io.printlnError("usage: clock_face file.ppm [show]");
             Os.exit(2)
         }
     }
 
-// The face at the time drawn and written to the file, or why it could not
-// be, on standard error.
-fn write(name : String, time : Int) : Unit = {
+// The face at the time drawn into a new pixmap.
+fn picture(time : Int) : Epx.Pixmap = {
     let pixmap = Epx.create(size, size, Epx.Rgb);
     Epx.fill(pixmap, paper);
     face(pixmap, Epx.Gc.create(), time);
+    pixmap
+}
+
+// The face written to the file, or why it could not be, on standard error.
+fn write(name : String, pixmap : Epx.Pixmap) : Unit =
     match Fs.write(Path(name), Epx.toPpm(pixmap), 5000) {
         Right(_) ->
             Unit
@@ -79,6 +102,13 @@ fn write(name : String, time : Int) : Unit = {
             Os.exit(1)
         }
     }
+
+// The window left on the screen until a line, or the end of standard
+// input, is read, and then closed.
+fn closeOnEnter(window : Epx.Screen.Window) : Unit = {
+    Io.println("press Enter to close");
+    let _ = Io.readLine();
+    Epx.Screen.close(window)
 }
 
 // The dial, its ticks and its hands at the time, drawn with one context.

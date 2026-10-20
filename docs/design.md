@@ -4,11 +4,13 @@ How the program is arranged, stated as rules: its processes and what each owns, 
 
 ## 1. What the library does
 
-The library is two modules over epx, the pixel library for Erlang. `Epx`, over epx's pixmaps, makes a pixmap, fills, reads and writes it pixel by pixel and in rectangles, copies, scales and blends one into another, draws points, lines, rectangles, ellipses and triangles into it with a graphics context, and writes one as a PPM file. `Epx.Gc`, over epx's graphics context, makes a context and sets and reads its keys (§7). The library opens no window and reads no event. It starts no process and holds no Erlang of its own.
+The library is three modules over epx, the pixel library for Erlang. `Epx`, over epx's pixmaps, makes a pixmap, fills, reads and writes it pixel by pixel and in rectangles, copies, scales and blends one into another, draws points, lines, rectangles, ellipses and triangles into it with a graphics context, and writes one as a PPM file. `Epx.Gc`, over epx's graphics context, makes a context and sets and reads its keys (§7). `Epx.Screen`, over epx's windows, opens a window on the screen and shows a pixmap in it (§11).
 
-`Epx` declares the types of §3, the context's type `Context` among them, and the drawing functions (§9). `Epx.Gc` declares `Style` (§8) and the functions of §7's table, which name `Epx`'s `Context` and `Color`. `Epx` names nothing of `Epx.Gc`'s.
+The library reads no event. It starts no process of its own, `open` starting epx's application (§11), and holds no Erlang of its own.
 
-Each function but `toPpm` and `drawLine` calls the epx functions its table names, each at most once: the table below for the pixmap's functions, §7's for the context's, §9's for the drawing functions. Where one epx function does a function's work exactly, the function is a `foreign fn` over it, and where it differs, Ernest closes the difference around the call.
+`Epx` declares the types of §3, the context's type `Context` among them, and the drawing functions (§9). `Epx.Gc` declares `Style` (§8) and the functions of §7's table, which name `Epx`'s `Context` and `Color`. `Epx.Screen` declares `Window` and the functions of §11's table, which name `Epx`'s `Pixmap`. `Epx` names nothing of `Epx.Gc`'s or `Epx.Screen`'s.
+
+Each function but `toPpm`, `drawLine` and the window's calls the epx functions its table names, each at most once: the table below for the pixmap's functions, §7's for the context's, §9's for the drawing functions. The window's call those §11's table names, as §11 says. Where one epx function does a function's work exactly, the function is a `foreign fn` over it, and where it differs, Ernest closes the difference around the call.
 
 The differences closed are these, each stated where its rule is (§2 to §10): a `Color` crosses as the tuple epx takes, and a `Format`, an `Operation` or a `Style` as its atoms; epx's `ok` is `Unit`; a width or a height below 0 is 0; a precondition of §5 or §10 is checked before the call.
 
@@ -45,7 +47,7 @@ A pixmap is not a value. A function that writes it changes it in place, and ever
 
 A pixmap lives while a process holds it, and the host frees it once none does; there is no `close`. A pixmap is bound to the node that made it (report §3.8, §3.11).
 
-The library starts no process, and no function receives or names a mailbox (report Appendix E.0 shape rule 5).
+The library starts no process of its own, and no function receives or names a mailbox (report Appendix E.0 shape rule 5).
 
 ## 3. The types
 
@@ -194,6 +196,54 @@ An argument the library refuses faults the calling process before epx is called 
 
 A getter of a style faults with `Fault("the context's style is none of Style's")` on a style that foreign code set and that is none of `Style`'s (§8). Memory the host cannot allocate for a new context faults as a foreign function that raises does, with epx's function in the cause: `Fault("foreign function epx:gc_create/0 raised error:badarg")`, or `epx:gc_copy/1`'s. Nothing else faults.
 
+## 11. Windows
+
+```
+export foreign type Window
+```
+
+`Epx.Screen` shows pixmaps on the screen, each in a window, through epx's backend, a thread of epx's that draws on the display `DISPLAY` names. A window is epx's window, of type `Window`, which the host compares exactly (report §3.10). It is held by epx outside any process, as a pixmap is (§2). It lives while a process holds it, and the host frees it and takes it off the screen once none does; a window still open when the program ends goes with the program. It is bound to the node that made it (report §3.8, §3.11).
+
+| Function | epx | What it does |
+|---|---|---|
+| `open(x, y, width, height)` | `epx:start/0`, `window_create/4`, `window_attach/1` | a window at that place and of that width and height on the screen, epx's application started where it is not running |
+| `show(window, pixmap)` | those of `showArea`, and `pixmap_info_/2` for the pixmap's width and height | the pixmap within its clip drawn at the same place in the window |
+| `showArea(window, pixmap, x, y, width, height)` | `pixmap_info_/2`, `pixmap_attach/1`, `pixmap_draw/8` | the rectangle of the pixmap at `x`, `y`, within its clip, drawn at the same place in the window |
+| `close(window)` | `window_adjust/2` | the window taken off the screen |
+
+`open` starts epx's application with `epx:start/0`, which starts it where it is not running and answers at once where it is. It makes the window with no event flag and attaches it to epx's backend, which puts it on the screen. Its place is asked of the window manager, which may place it elsewhere. A coordinate given to `open` is from −32,767 to 32,767, and a width or a height from 1 to 32,767, one below 1 being 1 (§12). What a new window shows before a pixmap is shown in it is not stated.
+
+`showArea` reads the pixmap's format and whether it is attached to the backend with `pixmap_info_/2`, attaches it with `pixmap_attach/1` where it is not, and draws the rectangle with `pixmap_draw/8`. A pixmap is attached by the first `show` or `showArea` that shows it and stays attached while it lives.
+
+The rectangle `showArea` shows is cut to the pixmap's clip, as an area function's source is (§4), and to the first 32,767 columns and rows, beyond which no window reaches. The pixmap's pixel at `x + i`, `y + j` is drawn at the window's pixel at `x + i`, `y + j`, and a pixel outside the window is not drawn. `show` is `showArea` of the rectangle at `0`, `0` of the pixmap's width and height.
+
+`show` and `showArea` answer once the backend has the request, before the pixels are on the screen, and the backend draws the requests in the order it takes them, each on the screen without a sync. The backend reads the pixmap's pixels when it draws them, so that a write made after `show` answered may be shown, and, since epx takes no lock, a write half done may be seen (§2). A pixmap may be shown in a window by any process that holds both.
+
+The backend draws each request into a copy of the window kept off the screen, `use_off_screen` as epx starts it, and copies the copy to the screen whole. A row shown at a time is so seen without flicker, and a window covered and uncovered keeps its picture.
+
+`close` takes the window off the screen, and nothing brings it back. A window closed is epx's until no process holds it: a `show` into it draws into it off the screen, where nothing is seen, and a second `close` does nothing. An `open` after a `close` makes a new window.
+
+No function sends the backend a sync, which epx answers with a message to the process that made the window. The window's close button is sent to that process all the same, as `{epx_event, Window, close}`, whatever the window's flags (`epx_bugs.md` 16), and the window stays on the screen.
+
+The message is of no Ernest type: a `receive` whose patterns each name a constructor leaves it in the mailbox, and one whose pattern is a variable takes it as a message of the mailbox's type. A program opens a window in a process that receives nothing, or whose patterns each name a constructor.
+
+Where no display can be opened, `DISPLAY` unset or naming no X server, epx's application starts with no backend, and `open` faults (§12). Where `DISPLAY` is unset, epx tries the framebuffer, `/dev/fb0`, first, and what a window on the framebuffer shows is not stated.
+
+The copy off the screen takes four bytes a pixel of the X server's memory, and a window whose copy the server cannot allocate shows nothing. Each request costs the backend a copy of the whole window to the screen and a round trip to the X server: requests made faster than the backend draws them wait in epx's queue, and are drawn after the program has gone on.
+
+`make test` runs with or without a display, and no test opens a window: this section and §12 have no test, and the window is tried by hand before a release (`release.md`).
+
+## 12. What the window functions fault
+
+An argument the library refuses faults the calling process before epx is called (report §7.4), as §5's do:
+
+- a coordinate given to `open` outside −32,767 to 32,767: `Fault("a window's coordinate is beyond 32767")`;
+- a width or a height given to `open` above 32,767: `Fault("a window's width or height is beyond 32767")`;
+- a coordinate given to `showArea` outside −16,777,216 to 16,777,216: `Fault("a coordinate is beyond 16777216")`, and a width or a height above 16,777,216: `Fault("a width or height is beyond 16777216")`;
+- a pixmap in `Rgba` or `Abgr`, given to `show` or `showArea`: `Fault("a window shows no pixmap in Rgba or Abgr")` (`epx_bugs.md` 18).
+
+`open` where no display can be opened faults with epx's cause, `Fault("foreign function epx:window_attach/1 raised error:badarg")` (`epx_bugs.md` 21). Two processes that make the first `show` of one pixmap at once may each find it not attached, and the second to attach it faults with `Fault("foreign function epx:pixmap_attach/1 raised error:badarg")`; a program shows a pixmap from one process before others show it. `show` and `showArea` fault as `Epx.format` does on a pixmap that foreign code made in a format `Format` does not name (§5). Nothing else faults.
+
 ## Glossary
 
 The names that recur across modules, one for each concept, in every module. A name the report states takes the report's; the Ernest names of [`style.md`](style.md)'s glossary hold here too.
@@ -210,3 +260,4 @@ The names that recur across modules, one for each concept, in every module. A na
 - **fill**: what a rectangle, an ellipse or a triangle holds within its border or its edges, and the two keys it is drawn by, the fill's style and color (§9). Not `interior`, `body`.
 - **border**: the edge of a rectangle or an ellipse, within it, and the three keys it is drawn by, the border's style, color and width (§9). Not `outline`, `stroke`, `frame`.
 - **line**: what `drawLine` draws, and the two keys a line, a point and a triangle's edges are drawn by beside the foreground, the line's style and width (§9). Not `stroke`, `pen`.
+- **window**: a window on the screen, of type `Window` in `Epx.Screen`, in which a pixmap is shown (§11); many are `windows`. Not `win`, `view`, `frame`, `display`; `Screen` is the module's name alone.

@@ -9,25 +9,40 @@
 // and ends with status 2; a file it cannot write is reported on standard
 // error, and it ends with status 1.
 //
+// With the word `show` after the file, it opens a window of the picture's
+// size before it draws and shows each triangle of one pixel in it once
+// drawn, the deepest subdivision, so that the gasket is seen to grow in the
+// order the recursion draws it. It then writes the file and leaves the
+// window on the screen until Enter is pressed. The window's close button
+// does nothing. Without the word it opens no window, which is how `make
+// test` runs it.
+//
 // The chaos game draws the same figure by random steps from a seed. The
 // subdivision is drawn here because it is the figure's definition written
 // as a function: `subdivide` calls itself three times.
 //
 // What to look at:
 //
-// - `subdivide` is the definition of the figure, and its only act is the
-//   write of a pixel at the bottom of the recursion.
+// - `subdivide` is the definition of the figure, and its acts are the
+//   write of a pixel at the bottom of the recursion and, where there is a
+//   window, the pixel shown in it.
 // - A pixmap is changed in place and is not a value (`Epx`'s page, *In
 //   place and shared*): the three calls write one pixmap, and `subdivide`
 //   answers `Unit`.
+// - `Epx.Screen.showArea` shows one rectangle of the pixmap in the window
+//   (`Epx.Screen`'s page), and answers before it is on the screen: the
+//   window draws the pixels in the order they were shown, after the
+//   program has drawn them all.
 // - `Epx.toPpm` makes the bytes of the file, and `Fs.write` writes them,
 //   its failure a value (report Appendix E.17).
 //
-// Run it from the repository's root once `make` has built the library:
+// Run it from the repository's root once `make` has built the library,
+// and with the word `show` on a machine with a screen:
 //
-//     LOAD="--load-path build --load-path lib/epx/ebin"
+//     LOAD="--load-path build --load-path lib/epx/ebin --load-path lib/tree_db/ebin"
 //     ern build $LOAD examples/sierpinski.ern
 //     ern run $LOAD examples/sierpinski.erc build/sierpinski.ppm
+//     ern run $LOAD examples/sierpinski.erc build/sierpinski.ppm show
 //
 
 // The picture's width and height in pixels: a power of two, so that every
@@ -39,19 +54,35 @@ let size : Int = 256
 export fn main() : Unit =
     match Os.arguments {
         [name] ->
-            write(name)
+            write(name, picture(None))
+      | [name, "show"] -> {
+            let window = Epx.Screen.open(0, 0, size, size);
+            let pixmap = picture(Some(window));
+            write(name, pixmap);
+            closeOnEnter(window)
+        }
       | _ -> {
-            Io.printlnError("usage: sierpinski file.ppm");
+            Io.printlnError("usage: sierpinski file.ppm [show]");
             Os.exit(2)
         }
     }
 
-// The picture drawn and written to the file, or why it could not be, on
-// standard error.
-fn write(name : String) : Unit = {
+// The picture drawn into a new pixmap, and shown as it is drawn in the
+// window where there is one.
+fn picture(window : Optional(Epx.Screen.Window)) : Epx.Pixmap = {
     let pixmap = Epx.create(size, size, Epx.Rgb);
     Epx.fill(pixmap, Epx.rgb(255, 255, 255));
-    subdivide(pixmap, 0, 0, size);
+    match window {
+        Some(shown) -> Epx.Screen.show(shown, pixmap)
+      | None -> Unit
+    };
+    subdivide(pixmap, window, 0, 0, size);
+    pixmap
+}
+
+// The picture written to the file, or why it could not be, on standard
+// error.
+fn write(name : String, pixmap : Epx.Pixmap) : Unit =
     match Fs.write(Path(name), Epx.toPpm(pixmap), 5000) {
         Right(_) ->
             Unit
@@ -60,21 +91,37 @@ fn write(name : String) : Unit = {
             Os.exit(1)
         }
     }
-}
 
 // The triangle in the square of that side at `x`, `y`, its apex at the
 // middle of the square's top and its base the square's bottom: the three
 // triangles of half the side at its apex and its two lower corners, and a
-// triangle of one pixel its pixel, colored by where it stands.
-fn subdivide(pixmap : Epx.Pixmap, x : Int, y : Int, side : Int) : Unit =
-    if side == 1 then
-        Epx.putPixel(pixmap, x, y, Epx.rgb(shade(x), shade(y), 255 - shade(x)))
-    else {
+// triangle of one pixel its pixel, colored by where it stands, and shown
+// in the window where there is one.
+fn subdivide(pixmap : Epx.Pixmap,
+             window : Optional(Epx.Screen.Window),
+             x : Int,
+             y : Int,
+             side : Int) : Unit =
+    if side == 1 then {
+        Epx.putPixel(pixmap, x, y, Epx.rgb(shade(x), shade(y), 255 - shade(x)));
+        match window {
+            Some(shown) -> Epx.Screen.showArea(shown, pixmap, x, y, 1, 1)
+          | None -> Unit
+        }
+    } else {
         let half = side / 2;
-        subdivide(pixmap, x + half / 2, y, half);
-        subdivide(pixmap, x, y + half, half);
-        subdivide(pixmap, x + half, y + half, half)
+        subdivide(pixmap, window, x + half / 2, y, half);
+        subdivide(pixmap, window, x, y + half, half);
+        subdivide(pixmap, window, x + half, y + half, half)
     }
+
+// The window left on the screen until a line, or the end of standard
+// input, is read, and then closed.
+fn closeOnEnter(window : Epx.Screen.Window) : Unit = {
+    Io.println("press Enter to close");
+    let _ = Io.readLine();
+    Epx.Screen.close(window)
+}
 
 // A channel from 0 to 255 for an offset from 0 to below `size`.
 fn shade(offset : Int) : Int =

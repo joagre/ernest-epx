@@ -9,21 +9,33 @@
 // ends with status 2; a file it cannot write is reported on standard
 // error, and it ends with status 1.
 //
+// With the word `show` after the file, it opens a window of the picture's
+// size before it draws, shows the picture in it once drawn, writes the
+// file, and leaves the window on the screen until Enter is pressed. The
+// window's close button does nothing. Without the word it opens no window,
+// which is how `make test` runs it.
+//
 // What to look at:
 //
 // - A pixmap is changed in place and is not a value (`Epx`'s page, *In
 //   place and shared*): `drawRow` writes each pixel of a row with
 //   `Epx.putPixel` and answers `Unit`.
 // - `escape` and `color` are pure: a count over floats, and a color from a
-//   count. `main`, `write`, `draw` and `drawRow` are the parts that act.
+//   count. `main`, `picture`, `write`, `draw`, `drawRow` and
+//   `closeOnEnter` are the parts that act.
 // - `Epx.toPpm` makes the bytes of the file, and `Fs.write` writes them,
 //   its failure a value (report Appendix E.17).
+// - `Epx.Screen.show` shows the pixmap in a window (`Epx.Screen`'s page),
+//   and `closeOnEnter` waits for a line on standard input before it closes
+//   the window, a wait on what the program means.
 //
-// Run it from the repository's root once `make` has built the library:
+// Run it from the repository's root once `make` has built the library,
+// and with the word `show` on a machine with a screen:
 //
-//     LOAD="--load-path build --load-path lib/epx/ebin"
+//     LOAD="--load-path build --load-path lib/epx/ebin --load-path lib/tree_db/ebin"
 //     ern build $LOAD examples/mandelbrot.ern
 //     ern run $LOAD examples/mandelbrot.erc build/mandelbrot.ppm
+//     ern run $LOAD examples/mandelbrot.erc build/mandelbrot.ppm show
 //
 
 // The picture's size in pixels, and the most steps a point is followed.
@@ -48,18 +60,30 @@ let spacing : Float = (right - left) / Int.toFloat(columns)
 export fn main() : Unit =
     match Os.arguments {
         [name] ->
-            write(name)
+            write(name, picture())
+      | [name, "show"] -> {
+            let window = Epx.Screen.open(0, 0, columns, rows);
+            let pixmap = picture();
+            Epx.Screen.show(window, pixmap);
+            write(name, pixmap);
+            closeOnEnter(window)
+        }
       | _ -> {
-            Io.printlnError("usage: mandelbrot file.ppm");
+            Io.printlnError("usage: mandelbrot file.ppm [show]");
             Os.exit(2)
         }
     }
 
-// The picture drawn and written to the file, or why it could not be, on
-// standard error.
-fn write(name : String) : Unit = {
+// The picture drawn into a new pixmap.
+fn picture() : Epx.Pixmap = {
     let pixmap = Epx.create(columns, rows, Epx.Rgb);
     draw(pixmap);
+    pixmap
+}
+
+// The picture written to the file, or why it could not be, on standard
+// error.
+fn write(name : String, pixmap : Epx.Pixmap) : Unit =
     match Fs.write(Path(name), Epx.toPpm(pixmap), 5000) {
         Right(_) ->
             Unit
@@ -68,6 +92,13 @@ fn write(name : String) : Unit = {
             Os.exit(1)
         }
     }
+
+// The window left on the screen until a line, or the end of standard
+// input, is read, and then closed.
+fn closeOnEnter(window : Epx.Screen.Window) : Unit = {
+    Io.println("press Enter to close");
+    let _ = Io.readLine();
+    Epx.Screen.close(window)
 }
 
 fn draw(pixmap : Epx.Pixmap) : Unit =
