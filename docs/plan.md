@@ -34,4 +34,4 @@ The first cut is built and released as 0.1.0, 2026-10-20: `Epx` with twenty func
 
 `examples/raytracer.ern`: the Boing ball, a sphere in red and white checks, above a mirror floor, traced with one light, Lambert shading, a highlight and a reflection to a depth of two, over a `Vector` record with its own operators; the rows shared out in turn among a count of processes the command line gives, each monitored, each writing its rows into the one pixmap with `putPixels`, `main` receiving a `Down` for each and then writing the PPM.
 
-The third row of `examples/README.md`, run by `make test` with a small count. Decided 2026-10-20 with the user; what writing floats and processes together feels against the principles goes to `language_feedback.md`.
+The third row of `examples/README.md`, run by `make test` with a small count. Designed in [`proposals/raytracer/proposal.md`](proposals/raytracer/proposal.md), its six decisions taken as recommended on 2026-10-20 (the log's *The ray tracer*); built by an agent from it and read back; what writing floats and processes together feels against the principles goes to `language_feedback.md`.
