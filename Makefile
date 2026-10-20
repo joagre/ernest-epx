@@ -12,6 +12,8 @@
 #                 fetched and unpacked where it is not there, and each Erlang
 #                 application under erl/ built by its own make and linked
 #   make doc      the documentation of every module, as CommonMark under build/
+#   make man      the pages copied into docs/man/, which a library's release
+#                 commits, its index the directory's README
 #   make format   lays every module out
 #   make release  the archive, build/NAME-VERSION.tar.gz, tests first
 #   make clean    removes what the build and make lib wrote
@@ -20,8 +22,10 @@ NAME        = epx
 ERN_VERSION = 0.4
 LIBS        =
 DEPS        =
-ERL_DEPS    = tree_db epx
-EXAMPLE_SUFFIX = .ppm             # what each example of examples/ writes, named by make test
+ERL_DEPS    = epx
+# What each program of examples/ writes, named by make test: the suffix of
+# the one path it is given.
+EXAMPLE_SUFFIX = .ppm
 
 # The ern on PATH, or ERN=path/to/ern; where its libraries are, beside it as
 # an installation and a checkout each lay them out.
@@ -38,13 +42,15 @@ LOAD_PATH   = $(addprefix --load-path ,$(shell ls -d lib/*/build lib/*/ebin 2>/d
 DEP_DIRS    = $(addprefix lib/,$(notdir $(basename $(basename $(DEPS)))))
 VERSION     = $(shell cat VERSION)
 
-.PHONY: all version lib build test run doc format release clean
+.PHONY: all version lib build test run doc man format release clean
 
 all: version lib build
 
 # The program is written for one floor of ern (report §8.7); a development
 # build of the floor passes.
 version:
+	@command -v $(ERN) >/dev/null 2>&1 || \
+	    { echo "no ern on PATH: ERN=path/to/ern make, or put Ernest's bin on PATH"; exit 1; }
 	@found=$$($(ERN) --version) && \
 	case "$$found" in "ern $(ERN_VERSION)."*) ;; \
 	    *) echo "ern $(ERN_VERSION) expected, $$found found"; exit 1 ;; esac
@@ -54,7 +60,8 @@ lib:
 	@for name in $(LIBS); do \
 	    test -e lib/$$name/build && continue; \
 	    test -n "$(ERNEST_LIBS)" || \
-	        { echo "no libraries beside $(ERN): neither lib/ernest/build/libs nor build/libs"; exit 1; }; \
+	        { echo "no libraries beside $(ERN):" \
+	               "neither lib/ernest/build/libs nor build/libs"; exit 1; }; \
 	    test -d "$(ERNEST_LIBS)/$$name" || \
 	        { echo "Ernest has no library $$name under $(ERNEST_LIBS)"; exit 1; }; \
 	    mkdir -p lib/$$name && ln -s "$(ERNEST_LIBS)/$$name" lib/$$name/build; \
@@ -79,7 +86,8 @@ lib:
 # lists them, a dependency before what needs it; then the program.
 build:
 	@for dir in $(DEP_DIRS); do \
-	    $(ERN) build --source-root $$dir/src --build-root $$dir/build $(LOAD_PATH) $$dir/src || exit 1; \
+	    $(ERN) build --source-root $$dir/src --build-root $$dir/build $(LOAD_PATH) \
+	        $$dir/src || exit 1; \
 	done
 	$(ERN) build --source-root src --build-root build $(LOAD_PATH) src
 
@@ -90,15 +98,18 @@ test: all
 	$(ERN) test tools/build
 	$(ERN) run tools/build/docs.erc
 	@if test -d test; then \
-	    $(ERN) build --source-root test --build-root test/build --load-path build $(LOAD_PATH) test && \
+	    $(ERN) build --source-root test --build-root test/build --load-path build \
+	        $(LOAD_PATH) test && \
 	    $(ERN) test --load-path build $(LOAD_PATH) test/build; \
 	fi
 	@if test -d examples; then \
-	    $(ERN) build --source-root examples --build-root examples/build --load-path build $(LOAD_PATH) examples && \
+	    $(ERN) build --source-root examples --build-root examples/build --load-path build \
+	        $(LOAD_PATH) examples && \
 	    mkdir -p build/examples && \
 	    for program in examples/build/*.erc; do \
 	        name=$$(basename $$program .erc); \
-	        $(ERN) run --load-path build $(LOAD_PATH) $$program build/examples/$$name$(EXAMPLE_SUFFIX) || exit 1; \
+	        $(ERN) run --load-path build $(LOAD_PATH) $$program \
+	            build/examples/$$name$(EXAMPLE_SUFFIX) || exit 1; \
 	        echo "examples/$$name.ern wrote build/examples/$$name$(EXAMPLE_SUFFIX)"; \
 	    done; \
 	fi
@@ -110,6 +121,15 @@ run: all
 doc: all
 	$(ERN) doc --source-root src --build-root build $(LOAD_PATH) src
 
+# The pages ern doc wrote under build/, mirrored into docs/man/ as Ernest's
+# make man mirrors its own; the release archive's staging directory is left
+# out, and the index becomes the README.
+man: doc
+	@rm -rf docs/man && mkdir -p docs/man
+	@cd build && find . -name '*.md' ! -name index.md ! -path './$(NAME)-*/*' | \
+	    tar cf - -T - | (cd ../docs/man && tar xf -)
+	@cp build/index.md docs/man/README.md
+
 format:
 	$(ERN) format src tools $(wildcard test) $(wildcard examples)
 
@@ -118,14 +138,16 @@ format:
 # README and the license. One shape for an application and a library, so
 # that any archive can be a dependency.
 release: test
-	@case "$$($(ERN) --version)" in *-dev) echo "a release is not made with a development build of ern"; exit 1 ;; esac
+	@case "$$($(ERN) --version)" in \
+	    *-dev) echo "a release is not made with a development build of ern"; exit 1 ;; esac
 	rm -rf build/$(NAME)-$(VERSION) && mkdir -p build/$(NAME)-$(VERSION)
 	cp -R src build/$(NAME)-$(VERSION)/src
 	mkdir -p build/$(NAME)-$(VERSION)/build && \
 	    find build -path build/$(NAME)-$(VERSION) -prune -o -name '*.erc' -print | \
 	    cpio -pdm --quiet build/$(NAME)-$(VERSION)/
 	test -d lib && cp -RL lib build/$(NAME)-$(VERSION)/lib || true
-	test -x bin/$(NAME) && mkdir -p build/$(NAME)-$(VERSION)/bin && cp bin/$(NAME) build/$(NAME)-$(VERSION)/bin/ || true
+	test -x bin/$(NAME) && mkdir -p build/$(NAME)-$(VERSION)/bin && \
+	    cp bin/$(NAME) build/$(NAME)-$(VERSION)/bin/ || true
 	cp README.md LICENSE build/$(NAME)-$(VERSION)/
 	tar -czf build/$(NAME)-$(VERSION).tar.gz -C build $(NAME)-$(VERSION)
 	rm -rf build/$(NAME)-$(VERSION)

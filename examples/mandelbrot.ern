@@ -11,18 +11,19 @@
 //
 // What to look at:
 //
-// - A pixmap is changed in place and is not a value (docs/design.md §2):
-//   `draw` writes each pixel with `Epx.putPixel` and answers `Unit`.
+// - A pixmap is changed in place and is not a value (`Epx`'s page, *In
+//   place and shared*): `drawRow` writes each pixel of a row with
+//   `Epx.putPixel` and answers `Unit`.
 // - `escape` and `color` are pure: a count over floats, and a color from a
-//   count. `main` and `written` are the parts that act.
+//   count. `main`, `write`, `draw` and `drawRow` are the parts that act.
 // - `Epx.toPpm` makes the bytes of the file, and `Fs.write` writes them,
 //   its failure a value (report Appendix E.17).
 //
 // Run it from the repository's root once `make` has built the library:
 //
-//     LOAD="--load-path build --load-path lib/epx/ebin --load-path lib/tree_db/ebin"
+//     LOAD="--load-path build --load-path lib/epx/ebin"
 //     ern build $LOAD examples/mandelbrot.ern
-//     ern run $LOAD examples/mandelbrot.erc mandelbrot.ppm
+//     ern run $LOAD examples/mandelbrot.erc build/mandelbrot.ppm
 //
 
 // The picture's size in pixels, and the most steps a point is followed.
@@ -47,7 +48,7 @@ let spacing : Float = (right - left) / Int.toFloat(columns)
 export fn main() : Unit =
     match Os.arguments {
         [name] ->
-            written(name)
+            write(name)
       | _ -> {
             Io.printlnError("usage: mandelbrot file.ppm");
             Os.exit(2)
@@ -56,7 +57,7 @@ export fn main() : Unit =
 
 // The picture drawn and written to the file, or why it could not be, on
 // standard error.
-fn written(name : String) : Unit = {
+fn write(name : String) : Unit = {
     let pixmap = Epx.create(columns, rows, Epx.Rgb);
     draw(pixmap);
     match Fs.write(Path(name), Epx.toPpm(pixmap), 5000) {
@@ -70,14 +71,12 @@ fn written(name : String) : Unit = {
 }
 
 fn draw(pixmap : Epx.Pixmap) : Unit =
-    List.forEach(List.range(0, rows - 1),
-                 fn(y) =
-                     List.forEach(List.range(0, columns - 1),
-                                  fn(x) =
-                                      Epx.putPixel(pixmap,
-                                                   x,
-                                                   y,
-                                                   color(escape(real(x), imaginary(y))))))
+    List.forEach(List.range(0, rows - 1), fn(y) = drawRow(pixmap, y))
+
+// Each pixel of the row colored by the steps its point takes to escape.
+fn drawRow(pixmap : Epx.Pixmap, y : Int) : Unit =
+    List.forEach(List.range(0, columns - 1),
+                 fn(x) = Epx.putPixel(pixmap, x, y, color(escape(real(x), imaginary(y)))))
 
 // Where a pixel's column and its row fall in the plane.
 fn real(x : Int) : Float =
@@ -91,25 +90,25 @@ fn imaginary(y : Int) : Float =
 fn escape(cReal : Float, cImaginary : Float) : Int =
     follow(cReal, cImaginary, 0.0, 0.0, 0)
 
-fn follow(cReal : Float, cImaginary : Float, zReal : Float, zImaginary : Float, step : Int) : Int =
-    if step == steps || zReal * zReal + zImaginary * zImaginary > 4.0 then
-        step
+fn follow(cReal : Float, cImaginary : Float, zReal : Float, zImaginary : Float, count : Int) : Int =
+    if count == steps || zReal * zReal + zImaginary * zImaginary > 4.0 then
+        count
     else
         follow(cReal,
                cImaginary,
                zReal * zReal - zImaginary * zImaginary + cReal,
                2.0 * zReal * zImaginary + cImaginary,
-               step + 1)
+               count + 1)
 
 // Black for a point that did not escape; otherwise a color that runs from
 // dark blue for the points that escape at once, through light blue and
 // yellow, to red for those that take the longest. Each channel is a
 // polynomial in the share of the steps taken, below 1 from 0 to 1.
-fn color(step : Int) : Epx.Color =
-    if step == steps then
+fn color(count : Int) : Epx.Color =
+    if count == steps then
         Epx.rgb(0, 0, 0)
     else {
-        let taken = Int.toFloat(step) / Int.toFloat(steps);
+        let taken = Int.toFloat(count) / Int.toFloat(steps);
         let remaining = 1.0 - taken;
         Epx.rgb(channel(9.0 * remaining * taken * taken * taken),
                 channel(15.0 * remaining * remaining * taken * taken),

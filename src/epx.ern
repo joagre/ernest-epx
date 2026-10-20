@@ -7,9 +7,11 @@
 /// again at each change. A picture kept as a value is the bytes `getPixels`
 /// answers, or the file `toPpm` writes.
 ///
-/// A program puts the library's build and the `ebin` directories of epx
-/// and of tree_db on its load path when it is compiled and when it is run;
-/// epx finds its NIF in the `priv` directory beside its `ebin`.
+/// A program puts the library's build on its load path when it is compiled
+/// and when it is run, and epx's `ebin` directory when it is run; epx finds
+/// its NIF in the `priv` directory beside its `ebin`. Run without epx's
+/// `ebin`, a call faults with a cause such as `foreign function
+/// epx:pixmap_create/3 raised error:undef`.
 ///
 /// **A pixmap's life.** A pixmap lives while a process holds it, and the
 /// host frees it once none does: there is no `close`. Its width, its height
@@ -17,31 +19,53 @@
 /// pixmap is 0 in every channel. It stays on the node that made it.
 ///
 /// **In place and shared.** A pixmap is not a value. `fill`, `putPixel` and
-/// every other operation that writes change it in place, and every process
+/// every other function that writes change it in place, and every process
 /// that holds it sees the change: a pixmap sent in a message, or captured
 /// by a spawned function, is the same pixmap there. Nothing orders the
-/// writes of two processes but the order in which they run. `copy` makes a
-/// pixmap that shares nothing with the first.
+/// writes of two processes but the order in which they run, and epx takes
+/// no lock: two calls on one pixmap from two processes may interleave pixel
+/// by pixel, and a read may see a write half done. `copy` makes a pixmap
+/// that shares nothing with the first.
 ///
 /// **Coordinates.** A pixel is at `x`, `y`, where `0`, `0` is the top left
 /// pixel, `x` grows to the right and `y` downward. A rectangle is its top
-/// left pixel, its width and its height. A negative width or height faults,
-/// and so does a coordinate beyond 32 bits with a sign or a size beyond 32
-/// bits without, each with epx's cause, such as `foreign function
-/// epx:pixmap_fill_area/6 raised error:badarg`.
+/// left pixel, its width and its height. A width or a height below 0 is 0,
+/// and a rectangle of width 0 or of height 0 has no pixels: a function
+/// reads and writes nothing of it.
+///
+/// **Bounds.** A coordinate is from -16777216 to 16777216, and a width or a
+/// height at most 16777216. A function given a coordinate outside that
+/// range faults, with the cause `a coordinate is beyond 16777216`, and one
+/// given a larger width or height with `a width or height is beyond
+/// 16777216`. A pixmap's bytes are its row's bytes times its height, a
+/// row's bytes being its width times its format's bytes a pixel, rounded up
+/// to a multiple of 16; `create` faults on a pixmap whose bytes reach 2
+/// GiB, with the cause `the pixmap's bytes reach 2 GiB`.
 ///
 /// **The clip.** Each pixmap has a clip, a rectangle within it, which is
 /// the whole pixmap until `setClip` sets another. `putPixel`, `putPixels`,
 /// `fillArea`, `scale`, `copyArea` and the blends, `blendArea`,
 /// `fadeArea`, `shadowArea` and `operationArea`, write only within the
-/// target's clip, `copyArea` and the blends read only within the source's,
-/// and `getPixel` answers opaque black outside it; `fill`, `flip`, `copyTo`
-/// and `getPixels` do not read it. A rectangle that reaches outside what an
-/// operation reads or writes is cut to the part within it.
+/// target's clip; `copyArea` and the blends read only within the source's;
+/// and `getPixel` answers opaque black outside it. `fill`, `flip`, `copyTo`
+/// and `getPixels` do not read it. `scale` reads the source's clip, and
+/// what it writes from a source whose clip is not the whole pixmap is not
+/// stated: set the source's clip to the whole pixmap first.
+///
+/// **Rectangles.** A rectangle that reaches outside what a function reads
+/// or writes is cut to the part within it. The exception is a source
+/// rectangle that begins left of or above the source's clip: it is cut to
+/// the clip and lands at the target's corner all the same, as `copyArea`
+/// shows.
 ///
 /// **Colors.** A `Color` is four channels from 0 to 255, alpha 255 being
-/// opaque. An operation given a channel outside that range faults, with the
+/// opaque. A function given a channel outside that range faults, with the
 /// cause `a channel of a Color is outside 0 to 255`.
+///
+/// **A call's cost.** A call runs on the host's scheduler until it ends,
+/// and nothing else runs on that scheduler meanwhile. Most calls end at
+/// once; `create`, `scale` and `toPpm` of a large pixmap do not, and
+/// `scale` of an 8192 by 8192 pixmap holds its scheduler for seconds.
 ///
 /// ## Examples
 ///
@@ -90,7 +114,8 @@ export foreign type Pixmap
 /// The order of a pixel's bytes, one byte a channel, in which `getPixels`
 /// answers them and `putPixels` reads them. `Rgb` and `Bgr` hold no alpha:
 /// a pixel of either is read with alpha 255, and the alpha it is written
-/// with is dropped.
+/// with is dropped. `Rgb` is this format, and `rgb` the function that makes
+/// an opaque `Color`.
 ///
 /// ### Examples
 ///
@@ -137,6 +162,10 @@ export type Color = Color(
 /// blended into another by `a` has each channel of the other moved `a /
 /// 256` of the way to the first's, each rounded down.
 ///
+/// An opaque source is scaled and blended by 255 / 256, not by 1, so that
+/// it may come out one short of itself, a channel of 200 as 199 under
+/// `Src`; `Copy` writes it exactly.
+///
 /// ### Examples
 ///
 /// ```ernest
@@ -174,7 +203,11 @@ export type Operation =
   /// The target atop the source, as `SrcAtop` with the two swapped.
   | DstAtop
   /// The source where the target is not, and the target where the source
-  /// is not.
+  /// is not: its alpha the two alphas summed less twice their product
+  /// divided by 256, rounded down; and its color the source's color
+  /// channels scaled by 255 less the target's alpha, blended by the
+  /// source's alpha into the target's color channels scaled by the
+  /// target's alpha.
   | Xor
   /// The source as it is, its alpha among its channels.
   | Copy
@@ -197,14 +230,16 @@ export type Operation =
 
 /// A new pixmap of that width, height and format, every pixel 0 in every
 /// channel: transparent black, which a format without alpha reads as
-/// opaque black. Its clip is the whole pixmap. Making it writes every pixel
-/// once.
+/// opaque black. Its clip is the whole pixmap. A width or a height below 0
+/// is 0. Making it writes every pixel once.
 ///
 /// ### Errors
 ///
-/// Faults on a negative width or height, on one beyond 32 bits, and on one
-/// whose pixels the host cannot allocate, with epx's cause: `foreign
-/// function epx:pixmap_create/3 raised error:badarg`.
+/// Faults on a width or a height above 16777216, with the cause `a width
+/// or height is beyond 16777216`, and on a pixmap whose bytes, its row's
+/// bytes times its height, reach 2 GiB, with the cause `the pixmap's bytes
+/// reach 2 GiB`. Faults where the host cannot allocate the pixels, with
+/// epx's cause: `foreign function epx:pixmap_create/3 raised error:badarg`.
 ///
 /// ### Examples
 ///
@@ -216,11 +251,24 @@ export type Operation =
 /// // => #(3, 2, Color(alpha = 0, red = 0, green = 0, blue = 0))
 /// ```
 export fn create(width : Int, height : Int, format : Format) : Pixmap = {
-    // epx leaves a new pixmap's memory as the host gave it (design §2).
-    let pixmap = rawCreate(width, height, formatAtom(format));
-    let _ = rawFill(pixmap, #(0, 0, 0, 0));
-    pixmap
+    let columns = extent(width);
+    let rows = extent(height);
+    // epx counts a pixmap's bytes in 32 bits and finds a pixel by an int
+    // (design §4, epx_bugs.md 7).
+    if rowBytes(columns, format) * rows >= byteLimit then
+        fault("the pixmap's bytes reach 2 GiB")
+    else {
+        // epx leaves a new pixmap's memory as the host gave it (design §2).
+        let pixmap = rawCreate(columns, rows, formatAtom(format));
+        let _ = rawFill(pixmap, #(0, 0, 0, 0));
+        pixmap
+    }
 }
+
+// The bytes epx gives a row of the format: its pixels' bytes, rounded up
+// to a multiple of 16 (design §4).
+fn rowBytes(width : Int, format : Format) : Int =
+    (width * pixelSize(format) + 15) / 16 * 16
 
 foreign fn rawCreate(width : Int, height : Int, format : Foreign.Term) : Pixmap =
     "epx:pixmap_create/3"
@@ -228,6 +276,11 @@ foreign fn rawCreate(width : Int, height : Int, format : Foreign.Term) : Pixmap 
 /// A new pixmap of the same width, height, format and pixels, which shares
 /// nothing with the first. Its clip is the whole pixmap, whatever the
 /// first's.
+///
+/// ### Errors
+///
+/// Faults where the host cannot allocate the new pixmap's pixels, with
+/// epx's cause: `foreign function epx:pixmap_copy/1 raised error:badarg`.
 ///
 /// ### Examples
 ///
@@ -261,7 +314,7 @@ foreign fn rawInfo(pixmap : Pixmap, key : Foreign.Term) : Int =
 /// Faults on a pixmap that foreign code made in a format `Format` does not
 /// name, with the cause `the pixmap's format is none of Format's`.
 export fn format(pixmap : Pixmap) : Format = {
-    let term = rawInfoTerm(pixmap, Foreign.atom("pixel_format"));
+    let term = rawPixelFormat(pixmap, Foreign.atom("pixel_format"));
     match List.find(formats, fn(known) = formatAtom(known) == term) {
         Some(found) -> found
       | None -> fault("the pixmap's format is none of Format's")
@@ -270,7 +323,7 @@ export fn format(pixmap : Pixmap) : Format = {
 
 let formats : List(Format) = [Argb, Rgba, Abgr, Bgra, Rgb, Bgr]
 
-foreign fn rawInfoTerm(pixmap : Pixmap, key : Foreign.Term) : Foreign.Term =
+foreign fn rawPixelFormat(pixmap : Pixmap, key : Foreign.Term) : Foreign.Term =
     "epx:pixmap_info_/2"
 
 //
@@ -297,9 +350,10 @@ foreign fn rawFill(pixmap : Pixmap, color : #(Int, Int, Int, Int)) : Foreign.Ter
 /// ### Errors
 ///
 /// Faults on a color with a channel outside 0 to 255, with the cause `a
-/// channel of a Color is outside 0 to 255`. Faults on a negative width or
-/// height with epx's cause: `foreign function epx:pixmap_fill_area/6 raised
-/// error:badarg`.
+/// channel of a Color is outside 0 to 255`. Faults on a coordinate outside
+/// -16777216 to 16777216, with the cause `a coordinate is beyond
+/// 16777216`, and on a width or a height above 16777216, with the cause `a
+/// width or height is beyond 16777216`.
 ///
 /// ### Examples
 ///
@@ -317,7 +371,13 @@ export fn fillArea(pixmap : Pixmap,
                    width : Int,
                    height : Int,
                    color : Color) : Unit = {
-    let _ = rawFillArea(pixmap, x, y, width, height, channels(color));
+    let _ =
+        rawFillArea(pixmap,
+                    coordinate(x),
+                    coordinate(y),
+                    extent(width),
+                    extent(height),
+                    channels(color));
     Unit
 }
 
@@ -336,8 +396,8 @@ foreign fn rawFillArea(pixmap : Pixmap,
 ///
 /// ### Errors
 ///
-/// Faults on a coordinate beyond 32 bits, with epx's cause: `foreign
-/// function epx:pixmap_get_pixel/3 raised error:badarg`.
+/// Faults on a coordinate outside -16777216 to 16777216, with the cause `a
+/// coordinate is beyond 16777216`.
 ///
 /// ### Examples
 ///
@@ -346,7 +406,7 @@ foreign fn rawFillArea(pixmap : Pixmap,
 /// // => Color(alpha = 255, red = 0, green = 0, blue = 0)
 /// ```
 export fn getPixel(pixmap : Pixmap, x : Int, y : Int) : Color =
-    match rawGetPixel(pixmap, x, y) {
+    match rawGetPixel(pixmap, coordinate(x), coordinate(y)) {
         #(alpha, red, green, blue) -> Color(alpha = alpha, red = red, green = green, blue = blue)
     }
 
@@ -359,11 +419,11 @@ foreign fn rawGetPixel(pixmap : Pixmap, x : Int, y : Int) : #(Int, Int, Int, Int
 /// ### Errors
 ///
 /// Faults on a color with a channel outside 0 to 255, with the cause `a
-/// channel of a Color is outside 0 to 255`. Faults on a coordinate beyond
-/// 32 bits with epx's cause: `foreign function epx:pixmap_put_pixel/4
-/// raised error:badarg`.
+/// channel of a Color is outside 0 to 255`. Faults on a coordinate outside
+/// -16777216 to 16777216, with the cause `a coordinate is beyond
+/// 16777216`.
 export fn putPixel(pixmap : Pixmap, x : Int, y : Int, color : Color) : Unit = {
-    let _ = rawPutPixel(pixmap, x, y, channels(color));
+    let _ = rawPutPixel(pixmap, coordinate(x), coordinate(y), channels(color));
     Unit
 }
 
@@ -376,12 +436,15 @@ foreign fn rawPutPixel(pixmap : Pixmap,
 /// The pixels of the rectangle at `x`, `y`, row by row from the top, as
 /// bytes in the pixmap's format. A rectangle that reaches outside the
 /// pixmap answers the bytes of the part within it, and one wholly outside,
-/// or of width and height 0, answers none. The clip is not read. The bytes
-/// are a value: a later write to the pixmap does not change them.
+/// or with no pixels, answers none. The clip is not read. The bytes are a
+/// value: a later write to the pixmap does not change them.
 ///
 /// ### Errors
 ///
-/// Faults on a negative width or height, with epx's cause: `foreign
+/// Faults on a coordinate outside -16777216 to 16777216, with the cause `a
+/// coordinate is beyond 16777216`, and on a width or a height above
+/// 16777216, with the cause `a width or height is beyond 16777216`. Faults
+/// where the host cannot allocate the bytes, with epx's cause: `foreign
 /// function epx:pixmap_get_pixels/5 raised error:badarg`.
 ///
 /// ### Examples
@@ -394,11 +457,16 @@ foreign fn rawPutPixel(pixmap : Pixmap,
 /// }
 /// // => #(<<255, 1, 2, 3>>, <<>>)
 /// ```
-export fn getPixels(pixmap : Pixmap, x : Int, y : Int, width : Int, height : Int) : Bytes =
-    // For a rectangle of width and height 0, epx answers its whole memory,
-    // the padding of its rows among it, as bytes that change as the pixmap
-    // is written (design §4).
-    if width == 0 && height == 0 then <<>> else rawGetPixels(pixmap, x, y, width, height)
+export fn getPixels(pixmap : Pixmap, x : Int, y : Int, width : Int, height : Int) : Bytes = {
+    let left = coordinate(x);
+    let top = coordinate(y);
+    let columns = extent(width);
+    let rows = extent(height);
+    // epx answers a rectangle of width and height 0 at 0, 0 with its whole
+    // memory, the padding of its rows among it, as bytes that change as the
+    // pixmap is written (design §1).
+    if columns == 0 && rows == 0 then <<>> else rawGetPixels(pixmap, left, top, columns, rows)
+}
 
 foreign fn rawGetPixels(pixmap : Pixmap, x : Int, y : Int, width : Int, height : Int) : Bytes =
     "epx:pixmap_get_pixels/5"
@@ -411,9 +479,11 @@ foreign fn rawGetPixels(pixmap : Pixmap, x : Int, y : Int, width : Int, height :
 /// ### Errors
 ///
 /// Faults where the bytes are not `width` times `height` pixels in the
-/// format, with the cause `the bytes are not width times height pixels in
-/// the format`. Faults on a negative width or height with epx's cause:
-/// `foreign function epx:pixmap_put_pixels/7 raised error:badarg`.
+/// format, a width or a height below 0 being 0, with the cause `the bytes
+/// are not width times height pixels in the format`. Faults on a
+/// coordinate outside -16777216 to 16777216, with the cause `a coordinate
+/// is beyond 16777216`, and on a width or a height above 16777216, with the
+/// cause `a width or height is beyond 16777216`.
 ///
 /// ### Examples
 ///
@@ -431,16 +501,21 @@ export fn putPixels(pixmap : Pixmap,
                     width : Int,
                     height : Int,
                     format : Format,
-                    bytes : Bytes) : Unit =
+                    bytes : Bytes) : Unit = {
+    let left = coordinate(x);
+    let top = coordinate(y);
+    let columns = extent(width);
+    let rows = extent(height);
     // epx writes nothing from bytes too few by a pixel or more, reads past
     // their end where they are too few by less, and leaves too many unread
     // (design §5).
-    if width >= 0 && height >= 0 && Bytes.size(bytes) != width * height * pixelSize(format) then
+    if Bytes.size(bytes) != columns * rows * pixelSize(format) then
         fault("the bytes are not width times height pixels in the format")
     else {
-        let _ = rawPutPixels(pixmap, x, y, width, height, formatAtom(format), bytes);
+        let _ = rawPutPixels(pixmap, left, top, columns, rows, formatAtom(format), bytes);
         Unit
     }
+}
 
 foreign fn rawPutPixels(pixmap : Pixmap,
                         x : Int,
@@ -481,17 +556,20 @@ foreign fn rawCopyTo(source : Pixmap, target : Pixmap) : Foreign.Term =
 
 /// Copies the source's rectangle at `sourceX`, `sourceY` into the target at
 /// `targetX`, `targetY`, in the target's format, its alpha copied and not
-/// blended. A pixel outside the target's clip is left out. A rectangle that
-/// begins left of or above the source's clip is cut to the clip and lands
-/// at `targetX`, `targetY` all the same, the pixels that remain standing
-/// left of or above where their places would put them: begin the source's
-/// rectangle within its clip. The source and the target may be one pixmap,
-/// the two rectangles overlapping.
+/// blended. A pixel outside the target's clip is left out. The source and
+/// the target may be one pixmap, the two rectangles overlapping.
+///
+/// A rectangle that begins left of or above the source's clip is cut to the
+/// clip, and what remains lands at `targetX`, `targetY` all the same, short
+/// of its place by what was cut: a row copied from `sourceX` -1 to
+/// `targetX` 1 puts the source's pixel 0 at the target's 1, where its place
+/// is 2. Begin the source's rectangle within its clip.
 ///
 /// ### Errors
 ///
-/// Faults on a negative width or height, with epx's cause: `foreign
-/// function epx:pixmap_copy_area/8 raised error:badarg`.
+/// Faults on a coordinate outside -16777216 to 16777216, with the cause `a
+/// coordinate is beyond 16777216`, and on a width or a height above
+/// 16777216, with the cause `a width or height is beyond 16777216`.
 ///
 /// ### Examples
 ///
@@ -505,6 +583,20 @@ foreign fn rawCopyTo(source : Pixmap, target : Pixmap) : Foreign.Term =
 /// }
 /// // => <<0, 0, 0, 1, 1, 1, 2, 2, 2>>
 /// ```
+///
+/// A row that begins left of the source's clip, its pixel 0 landing at the
+/// target's 1 and not at its 2:
+///
+/// ```ernest
+/// {
+///     let source = Epx.create(2, 1, Epx.Rgb);
+///     let target = Epx.create(4, 1, Epx.Rgb);
+///     Epx.putPixels(source, 0, 0, 2, 1, Epx.Rgb, <<1, 1, 1, 2, 2, 2>>);
+///     Epx.copyArea(source, target, -1, 0, 1, 0, 3, 1);
+///     Epx.getPixels(target, 0, 0, 4, 1)
+/// }
+/// // => <<0, 0, 0, 1, 1, 1, 2, 2, 2, 0, 0, 0>>
+/// ```
 export fn copyArea(source : Pixmap,
                    target : Pixmap,
                    sourceX : Int,
@@ -513,7 +605,15 @@ export fn copyArea(source : Pixmap,
                    targetY : Int,
                    width : Int,
                    height : Int) : Unit = {
-    let _ = rawCopyArea(source, target, sourceX, sourceY, targetX, targetY, width, height);
+    let _ =
+        rawCopyArea(source,
+                    target,
+                    coordinate(sourceX),
+                    coordinate(sourceY),
+                    coordinate(targetX),
+                    coordinate(targetY),
+                    extent(width),
+                    extent(height));
     Unit
 }
 
@@ -530,12 +630,14 @@ foreign fn rawCopyArea(source : Pixmap,
 /// Scales the whole source to `width` by `height` pixels and writes it into
 /// the target at its top left, within the target's clip. Scaled up, a
 /// pixel is mixed from the source's pixels around its place; scaled down,
-/// from those it covers. A width or a height of 0 writes nothing.
+/// from those it covers. A width or a height of 0 or below writes nothing.
+/// What it writes from a source whose clip is not the whole pixmap is not
+/// stated: set the source's clip to the whole pixmap first.
 ///
 /// ### Errors
 ///
-/// Faults on a negative width or height, with epx's cause: `foreign
-/// function epx:pixmap_scale/4 raised error:badarg`.
+/// Faults on a width or a height above 16777216, with the cause `a width or
+/// height is beyond 16777216`.
 ///
 /// ### Examples
 ///
@@ -550,7 +652,7 @@ foreign fn rawCopyArea(source : Pixmap,
 /// // => Color(alpha = 255, red = 9, green = 9, blue = 9)
 /// ```
 export fn scale(source : Pixmap, target : Pixmap, width : Int, height : Int) : Unit = {
-    let _ = rawScale(source, target, width, height);
+    let _ = rawScale(source, target, extent(width), extent(height));
     Unit
 }
 
@@ -586,8 +688,13 @@ foreign fn rawFlip(pixmap : Pixmap) : Foreign.Term =
 /// Blends the source's rectangle into the target's by `alpha`: each color
 /// channel of the target moves `alpha / 256` of the way to the source's,
 /// rounded down. The source's alpha is not read, and the target keeps its
-/// own. An alpha of 0 leaves the target as it was. The rectangles are
-/// placed and cut as `copyArea` places and cuts them.
+/// own. An alpha of 0 leaves the target as it was, and at 255 a channel
+/// comes out one short of the source's where the target's was below it,
+/// 200 as 199; `copyArea` copies the source exactly.
+///
+/// The rectangles are placed and cut as `copyArea` places and cuts them,
+/// and must not overlap in one pixmap: where they do, what is written is
+/// not stated.
 ///
 /// Where both pixmaps hold four bytes a pixel in one format and the
 /// rectangle is 8 pixels wide or more, epx may blend with the machine's
@@ -597,8 +704,10 @@ foreign fn rawFlip(pixmap : Pixmap) : Foreign.Term =
 /// ### Errors
 ///
 /// Faults on an alpha outside 0 to 255, with the cause `the alpha is
-/// outside 0 to 255`. Faults on a negative width or height with epx's
-/// cause: `foreign function epx:pixmap_alpha_area/9 raised error:badarg`.
+/// outside 0 to 255`. Faults on a coordinate outside -16777216 to 16777216,
+/// with the cause `a coordinate is beyond 16777216`, and on a width or a
+/// height above 16777216, with the cause `a width or height is beyond
+/// 16777216`.
 ///
 /// ### Examples
 ///
@@ -623,9 +732,17 @@ export fn blendArea(source : Pixmap,
                     width : Int,
                     height : Int) : Unit =
     // epx takes an alpha above 255 as 255 (design §5).
-    if isChannel(alpha) then {
+    if isByte(alpha) then {
         let _ =
-            rawAlphaArea(source, target, alpha, sourceX, sourceY, targetX, targetY, width, height);
+            rawAlphaArea(source,
+                         target,
+                         alpha,
+                         coordinate(sourceX),
+                         coordinate(sourceY),
+                         coordinate(targetX),
+                         coordinate(targetY),
+                         extent(width),
+                         extent(height));
         Unit
     } else
         fault("the alpha is outside 0 to 255")
@@ -643,11 +760,14 @@ foreign fn rawAlphaArea(source : Pixmap,
 
 /// Blends the source's rectangle into the target's by the source's own
 /// alpha scaled by `fade`: each channel of the target, alpha among them,
-/// moves `a / 256` of the way to the source's, where `a` is the source's
-/// alpha times `fade / 256`, each rounded down. A fade of 0 leaves the
-/// target as it was, and one of 255 blends by the source's alpha as it is,
-/// as `SrcBlend` does. The rectangles are placed and cut as `copyArea`
-/// places and cuts them.
+/// moves `a / 256` of the way to the source's, rounded down, where `a` is
+/// the source's alpha times `fade / 256`, rounded down, and at a fade of
+/// 255 the source's alpha itself. A fade of 0 leaves the target as it was,
+/// and one of 255 blends as `SrcBlend` does.
+///
+/// The rectangles are placed and cut as `copyArea` places and cuts them,
+/// and must not overlap in one pixmap: where they do, what is written is
+/// not stated.
 ///
 /// Where both pixmaps hold four bytes a pixel in one format and the
 /// rectangle is 8 pixels wide or more, epx may blend with the machine's
@@ -657,8 +777,9 @@ foreign fn rawAlphaArea(source : Pixmap,
 /// ### Errors
 ///
 /// Faults on a fade outside 0 to 255, with the cause `the fade is outside 0
-/// to 255`. Faults on a negative width or height with epx's cause:
-/// `foreign function epx:pixmap_fade_area/9 raised error:badarg`.
+/// to 255`. Faults on a coordinate outside -16777216 to 16777216, with the
+/// cause `a coordinate is beyond 16777216`, and on a width or a height
+/// above 16777216, with the cause `a width or height is beyond 16777216`.
 ///
 /// ### Examples
 ///
@@ -683,9 +804,17 @@ export fn fadeArea(source : Pixmap,
                    width : Int,
                    height : Int) : Unit =
     // epx takes a fade above 255 as 255 (design §5).
-    if isChannel(fade) then {
+    if isByte(fade) then {
         let _ =
-            rawFadeArea(source, target, fade, sourceX, sourceY, targetX, targetY, width, height);
+            rawFadeArea(source,
+                        target,
+                        fade,
+                        coordinate(sourceX),
+                        coordinate(sourceY),
+                        coordinate(targetX),
+                        coordinate(targetY),
+                        extent(width),
+                        extent(height));
         Unit
     } else
         fault("the fade is outside 0 to 255")
@@ -706,13 +835,17 @@ foreign fn rawFadeArea(source : Pixmap,
 /// down, where `l` is the luminance of the source's pixel, `(299 * red +
 /// 587 * green + 114 * blue) / 1000`. A black source leaves the target as it
 /// was, and a white one makes it transparent black. The source's alpha is
-/// not read. The rectangles are placed and cut as `copyArea` places and
-/// cuts them.
+/// not read.
+///
+/// The rectangles are placed and cut as `copyArea` places and cuts them,
+/// and must not overlap in one pixmap: where they do, what is written is
+/// not stated.
 ///
 /// ### Errors
 ///
-/// Faults on a negative width or height, with epx's cause: `foreign
-/// function epx:pixmap_shadow_area/8 raised error:badarg`.
+/// Faults on a coordinate outside -16777216 to 16777216, with the cause `a
+/// coordinate is beyond 16777216`, and on a width or a height above
+/// 16777216, with the cause `a width or height is beyond 16777216`.
 ///
 /// ### Examples
 ///
@@ -735,7 +868,15 @@ export fn shadowArea(source : Pixmap,
                      targetY : Int,
                      width : Int,
                      height : Int) : Unit = {
-    let _ = rawShadowArea(source, target, sourceX, sourceY, targetX, targetY, width, height);
+    let _ =
+        rawShadowArea(source,
+                      target,
+                      coordinate(sourceX),
+                      coordinate(sourceY),
+                      coordinate(targetX),
+                      coordinate(targetY),
+                      extent(width),
+                      extent(height));
     Unit
 }
 
@@ -751,13 +892,17 @@ foreign fn rawShadowArea(source : Pixmap,
 
 /// Combines the source's rectangle with the target's by the operation,
 /// pixel by pixel, and writes the result into the target; `Operation` says
-/// what each gives. The rectangles are placed and cut as `copyArea` places
-/// and cuts them.
+/// what each gives.
+///
+/// The rectangles are placed and cut as `copyArea` places and cuts them,
+/// and must not overlap in one pixmap: where they do, what is written is
+/// not stated.
 ///
 /// ### Errors
 ///
-/// Faults on a negative width or height, with epx's cause: `foreign
-/// function epx:pixmap_operation_area/9 raised error:badarg`.
+/// Faults on a coordinate outside -16777216 to 16777216, with the cause `a
+/// coordinate is beyond 16777216`, and on a width or a height above
+/// 16777216, with the cause `a width or height is beyond 16777216`.
 ///
 /// ### Examples
 ///
@@ -785,12 +930,12 @@ export fn operationArea(source : Pixmap,
         rawOperationArea(source,
                          target,
                          operationAtom(operation),
-                         sourceX,
-                         sourceY,
-                         targetX,
-                         targetY,
-                         width,
-                         height);
+                         coordinate(sourceX),
+                         coordinate(sourceY),
+                         coordinate(targetX),
+                         coordinate(targetY),
+                         extent(width),
+                         extent(height));
     Unit
 }
 
@@ -815,8 +960,9 @@ foreign fn rawOperationArea(source : Pixmap,
 ///
 /// ### Errors
 ///
-/// Faults on a negative width or height, with epx's cause: `foreign
-/// function epx:pixmap_set_clip/2 raised error:badarg`.
+/// Faults on a coordinate outside -16777216 to 16777216, with the cause `a
+/// coordinate is beyond 16777216`, and on a width or a height above
+/// 16777216, with the cause `a width or height is beyond 16777216`.
 ///
 /// ### Examples
 ///
@@ -830,7 +976,8 @@ foreign fn rawOperationArea(source : Pixmap,
 /// // => <<255, 255, 255, 0, 0, 0>>
 /// ```
 export fn setClip(pixmap : Pixmap, x : Int, y : Int, width : Int, height : Int) : Unit = {
-    let _ = rawSetClip(pixmap, #(x, y, width, height));
+    let rectangle = #(coordinate(x), coordinate(y), extent(width), extent(height));
+    let _ = rawSetClip(pixmap, rectangle);
     Unit
 }
 
@@ -853,44 +1000,74 @@ foreign fn rawSetClip(pixmap : Pixmap, rectangle : #(Int, Int, Int, Int)) : Fore
 export fn rgb(red : Int, green : Int, blue : Int) : Color =
     Color(alpha = 255, red = red, green = green, blue = blue)
 
-/// The pixmap as a PPM file in its binary form, `P6`: a header of the text
-/// `P6`, the width and the height in decimal, and `255`, each followed by a
-/// line feed but the width, which a space follows; then the pixels, row by
-/// row from the top, each as its red, green and blue bytes. A pixel's alpha
-/// is dropped, and its color channels are written as they are.
+/// The pixmap as a PPM file in its binary form, `P6`: the text `P6`, a line
+/// feed, the width and the height in decimal with a space between them, a
+/// line feed, `255` and a line feed, and then the pixels, row by row from
+/// the top, each as its red, green and blue bytes. A pixel's alpha is
+/// dropped, and its color channels are written as they are. It holds a
+/// copy of the pixels, three bytes each, while it runs.
+///
+/// ### Errors
+///
+/// Faults where the host cannot allocate the copy or the file's bytes,
+/// with epx's cause: `foreign function epx:pixmap_create/3 raised
+/// error:badarg` or `foreign function epx:pixmap_get_pixels/5 raised
+/// error:badarg`.
 ///
 /// ### Examples
 ///
 /// ```ernest
-/// Epx.toPpm(Epx.create(1, 1, Epx.Rgb))
-/// // => <<80, 54, 10, 49, 32, 49, 10, 50, 53, 53, 10, 0, 0, 0>>
+/// Epx.toPpm(Epx.create(1, 1, Epx.Rgb)) == String.toUtf8("P6\n1 1\n255\n") <> <<0, 0, 0>>
+/// // => true
 /// ```
 export fn toPpm(pixmap : Pixmap) : Bytes = {
     let columns = width(pixmap);
     let rows = height(pixmap);
-    let raster = create(columns, rows, Rgb);
-    copyTo(pixmap, raster);
+    // copyTo writes every pixel of the copy, so it is not filled first
+    // (design §1).
+    let rgbPixmap = rawCreate(columns, rows, formatAtom(Rgb));
+    copyTo(pixmap, rgbPixmap);
     let header = "P6\n" <> Int.toString(columns) <> " " <> Int.toString(rows) <> "\n255\n";
-    String.toUtf8(header) <> getPixels(raster, 0, 0, columns, rows)
+    String.toUtf8(header) <> getPixels(rgbPixmap, 0, 0, columns, rows)
 }
 
 //
 // What crosses to epx
 //
 
+// The farthest from 0 a coordinate, a width or a height goes: epx turns
+// each into a float through the pixmap's transform, exact to 2^24, and
+// computes a rectangle's right edge in an int (design §4, epx_bugs.md 8).
+let limit : Int = 16777216
+
+// The bytes a pixmap stays below: epx counts them in 32 bits and finds a
+// pixel by an int (design §4, epx_bugs.md 7).
+let byteLimit : Int = 2147483648
+
+// A coordinate as epx takes it, once it is within the limit (design §4).
+fn coordinate(value : Int) : Int =
+    if value < -limit || value > limit then fault("a coordinate is beyond 16777216") else value
+
+// A width or a height as epx takes it: one below 0 is 0, and one past the
+// limit faults (design §4).
+fn extent(value : Int) : Int =
+    if value > limit then
+        fault("a width or height is beyond 16777216")
+    else if value < 0 then
+        0
+    else
+        value
+
 // A color as epx takes it, `{A, R, G, B}`, once each channel is known to
 // be in range: epx takes a channel outside 0 to 255 as the nearer end
 // (design §5).
 fn channels(color : Color) : #(Int, Int, Int, Int) =
-    if isChannel(color.alpha)
-        && isChannel(color.red)
-        && isChannel(color.green)
-        && isChannel(color.blue) then
+    if isByte(color.alpha) && isByte(color.red) && isByte(color.green) && isByte(color.blue) then
         #(color.alpha, color.red, color.green, color.blue)
     else
         fault("a channel of a Color is outside 0 to 255")
 
-fn isChannel(value : Int) : Bool =
+fn isByte(value : Int) : Bool =
     value >= 0 && value <= 255
 
 // The atom epx names a format by (design §3).
@@ -907,9 +1084,12 @@ fn formatAtom(format : Format) : Foreign.Term =
 // The bytes a pixel of the format takes (design §3).
 fn pixelSize(format : Format) : Int =
     match format {
-        Rgb -> 3
+        Argb -> 4
+      | Rgba -> 4
+      | Abgr -> 4
+      | Bgra -> 4
+      | Rgb -> 3
       | Bgr -> 3
-      | _ -> 4
     }
 
 // The atom epx names an operation by (design §3).
@@ -999,17 +1179,21 @@ let blended = Test.Case(name = "blendArea blends by the alpha", run = fn() = {
                  Color(alpha = 100, red = 127, green = 127, blue = 127)))
 })
 
-// design §1: `fadeArea` blends by the source's alpha scaled by the fade.
+// design §1: `fadeArea` blends by the source's alpha scaled by the fade,
+// and at a fade of 255 by the source's alpha itself.
 let faded = Test.Case(name = "fadeArea blends by the source's alpha scaled", run = fn() = {
-    let source = create(1, 1, Argb);
-    let target = create(1, 1, Argb);
-    fill(source, Color(alpha = 128, red = 200, green = 200, blue = 200));
-    fill(target, black);
-    fadeArea(source, target, 0, 0, 0, 0, 0, 1, 1);
-    let untouched = getPixel(target, 0, 0);
-    fadeArea(source, target, 128, 0, 0, 0, 0, 1, 1);
-    Test.equal(#(untouched, getPixel(target, 0, 0)),
-               #(black, Color(alpha = 223, red = 50, green = 50, blue = 50)))
+    let faded = fn(fade : Int) : Color = {
+        let source = create(1, 1, Argb);
+        let target = create(1, 1, Argb);
+        fill(source, Color(alpha = 128, red = 200, green = 200, blue = 200));
+        fill(target, black);
+        fadeArea(source, target, fade, 0, 0, 0, 0, 1, 1);
+        getPixel(target, 0, 0)
+    };
+    Test.equal(List.map([0, 128, 255], faded),
+               [black,
+                Color(alpha = 223, red = 50, green = 50, blue = 50),
+                Color(alpha = 191, red = 100, green = 100, blue = 100)])
 })
 
 // design §1: `shadowArea` darkens the target by the source's luminance.
@@ -1062,6 +1246,14 @@ let shared = Test.Case(name = "a pixmap is shared and a copy is not", run = fn()
                #("Returned", white, transparent))
 })
 
+// design §3: a pixmap is equal to itself and to no other, its copy among
+// them.
+let compared = Test.Case(name = "a pixmap is equal to itself alone", run = fn() = {
+    let pixmap = create(1, 1, Argb);
+    let same = pixmap;
+    Test.equal(#(pixmap == same, pixmap == copy(pixmap)), #(true, false))
+})
+
 // design §3: each format is its atom to epx and back, a pixel's bytes in
 // the order its name lists.
 let formatsCross = Test.Case(name = "each format crosses and orders its bytes", run = fn() = {
@@ -1089,25 +1281,92 @@ let opaqueColors = Test.Case(name = "rgb is opaque, and Rgb reads alpha 255", ru
                #(Color(alpha = 255, red = 1, green = 2, blue = 3), rgb(1, 2, 3)))
 })
 
-// design §3: an operation crosses as its atom and combines as its
-// constructor's doc block says.
+// design §3: each operation crosses as its atom and combines two
+// translucent pixels as its constructor's doc block says.
 let operations = Test.Case(name = "operationArea combines as each operation says", run = fn() = {
-    let source = Color(alpha = 255, red = 200, green = 0, blue = 100);
-    let target = Color(alpha = 255, red = 100, green = 10, blue = 200);
+    let sourceColor = Color(alpha = 128, red = 200, green = 0, blue = 100);
+    let targetColor = Color(alpha = 64, red = 100, green = 10, blue = 200);
     let combined = fn(operation : Operation) : Color = {
-        let from = create(1, 1, Argb);
-        let into = create(1, 1, Argb);
-        fill(from, source);
-        fill(into, target);
-        operationArea(from, into, operation, 0, 0, 0, 0, 1, 1);
-        getPixel(into, 0, 0)
+        let source = create(1, 1, Argb);
+        let target = create(1, 1, Argb);
+        fill(source, sourceColor);
+        fill(target, targetColor);
+        operationArea(source, target, operation, 0, 0, 0, 0, 1, 1);
+        getPixel(target, 0, 0)
     };
-    Test.equal(List.map([Copy, Add, Sub, Clear, Dst], combined),
-               [source,
-                Color(alpha = 255, red = 255, green = 10, blue = 255),
-                Color(alpha = 0, red = 100, green = 0, blue = 0),
-                transparent,
-                Color(alpha = 255, red = 99, green = 9, blue = 199)])
+    let every =
+        [Clear,
+         Src,
+         Dst,
+         SrcOver,
+         DstOver,
+         SrcIn,
+         DstIn,
+         SrcOut,
+         DstOut,
+         SrcAtop,
+         DstAtop,
+         Xor,
+         Copy,
+         Add,
+         Sub,
+         SrcBlend,
+         DstBlend];
+    Test.equal(List.map(every, combined),
+               [transparent,
+                Color(alpha = 128, red = 100, green = 0, blue = 50),
+                Color(alpha = 64, red = 25, green = 2, blue = 50),
+                Color(alpha = 159, red = 112, green = 1, blue = 75),
+                Color(alpha = 159, red = 100, green = 2, blue = 87),
+                Color(alpha = 32, red = 25, green = 0, blue = 12),
+                Color(alpha = 32, red = 12, green = 1, blue = 25),
+                Color(alpha = 95, red = 74, green = 0, blue = 37),
+                Color(alpha = 31, red = 12, green = 1, blue = 24),
+                Color(alpha = 64, red = 37, green = 1, blue = 37),
+                Color(alpha = 128, red = 87, green = 1, blue = 62),
+                Color(alpha = 128, red = 87, green = 1, blue = 62),
+                sourceColor,
+                Color(alpha = 192, red = 255, green = 10, blue = 255),
+                Color(alpha = 64, red = 100, green = 0, blue = 0),
+                Color(alpha = 96, red = 150, green = 5, blue = 150),
+                Color(alpha = 112, red = 175, green = 2, blue = 125)])
+})
+
+// design §4: a coordinate and a width or a height reach 16777216 either
+// way, and a rectangle's right edge there is where it is.
+let bounded = Test.Case(name = "a coordinate and a size reach 16777216", run = fn() = {
+    let pixmap = create(3, 1, Rgb);
+    fillArea(pixmap, 1, 0, 16777216, 1, white);
+    fillArea(pixmap, -16777215, 0, 16777216, 1, rgb(1, 1, 1));
+    Test.equal(#(getPixels(pixmap, 0, 0, 3, 1), getPixel(pixmap, -16777216, 16777216)),
+               #(<<1, 1, 1, 255, 255, 255, 255, 255, 255>>, black))
+})
+
+// design §4: a width or a height below 0 is 0, and a rectangle with no
+// pixels reads and writes nothing.
+let belowZero = Test.Case(name = "a width or height below 0 is 0", run = fn() = {
+    let made = create(-1, 2, Argb);
+    let source = create(2, 1, Rgb);
+    let pixmap = create(2, 1, Rgb);
+    fill(source, white);
+    fill(pixmap, rgb(1, 2, 3));
+    fillArea(pixmap, 0, 0, -1, 1, white);
+    putPixels(pixmap, 0, 0, 2, -1, Rgb, <<>>);
+    copyArea(source, pixmap, 0, 0, 0, 0, -2, 1);
+    blendArea(source, pixmap, 128, 0, 0, 0, 0, 2, -1);
+    fadeArea(source, pixmap, 128, 0, 0, 0, 0, -2, -1);
+    shadowArea(source, pixmap, 0, 0, 0, 0, -1, 1);
+    operationArea(source, pixmap, Copy, 0, 0, 0, 0, 1, -1);
+    scale(source, pixmap, 2, -5);
+    let unwritten = getPixels(pixmap, 0, 0, 2, 1);
+    setClip(pixmap, 0, 0, -1, -1);
+    putPixel(pixmap, 0, 0, white);
+    Test.equal(#(width(made),
+                 height(made),
+                 unwritten,
+                 getPixels(pixmap, 0, 0, -3, 1),
+                 getPixels(pixmap, 0, 0, 2, 1)),
+               #(0, 2, <<1, 2, 3, 1, 2, 3>>, <<>>, <<1, 2, 3, 1, 2, 3>>))
 })
 
 // design §4: outside the clip `putPixel` writes nothing and `getPixel`
@@ -1125,6 +1384,56 @@ let clipped = Test.Case(name = "the clip bounds putPixel and getPixel", run = fn
                #(white, black, black, <<255, 255, 255, 255>>))
 })
 
+// design §4: `putPixels`, `scale` and the five area functions write only
+// within the target's clip.
+let targetClipped = Test.Case(name = "the target's clip bounds what is written", run = fn() = {
+    let source = create(2, 1, Argb);
+    fill(source, white);
+    let written = fn(write : (Pixmap) -> Unit) : Bytes = {
+        let target = create(2, 1, Argb);
+        fill(target, rgb(100, 100, 100));
+        setClip(target, 1, 0, 1, 1);
+        write(target);
+        getPixels(target, 0, 0, 2, 1)
+    };
+    let writes =
+        [fn(target) = putPixels(target, 0, 0, 2, 1, Rgb, <<1, 2, 3, 4, 5, 6>>),
+         fn(target) = scale(source, target, 2, 1),
+         fn(target) = copyArea(source, target, 0, 0, 0, 0, 2, 1),
+         fn(target) = blendArea(source, target, 128, 0, 0, 0, 0, 2, 1),
+         fn(target) = fadeArea(source, target, 128, 0, 0, 0, 0, 2, 1),
+         fn(target) = shadowArea(source, target, 0, 0, 0, 0, 2, 1),
+         fn(target) = operationArea(source, target, Copy, 0, 0, 0, 0, 2, 1)];
+    Test.equal(List.map(writes, written),
+               [<<255, 100, 100, 100, 255, 4, 5, 6>>,
+                <<255, 100, 100, 100, 255, 255, 255, 255>>,
+                <<255, 100, 100, 100, 255, 255, 255, 255>>,
+                <<255, 100, 100, 100, 255, 177, 177, 177>>,
+                <<255, 100, 100, 100, 255, 176, 176, 176>>,
+                <<255, 100, 100, 100, 0, 0, 0, 0>>,
+                <<255, 100, 100, 100, 255, 255, 255, 255>>])
+})
+
+// design §4: a copy's clip is the whole pixmap, whatever the first's.
+let copyUnclipped = Test.Case(name = "a copy's clip is the whole pixmap", run = fn() = {
+    let pixmap = create(2, 1, Rgb);
+    setClip(pixmap, 0, 0, 1, 1);
+    let copied = copy(pixmap);
+    putPixel(copied, 1, 0, white);
+    Test.equal(getPixel(copied, 1, 0), white)
+})
+
+// design §4: `setClip` of a rectangle outside the pixmap leaves the clip
+// empty, so that nothing is written and `getPixel` answers opaque black.
+let emptyClip = Test.Case(name = "a clip outside the pixmap is empty", run = fn() = {
+    let pixmap = create(2, 1, Rgb);
+    fill(pixmap, white);
+    setClip(pixmap, 5, 5, 2, 2);
+    fillArea(pixmap, 0, 0, 2, 1, rgb(1, 1, 1));
+    Test.equal(#(getPixels(pixmap, 0, 0, 2, 1), getPixel(pixmap, 0, 0)),
+               #(<<255, 255, 255, 255, 255, 255>>, black))
+})
+
 // design §4: `fillArea` writes within the clip, and `fill` and `flip` do
 // not read it.
 let clipIgnored = Test.Case(name = "fillArea reads the clip, fill and flip do not", run = fn() = {
@@ -1140,23 +1449,25 @@ let clipIgnored = Test.Case(name = "fillArea reads the clip, fill and flip do no
 })
 
 // design §4: `getPixels` answers the part of its rectangle within the
-// pixmap, and no bytes for a rectangle of width and height 0, and what it
+// pixmap, and no bytes for a rectangle with no pixels, and what it
 // answered does not change with a later write.
 let partlyOutside = Test.Case(name = "getPixels answers the part within the pixmap", run = fn() = {
     let pixmap = create(2, 2, Rgb);
     fill(pixmap, rgb(1, 2, 3));
     let empty = getPixels(pixmap, 0, 0, 0, 0);
+    let thin = getPixels(pixmap, 1, 0, 0, 2);
     let corner = getPixels(pixmap, 1, 1, 4, 4);
     let before = getPixels(pixmap, -1, 0, 2, 1);
     fill(pixmap, white);
-    Test.equal(#(empty, corner, before, getPixels(pixmap, 5, 5, 1, 1)),
-               #(<<>>, <<1, 2, 3>>, <<1, 2, 3>>, <<>>))
+    Test.equal(#(empty, thin, corner, before, getPixels(pixmap, 5, 5, 1, 1)),
+               #(<<>>, <<>>, <<1, 2, 3>>, <<1, 2, 3>>, <<>>))
 })
 
-// design §4: in an area operation a source pixel lands where its place in
-// the rectangle puts it, a rectangle overlapping itself among them; one
-// that begins outside the source's clip is cut and lands as if it were not.
-let landed = Test.Case(name = "an area operation's pixels land in their places", run = fn() = {
+// design §4: in an area function a source pixel lands where its place in
+// the rectangle puts it, a rectangle of `copyArea` overlapping itself
+// among them; one that begins outside the source's clip is cut and lands
+// as if it were not.
+let landed = Test.Case(name = "an area function's pixels land in their places", run = fn() = {
     let source = create(3, 1, Rgb);
     putPixels(source, 0, 0, 3, 1, Rgb, <<1, 1, 1, 2, 2, 2, 3, 3, 3>>);
     let target = create(5, 1, Rgb);
@@ -1167,19 +1478,34 @@ let landed = Test.Case(name = "an area operation's pixels land in their places",
                #(<<0, 0, 0, 1, 1, 1, 2, 2, 2, 0, 0, 0, 0, 0, 0>>, <<1, 1, 1, 1, 1, 1, 2, 2, 2>>))
 })
 
-// design §5: the library refuses a channel, an alpha and a fade outside 0
-// to 255, and bytes of another size, before epx is called.
+// design §5: the library refuses a coordinate, a size and a pixmap's
+// bytes past their bounds, a channel, an alpha and a fade outside 0 to
+// 255, and bytes of another size, before epx is called.
 let refused = Test.Case(name = "the library's own faults", run = fn() = {
     let pixmap = create(2, 1, Argb);
     let tooRed = Color(alpha = 255, red = 256, green = 0, blue = 0);
     let unseen = Color(alpha = -1, red = 0, green = 0, blue = 0);
-    Test.equal([ending(fn() = fill(pixmap, tooRed)),
+    let made = fn(width : Int, height : Int, format : Format) : () -> Unit = fn() = {
+        let _ = create(width, height, format);
+        Unit
+    };
+    Test.equal([ending(fn() = fillArea(pixmap, -16777217, 0, 1, 1, white)),
+                ending(fn() = putPixel(pixmap, 0, 16777217, white)),
+                ending(fn() = setClip(pixmap, 0, 0, 16777217, 1)),
+                ending(made(1, 16777217, Argb)),
+                ending(made(42, 16777216, Rgb)),
+                ending(fn() = fill(pixmap, tooRed)),
                 ending(fn() = fillArea(pixmap, 0, 0, 1, 1, tooRed)),
                 ending(fn() = putPixel(pixmap, 0, 0, unseen)),
                 ending(fn() = blendArea(pixmap, pixmap, 256, 0, 0, 0, 0, 1, 1)),
                 ending(fn() = fadeArea(pixmap, pixmap, -1, 0, 0, 0, 0, 1, 1)),
                 ending(fn() = putPixels(pixmap, 0, 0, 2, 1, Rgb, <<1, 2, 3, 4, 5>>))],
-               ["a channel of a Color is outside 0 to 255",
+               ["a coordinate is beyond 16777216",
+                "a coordinate is beyond 16777216",
+                "a width or height is beyond 16777216",
+                "a width or height is beyond 16777216",
+                "the pixmap's bytes reach 2 GiB",
+                "a channel of a Color is outside 0 to 255",
                 "a channel of a Color is outside 0 to 255",
                 "a channel of a Color is outside 0 to 255",
                 "the alpha is outside 0 to 255",
@@ -1187,20 +1513,15 @@ let refused = Test.Case(name = "the library's own faults", run = fn() = {
                 "the bytes are not width times height pixels in the format"])
 })
 
-// design §5: epx refuses a negative width or height, and its cause names
-// its function.
-let refusedByEpx = Test.Case(name = "epx's faults", run = fn() = {
-    let pixmap = create(1, 1, Argb);
-    let made = fn() = {
-        let _ = create(-1, 1, Argb);
+// design §5: `format` faults on a pixmap that foreign code made in a
+// format `Format` does not name.
+let foreignFormat = Test.Case(name = "format refuses a format it does not name", run = fn() = {
+    let gray = rawCreate(1, 1, Foreign.atom("l8"));
+    let read = fn() = {
+        let _ = format(gray);
         Unit
     };
-    Test.equal([ending(made),
-                ending(fn() = putPixels(pixmap, 0, 0, -1, 1, Rgb, <<>>)),
-                ending(fn() = setClip(pixmap, 0, 0, 1, -1))],
-               ["foreign function epx:pixmap_create/3 raised error:badarg",
-                "foreign function epx:pixmap_put_pixels/7 raised error:badarg",
-                "foreign function epx:pixmap_set_clip/2 raised error:badarg"])
+    Test.equal(ending(read), "the pixmap's format is none of Format's")
 })
 
 // design §6: `toPpm` writes the header and then each pixel's red, green

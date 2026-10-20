@@ -6,11 +6,11 @@ How the program is arranged, stated as rules: its processes and what each owns, 
 
 The library is one module, `Epx`, over the pixmaps of epx, the pixel library for Erlang. It makes a pixmap, fills, reads and writes it pixel by pixel and in rectangles, copies, scales and blends one into another, and writes one as a PPM file. It draws no line or shape, opens no window and reads no event. It starts no process and holds no Erlang of its own.
 
-Each operation calls the epx functions the table below names, each at most once. Where one function does the operation's work exactly, the operation is a `foreign fn` over it, and where it differs, Ernest closes the difference around the call.
+Each function but `toPpm` calls the epx functions the table below names, each at most once. Where one epx function does a function's work exactly, the function is a `foreign fn` over it, and where it differs, Ernest closes the difference around the call.
 
-The differences closed are these, each stated where its rule is (§2 to §5): a `Color` crosses as the tuple epx takes, and a `Format` or an `Operation` as its atom; epx's `ok` is `Unit`; a precondition of §5 is checked before the call; a new pixmap is filled; and an empty rectangle is read without epx.
+The differences closed are these, each stated where its rule is (§2 to §5): a `Color` crosses as the tuple epx takes, and a `Format` or an `Operation` as its atom; epx's `ok` is `Unit`; a width or a height below 0 is 0; a precondition of §5 is checked before the call; a new pixmap is filled; and `getPixels` answers a rectangle of width and height 0 without epx, which answers its whole memory for one at `0`, `0`.
 
-| Operation | epx | What it does |
+| Function | epx | What it does |
 |---|---|---|
 | `create(width, height, format)` | `pixmap_create/3`, `pixmap_fill/2` | a new pixmap, every pixel 0 in every channel |
 | `copy(pixmap)` | `pixmap_copy/1` | a new pixmap with the same size, format and pixels |
@@ -31,17 +31,17 @@ The differences closed are these, each stated where its rule is (§2 to §5): a 
 | `operationArea(source, target, operation, sourceX, sourceY, targetX, targetY, width, height)` | `pixmap_operation_area/9` | a rectangle of the source combined with the target by the operation |
 | `setClip(pixmap, x, y, width, height)` | `pixmap_set_clip/2` | the pixmap's clip (§4) |
 | `rgb(red, green, blue)` | none | an opaque color |
-| `toPpm(pixmap)` | none | the pixmap as a PPM file (§6) |
+| `toPpm(pixmap)` | Ernest over `width`, `height`, `create` without its fill, `copyTo` and `getPixels` | the pixmap as a PPM file (§6) |
 
 ## 2. Pixmaps
 
 A pixmap is a rectangle of pixels held by epx outside any process. Its width, its height and its format are fixed when it is made. Every pixel of a new pixmap is 0 in every channel its format holds.
 
-A pixmap is not a value. An operation that writes it changes it in place, and every process that holds it sees the change, a process it was sent to or that captured it among them. Nothing orders the writes of two processes but the order in which they run. `copy` makes a new pixmap, which shares nothing with the first.
+A pixmap is not a value. A function that writes it changes it in place, and every process that holds it sees the change, a process it was sent to or that captured it among them. Nothing orders the writes of two processes but the order in which they run. epx takes no lock: two calls on one pixmap from two processes may interleave pixel by pixel, and a read may see a write half done. `copy` makes a new pixmap, which shares nothing with the first.
 
 A pixmap lives while a process holds it, and the host frees it once none does; there is no `close`. A pixmap is bound to the node that made it (report §3.8, §3.11).
 
-The library starts no process, and no operation receives or names a mailbox (report Appendix E.0 shape rule 5).
+The library starts no process, and no function receives or names a mailbox (report Appendix E.0 shape rule 5).
 
 ## 3. The types
 
@@ -66,28 +66,42 @@ An `Operation` is one of epx's seventeen ways of combining a pixel of the source
 
 ## 4. Coordinates and the clip
 
-A pixel is at `x`, `y`, where `0`, `0` is the top left pixel, `x` grows to the right and `y` downward. A rectangle is its top left pixel, its width and its height. A coordinate is an `Int` the host holds in 32 bits with a sign, and a width or a height one it holds in 32 bits without.
+A pixel is at `x`, `y`, where `0`, `0` is the top left pixel, `x` grows to the right and `y` downward. A rectangle is its top left pixel, its width and its height.
+
+A coordinate is from −16,777,216 to 16,777,216, and a width or a height at most 16,777,216 (§5). A width or a height below 0 is 0 (report §7.4), and a rectangle of width 0 or of height 0 has no pixels: a function reads and writes nothing of it.
+
+A pixmap's bytes are its row's bytes times its height, and a row's bytes are its width times its format's bytes a pixel, rounded up to a multiple of 16. A pixmap's bytes are below 2,147,483,648, 2 GiB (§5).
 
 Each pixmap has a clip, a rectangle within it, which is the whole pixmap when the pixmap is made or copied. `setClip` sets the clip to the part of its rectangle within the pixmap, which may be empty.
 
-The clip bounds what an operation writes, and what `getPixel` reads:
+The clip bounds what a function writes and what it reads:
 
-- `putPixel`, `putPixels`, `fillArea`, `scale` and the five area operations, `copyArea`, `blendArea`, `fadeArea`, `shadowArea` and `operationArea`, write only within the target's clip, and the area operations read only within the source's.
+- `putPixel`, `putPixels`, `fillArea`, `scale` and the five area functions, `copyArea`, `blendArea`, `fadeArea`, `shadowArea` and `operationArea`, write only within the target's clip, and the area functions read only within the source's.
+- `scale` reads the source's clip. What it writes from a source whose clip is not the whole pixmap is not stated: a program sets the source's clip to the whole pixmap first.
 - `getPixel` answers opaque black, `Color(alpha = 255, red = 0, green = 0, blue = 0)`, for a point outside the clip, and for one outside the pixmap.
 - `fill`, `flip`, `copyTo` and `getPixels` do not read the clip.
 
-A rectangle that reaches outside what an operation reads or writes is cut to the part within it, and one wholly outside is empty. In an area operation the source's pixel at `sourceX + i`, `sourceY + j` goes to the target's at `targetX + i`, `targetY + j`, and a pixel outside the target's clip is left out. A source rectangle that begins left of or above the source's clip is cut to the clip and lands at `targetX`, `targetY` all the same, as epx has it (`epx_bugs.md` 6): a program begins the source's rectangle within the clip. `getPixels` answers the bytes of the part of its rectangle within the pixmap, row by row from the top. A rectangle of width 0 and height 0 has no pixels, and `getPixels` answers no bytes for it.
+A rectangle that reaches outside what a function reads or writes is cut to the part within it, and one wholly outside is empty.
+
+In an area function the source's pixel at `sourceX + i`, `sourceY + j` goes to the target's at `targetX + i`, `targetY + j`, and a pixel outside the target's clip is left out. The exception is a source rectangle that begins left of or above the source's clip: it is cut to the clip and lands at `targetX`, `targetY` all the same, as epx has it (`epx_bugs.md` 6), so a program begins the source's rectangle within the clip.
+
+The two rectangles of `copyArea` may overlap in one pixmap. Those of `blendArea`, `fadeArea`, `shadowArea` and `operationArea` must not, and what they write where they do is not stated.
+
+`getPixels` answers the bytes of the part of its rectangle within the pixmap, row by row from the top, and no bytes for a rectangle that has no pixels.
 
 ## 5. What faults
 
 An argument the library refuses faults the calling process before epx is called (report §7.4):
 
+- a coordinate outside −16,777,216 to 16,777,216: `Fault("a coordinate is beyond 16777216")`;
+- a width or a height above 16,777,216: `Fault("a width or height is beyond 16777216")`;
+- a width, a height and a format given to `create` whose pixmap's bytes reach 2 GiB (§4): `Fault("the pixmap's bytes reach 2 GiB")`;
 - a `Color` with a channel outside 0 to 255, given to `fill`, `fillArea` or `putPixel`: `Fault("a channel of a Color is outside 0 to 255")`;
 - an `alpha` outside 0 to 255, given to `blendArea`: `Fault("the alpha is outside 0 to 255")`;
 - a `fade` outside 0 to 255, given to `fadeArea`: `Fault("the fade is outside 0 to 255")`;
-- bytes given to `putPixels` that are not `width` times `height` pixels in the format, where the width and the height are 0 or more: `Fault("the bytes are not width times height pixels in the format")`.
+- bytes given to `putPixels` that are not `width` times `height` pixels in the format, a width or a height below 0 being 0: `Fault("the bytes are not width times height pixels in the format")`.
 
-An argument epx refuses faults as a foreign function that raises does, with epx's function in the cause: `Fault("foreign function epx:pixmap_create/3 raised error:badarg")` (report §7.4). epx refuses a negative width or height, and a coordinate, a width or a height the host does not hold as §4 says. `format` faults with `Fault("the pixmap's format is none of Format's")` on a pixmap that foreign code made in another format.
+Memory the host cannot allocate faults as a foreign function that raises does, with epx's function in the cause (report §7.4): a new pixmap's pixels, in `create`, `copy` and `toPpm`, with `Fault("foreign function epx:pixmap_create/3 raised error:badarg")` or `epx:pixmap_copy/1`'s, and the bytes `getPixels` answers, in `getPixels` and `toPpm`, with `epx:pixmap_get_pixels/5`'s. `format` faults with `Fault("the pixmap's format is none of Format's")` on a pixmap that foreign code made in another format.
 
 Nothing else faults. A read outside the pixmap or its clip answers as §4 says, and a write outside the clip writes nothing.
 
@@ -103,5 +117,6 @@ The names that recur across modules, one for each concept, in every module. A na
 - **color**: a `Color`, four channels (§3). Not `pixel` for the value, nor `c`, `col`.
 - **channel**: one of a color's four values, `alpha`, `red`, `green` or `blue`, from 0 to 255 (§3). Not `component`.
 - **format**: a `Format`, the order of a pixel's bytes (§3). Not `pixelFormat`, `fmt`.
-- **source, target**: the pixmap an operation of two reads and the one it writes; their rectangles' corners are `sourceX`, `sourceY`, `targetX` and `targetY`. Not `src`, `dst`, `destination`.
+- **source, target**: the pixmap a function of two reads and the one it writes; their rectangles' corners are `sourceX`, `sourceY`, `targetX` and `targetY`. Not `src`, `dst`, `destination`.
 - **clip**: a pixmap's clip (§4). Not `clipRect`.
+- **function, operation**: one of the library's functions, `fill` or `copyArea` (§1), and an `Operation`, one of epx's ways of combining two pixels (§3). Not `operation` for a function.

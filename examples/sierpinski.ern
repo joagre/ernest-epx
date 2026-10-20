@@ -17,26 +17,29 @@
 //
 // - `subdivide` is the definition of the figure, and its only act is the
 //   write of a pixel at the bottom of the recursion.
-// - A pixmap is changed in place and is not a value (docs/design.md §2):
-//   the three calls write one pixmap, and `subdivide` answers `Unit`.
+// - A pixmap is changed in place and is not a value (`Epx`'s page, *In
+//   place and shared*): the three calls write one pixmap, and `subdivide`
+//   answers `Unit`.
 // - `Epx.toPpm` makes the bytes of the file, and `Fs.write` writes them,
 //   its failure a value (report Appendix E.17).
 //
 // Run it from the repository's root once `make` has built the library:
 //
-//     LOAD="--load-path build --load-path lib/epx/ebin --load-path lib/tree_db/ebin"
+//     LOAD="--load-path build --load-path lib/epx/ebin"
 //     ern build $LOAD examples/sierpinski.ern
-//     ern run $LOAD examples/sierpinski.erc sierpinski.ppm
+//     ern run $LOAD examples/sierpinski.erc build/sierpinski.ppm
 //
 
-// The picture's width and height in pixels, a power of two, so that every
-// triangle halves into whole pixels.
+// The picture's width and height in pixels: a power of two, so that every
+// triangle halves into whole pixels, and at most 16384, the largest whose
+// pixmap stays below the 2 GiB at which `Epx.create` faults (`Epx`'s page,
+// *Bounds*).
 let size : Int = 256
 
 export fn main() : Unit =
     match Os.arguments {
         [name] ->
-            written(name)
+            write(name)
       | _ -> {
             Io.printlnError("usage: sierpinski file.ppm");
             Os.exit(2)
@@ -45,7 +48,7 @@ export fn main() : Unit =
 
 // The picture drawn and written to the file, or why it could not be, on
 // standard error.
-fn written(name : String) : Unit = {
+fn write(name : String) : Unit = {
     let pixmap = Epx.create(size, size, Epx.Rgb);
     Epx.fill(pixmap, Epx.rgb(255, 255, 255));
     subdivide(pixmap, 0, 0, size);
@@ -65,10 +68,14 @@ fn written(name : String) : Unit = {
 // triangle of one pixel its pixel, colored by where it stands.
 fn subdivide(pixmap : Epx.Pixmap, x : Int, y : Int, side : Int) : Unit =
     if side == 1 then
-        Epx.putPixel(pixmap, x, y, Epx.rgb(x, y, 255 - x))
+        Epx.putPixel(pixmap, x, y, Epx.rgb(shade(x), shade(y), 255 - shade(x)))
     else {
         let half = side / 2;
         subdivide(pixmap, x + half / 2, y, half);
         subdivide(pixmap, x, y + half, half);
         subdivide(pixmap, x + half, y + half, half)
     }
+
+// A channel from 0 to 255 for an offset from 0 to below `size`.
+fn shade(offset : Int) : Int =
+    offset * 256 / size

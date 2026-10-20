@@ -3,11 +3,12 @@
 //
 // Every backticked path in a tracked document that begins with a directory
 // of the repository names something that is there, or the program says
-// which does not, on standard error, and ends with status 1. Every prose
-// paragraph past about a hundred words is listed on standard output for its
-// writer to read again, a list and not a limit (CLAUDE.md, *Writing*); the
-// log, the proposals and the manual pages are left out. Fenced code is read
-// as neither.
+// which does not, on standard error, and ends with status 1; the plan and
+// the findings are left out, and so is a path under docs/man/, which make
+// man writes at a release. Every prose paragraph past about a hundred words
+// is listed on standard output for its writer to read again, a list and not
+// a limit (CLAUDE.md, *Writing*); the log, the proposals and the manual
+// pages are left out. Fenced code is read as neither.
 //
 //     make test    runs it, as ern run tools/build/docs.erc
 //
@@ -32,12 +33,21 @@ type Reading =
 
 let measure : Int = 100
 
+let notice : String =
+    "paragraphs past about a hundred words, to read again for a turn they may hide:"
+
 export fn main() : Unit = {
     let files = tracked();
     let tops = directories();
-    List.forEach(List.flatMap(List.filter(files, isMeasured), paragraphsIn),
-                 fn(paragraph) = Io.println(shown(paragraph)));
-    let missing = List.unique(List.flatMap(files, fn(file) = missingIn(file, tops)));
+    let long = List.flatMap(List.filter(files, isMeasured), paragraphsIn);
+    if List.isEmpty(long) then
+        Unit
+    else {
+        Io.println(notice);
+        List.forEach(long, fn(paragraph) = Io.println(shown(paragraph)))
+    };
+    let missing =
+        List.unique(List.flatMap(List.filter(files, isChecked), fn(file) = missingIn(file, tops)));
     List.forEach(missing, Io.printlnError);
     if List.isEmpty(missing) then Unit else Os.exit(1)
 }
@@ -111,8 +121,9 @@ fn missingIn(file : String, tops : List(String)) : List(String) =
     })
 
 // The backticked pieces of the text outside fenced code that begin with one
-// of the tops; a wildcard or a metavariable, `<name>`, names no one file, and
-// a piece that ends with "/" names a directory the writer did not mean to pin.
+// of the tops; a wildcard or a metavariable, `<name>`, names no one file, a
+// piece that ends with "/" names a directory the writer did not mean to pin,
+// and a manual page is there only once a release has written it.
 fn pathsIn(text : String, tops : List(String)) : List(String) = {
     let pieces = String.split(unfenced(text), "`");
     List.filterMap(List.indexed(pieces), fn(indexed) = match indexed {
@@ -123,6 +134,7 @@ fn pathsIn(text : String, tops : List(String)) : List(String) = {
 
 fn isPath(piece : String, tops : List(String)) : Bool =
     List.any(tops, fn(top) = String.startsWith(piece, top))
+        && String.startsWith(piece, "docs/man/") == false
         && String.contains(piece, "*") == false
         && String.contains(piece, "<") == false
         && String.endsWith(piece, "/") == false
@@ -152,12 +164,20 @@ fn isFence(line : String) : Bool = {
 // The paragraphs
 //
 
-// Whether a file's paragraphs are measured: the log is history, a proposal
-// is thinking, and a manual page is written by ern doc.
+// Whether a file is the repository's own writing: a manual page is written
+// by ern doc, and what it names is the module's.
+fn isOwn(file : String) : Bool =
+    String.startsWith(file, "docs/man/") == false
+
+// Whether a file's paths are checked: the plan names paths not yet written,
+// and the findings the paths of the tree their readers read.
+fn isChecked(file : String) : Bool =
+    isOwn(file) && file != "docs/plan.md" && file != "docs/findings.md"
+
+// Whether a file's paragraphs are measured: the log is history and a
+// proposal is thinking.
 fn isMeasured(file : String) : Bool =
-    file != "docs/log.md"
-        && String.startsWith(file, "docs/proposals/") == false
-        && String.startsWith(file, "docs/man/") == false
+    isOwn(file) && file != "docs/log.md" && String.startsWith(file, "docs/proposals/") == false
 
 fn paragraphsIn(file : String) : List(Paragraph) =
     paragraphsOf(file, contents(file))
@@ -300,10 +320,11 @@ let readsItems = Test.Case(name = "reads a list item as a paragraph", run = fn()
 })
 
 /// A backticked path under a top is found outside fenced code; one with a
-/// wildcard, a metavariable or a trailing "/" is not, nor one under no top.
+/// wildcard, a metavariable or a trailing "/" is not, nor a manual page, nor
+/// one under no top.
 let findsPaths = Test.Case(name = "finds the backticked paths", run = fn() = {
     let text =
         "see `src/a.ern` and `lib/*/build`, `bin/<name>`, `src/`, `other/x`\n"
-            <> "```\n`src/fenced.ern`\n```\n`docs/b.md`";
+            <> "```\n`src/fenced.ern`\n```\n`docs/b.md`, `docs/man/m.md`";
     Test.equal(pathsIn(text, ["src/", "docs/"]), ["src/a.ern", "docs/b.md"])
 })
