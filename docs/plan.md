@@ -55,7 +55,7 @@ Who draws into the window: each worker after its row, which is the demonstration
 
 And flicker: epx's X11 backend draws off screen by default, `use_off_screen`, and its framebuffer backend double-buffers, `double_buffer`; the window is made with those on, and the experiment shows whether a row drawn at a time flickers.
 
-Designed in a proposal first, after the second cut and before the release 0.2.0; decided 2026-10-20 with the user (the log's *A Window That Shows*), which reverses that part of *Where the Library Stops*.
+Designed in [`proposals/window/proposal.md`](proposals/window/proposal.md), its seven decisions taken as recommended on 2026-10-20 (the log's *The window decided*), built by an agent from it after its experiment, the page read back here; decided 2026-10-20 with the user (the log's *A Window That Shows*), which reverses that part of *Where the Library Stops*.
 
 ## Milestone 5: Whitted's spheres
 
