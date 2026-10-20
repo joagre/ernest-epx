@@ -149,6 +149,7 @@ release: test
 	test -x bin/$(NAME) && mkdir -p build/$(NAME)-$(VERSION)/bin && \
 	    cp bin/$(NAME) build/$(NAME)-$(VERSION)/bin/ || true
 	cp README.md LICENSE build/$(NAME)-$(VERSION)/
+	test -f THIRD_PARTY_LICENSES && cp THIRD_PARTY_LICENSES build/$(NAME)-$(VERSION)/ || true
 	tar -czf build/$(NAME)-$(VERSION).tar.gz -C build $(NAME)-$(VERSION)
 	rm -rf build/$(NAME)-$(VERSION)
 
