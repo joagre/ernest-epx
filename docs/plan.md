@@ -6,7 +6,7 @@ Read *Where we are* first, then the table of milestones; the milestones to come 
 
 ## Where we are
 
-The first cut is built, 2026-10-20: `Epx` with twenty operations over epx's pixmaps, its design in `design.md`, and two examples. `sub` and `scroll` of the proposal wait on epx, milestone 2, and the area operations are epx's exactly, a source rectangle that begins outside the clip landing as epx lands it. Next is milestone 2.
+The first cut is built, 2026-10-20: `Epx` with twenty operations over epx's pixmaps, its design in `design.md`, and two examples. `sub` and `scroll` of the proposal wait on epx, milestone 2, and the area operations are epx's exactly, a source rectangle that begins outside the clip landing as epx lands it. Next is milestone 3, the release 0.1.0; milestone 2 waits on epx and on Ernest.
 
 ## Milestones
 
@@ -25,3 +25,12 @@ The first cut is built, 2026-10-20: `Epx` with twenty operations over epx's pixm
 2. **The reports of `epx_bugs.md` filed with epx**, by the user, and the submodule moved to a release that has the fixes.
 3. **`sub` and `scroll`**, once epx's fixes 1 to 3 are in the submodule, as the proposal's section 2 has them, `scroll`'s `rotate` a type of two named constructors (shape rule 9).
 4. **The next cut**: the drawing functions with the graphics context, `Epx.Gc`, as the proposal's section 2 leaves them, designed in a proposal of their own.
+5. **What waits on Ernest**: the lines the library carried to Ernest's `language_feedback.md`, 123, a foreign function answering `ok` declared `Unit`, and 124, a `Test` function for a fault, each decided in Ernest's plan; when Ernest has them, the thirteen dropped answers and the tests' own helper go.
+
+## Milestone 3: the release 0.1.0
+
+The first cut released as [`release.md`](release.md) says: a fresh clone that builds and passes, the two readers and their findings, `make man` with `docs/man/` committed, the tag `v0.1.0` and the archive published beside it, with notes that say what the release is. The first run of the template's release, whose lessons go to `ernest-template`.
+
+## Milestone 4: the ray tracer
+
+`examples/raytracer.ern`: the Boing ball, a sphere in red and white checks, above a mirror floor, traced with one light, Lambert shading, a highlight and a reflection to a depth of two, over a `Vector` record with its own operators; the rows shared out in turn among a count of processes the command line gives, each monitored, each writing its rows into the one pixmap with `putPixels`, `main` receiving a `Down` for each and then writing the PPM. The third row of `examples/README.md`, run by `make test` with a small count. Decided 2026-10-20 with the user; what writing floats and processes together feels against the principles goes to `language_feedback.md`.
