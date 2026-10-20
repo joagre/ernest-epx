@@ -24,6 +24,7 @@ Clone with `--recursive`: epx and tree_db are git submodules under `erl/`, which
 - `docs/proposals/`: what is designed, a directory for each proposal, from the first one on.
 - [`docs/language_feedback.md`](docs/language_feedback.md): what writing Ernest felt against the principles, carried to Ernest by copy.
 - [`CLAUDE.md`](CLAUDE.md): the working rules.
+- [`docs/epx_bugs.md`](docs/epx_bugs.md): the defects found in epx, each a report for its tracker.
 - [`ACKNOWLEDGMENTS.md`](ACKNOWLEDGMENTS.md): the people this library stands on, by name alone.
 
 The tests live in the modules they test, which `make test` runs; `tools/` holds the checker of the documents, and [`examples/`](examples/README.md) programs that use the library, which `make test` builds and runs too.

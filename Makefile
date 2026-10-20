@@ -21,6 +21,7 @@ ERN_VERSION = 0.4
 LIBS        =
 DEPS        =
 ERL_DEPS    = tree_db epx
+EXAMPLE_SUFFIX = .ppm             # what each example of examples/ writes, named by make test
 
 # The ern on PATH, or ERN=path/to/ern; where its libraries are, beside it as
 # an installation and a checkout each lay them out.
@@ -97,8 +98,8 @@ test: all
 	    mkdir -p build/examples && \
 	    for program in examples/build/*.erc; do \
 	        name=$$(basename $$program .erc); \
-	        $(ERN) run --load-path build $(LOAD_PATH) $$program build/examples/$$name.ppm || exit 1; \
-	        echo "examples/$$name.ern wrote build/examples/$$name.ppm"; \
+	        $(ERN) run --load-path build $(LOAD_PATH) $$program build/examples/$$name$(EXAMPLE_SUFFIX) || exit 1; \
+	        echo "examples/$$name.ern wrote build/examples/$$name$(EXAMPLE_SUFFIX)"; \
 	    done; \
 	fi
 

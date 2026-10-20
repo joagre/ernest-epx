@@ -1032,7 +1032,7 @@ let black : Color = rgb(0, 0, 0)
 
 let transparent : Color = Color(alpha = 0, red = 0, green = 0, blue = 0)
 
-/// design §1: a pixmap is made, filled, written and read back through epx.
+// design §1: a pixmap is made, filled, written and read back through epx.
 let roundTrip = Test.Case(name = "a pixmap made, filled, written and read", run = fn() = {
     let pixmap = create(4, 3, Argb);
     fill(pixmap, rgb(0, 0, 255));
@@ -1041,16 +1041,16 @@ let roundTrip = Test.Case(name = "a pixmap made, filled, written and read", run 
                #(4, 3, rgb(0, 0, 255), rgb(255, 0, 0)))
 })
 
-/// design §1: `putPixels` reads the bytes in the format given and writes
-/// them in the pixmap's.
+// design §1: `putPixels` reads the bytes in the format given and writes
+// them in the pixmap's.
 let putInFormat = Test.Case(name = "putPixels converts the format", run = fn() = {
     let pixmap = create(2, 1, Argb);
     putPixels(pixmap, 0, 0, 2, 1, Bgr, <<3, 2, 1, 6, 5, 4>>);
     Test.equal(getPixels(pixmap, 0, 0, 2, 1), <<255, 1, 2, 3, 255, 4, 5, 6>>)
 })
 
-/// design §1: `copyTo` copies the rectangle at the top left of both
-/// pixmaps, in the target's format.
+// design §1: `copyTo` copies the rectangle at the top left of both
+// pixmaps, in the target's format.
 let copiedTo = Test.Case(name = "copyTo copies the rectangle both hold", run = fn() = {
     let source = create(3, 1, Argb);
     let target = create(2, 2, Rgb);
@@ -1059,8 +1059,8 @@ let copiedTo = Test.Case(name = "copyTo copies the rectangle both hold", run = f
     Test.equal(getPixels(target, 0, 0, 2, 2), <<7, 8, 9, 7, 8, 9, 0, 0, 0, 0, 0, 0>>)
 })
 
-/// design §1: `blendArea` moves the target's color toward the source's by
-/// the alpha, and the target keeps its own alpha.
+// design §1: `blendArea` moves the target's color toward the source's by
+// the alpha, and the target keeps its own alpha.
 let blended = Test.Case(name = "blendArea blends by the alpha", run = fn() = {
     let source = create(1, 1, Argb);
     let target = create(1, 1, Argb);
@@ -1074,7 +1074,7 @@ let blended = Test.Case(name = "blendArea blends by the alpha", run = fn() = {
                  Color(alpha = 100, red = 127, green = 127, blue = 127)))
 })
 
-/// design §1: `fadeArea` blends by the source's alpha scaled by the fade.
+// design §1: `fadeArea` blends by the source's alpha scaled by the fade.
 let faded = Test.Case(name = "fadeArea blends by the source's alpha scaled", run = fn() = {
     let source = create(1, 1, Argb);
     let target = create(1, 1, Argb);
@@ -1087,7 +1087,7 @@ let faded = Test.Case(name = "fadeArea blends by the source's alpha scaled", run
                #(black, Color(alpha = 223, red = 50, green = 50, blue = 50)))
 })
 
-/// design §1: `shadowArea` darkens the target by the source's luminance.
+// design §1: `shadowArea` darkens the target by the source's luminance.
 let shadowed = Test.Case(name = "shadowArea darkens by the luminance", run = fn() = {
     let shaded = fn(color : Color) : Color = {
         let source = create(1, 1, Argb);
@@ -1103,8 +1103,8 @@ let shadowed = Test.Case(name = "shadowArea darkens by the luminance", run = fn(
                 Color(alpha = 127, red = 50, green = 50, blue = 50)])
 })
 
-/// design §1: `scale` writes the whole source at the size given into the
-/// target's top left, and `flip` reverses the rows.
+// design §1: `scale` writes the whole source at the size given into the
+// target's top left, and `flip` reverses the rows.
 let scaledAndFlipped =
     Test.Case(name = "scale writes the source at a size, and flip", run = fn() = {
         let source = create(1, 1, Rgb);
@@ -1118,8 +1118,8 @@ let scaledAndFlipped =
                      <<0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 0, 0, 0>>))
     })
 
-/// design §2: every pixel of a new pixmap is 0 in every channel its format
-/// holds.
+// design §2: every pixel of a new pixmap is 0 in every channel its format
+// holds.
 let newIsZero = Test.Case(name = "a new pixmap is 0 in every channel", run = fn() = {
     let pixmap = create(2, 1, Argb);
     let opaque = create(1, 1, Rgb);
@@ -1127,8 +1127,8 @@ let newIsZero = Test.Case(name = "a new pixmap is 0 in every channel", run = fn(
                #(<<0, 0, 0, 0, 0, 0, 0, 0>>, black))
 })
 
-/// design §2: a pixmap written by another process is written here, and a
-/// copy shares nothing with the first.
+// design §2: a pixmap written by another process is written here, and a
+// copy shares nothing with the first.
 let shared = Test.Case(name = "a pixmap is shared and a copy is not", run = fn() = {
     let pixmap = create(1, 1, Argb);
     let copied = copy(pixmap);
@@ -1137,8 +1137,8 @@ let shared = Test.Case(name = "a pixmap is shared and a copy is not", run = fn()
                #("Returned", white, transparent))
 })
 
-/// design §3: each format is its atom to epx and back, a pixel's bytes in
-/// the order its name lists.
+// design §3: each format is its atom to epx and back, a pixel's bytes in
+// the order its name lists.
 let formatsCross = Test.Case(name = "each format crosses and orders its bytes", run = fn() = {
     let color = Color(alpha = 7, red = 1, green = 2, blue = 3);
     let read = List.map(formats, fn(known) = {
@@ -1155,8 +1155,8 @@ let formatsCross = Test.Case(name = "each format crosses and orders its bytes", 
                 #(Bgr, <<3, 2, 1>>)])
 })
 
-/// design §3: `rgb` is the color of alpha 255, and a format without alpha
-/// reads every pixel with alpha 255.
+// design §3: `rgb` is the color of alpha 255, and a format without alpha
+// reads every pixel with alpha 255.
 let opaqueColors = Test.Case(name = "rgb is opaque, and Rgb reads alpha 255", run = fn() = {
     let pixmap = create(1, 1, Rgb);
     fill(pixmap, Color(alpha = 7, red = 1, green = 2, blue = 3));
@@ -1164,8 +1164,8 @@ let opaqueColors = Test.Case(name = "rgb is opaque, and Rgb reads alpha 255", ru
                #(Color(alpha = 255, red = 1, green = 2, blue = 3), rgb(1, 2, 3)))
 })
 
-/// design §3: an operation crosses as its atom and combines as its
-/// constructor's doc block says.
+// design §3: an operation crosses as its atom and combines as its
+// constructor's doc block says.
 let operations = Test.Case(name = "operationArea combines as each operation says", run = fn() = {
     let source = Color(alpha = 255, red = 200, green = 0, blue = 100);
     let target = Color(alpha = 255, red = 100, green = 10, blue = 200);
@@ -1185,9 +1185,9 @@ let operations = Test.Case(name = "operationArea combines as each operation says
                 Color(alpha = 255, red = 99, green = 9, blue = 199)])
 })
 
-/// design §4: outside the clip `putPixel` writes nothing and `getPixel`
-/// answers opaque black, as it does outside the pixmap, while `getPixels`
-/// reads past the clip.
+// design §4: outside the clip `putPixel` writes nothing and `getPixel`
+// answers opaque black, as it does outside the pixmap, while `getPixels`
+// reads past the clip.
 let clipped = Test.Case(name = "the clip bounds putPixel and getPixel", run = fn() = {
     let pixmap = create(3, 1, Argb);
     fill(pixmap, white);
@@ -1200,8 +1200,8 @@ let clipped = Test.Case(name = "the clip bounds putPixel and getPixel", run = fn
                #(white, black, black, <<255, 255, 255, 255>>))
 })
 
-/// design §4: `fillArea` writes within the clip, and `fill` and `flip` do
-/// not read it.
+// design §4: `fillArea` writes within the clip, and `fill` and `flip` do
+// not read it.
 let clipIgnored = Test.Case(name = "fillArea reads the clip, fill and flip do not", run = fn() = {
     let pixmap = create(1, 2, Rgb);
     setClip(pixmap, 0, 0, 1, 1);
@@ -1214,9 +1214,9 @@ let clipIgnored = Test.Case(name = "fillArea reads the clip, fill and flip do no
                #(<<255, 255, 255, 0, 0, 0>>, <<0, 0, 0, 255, 255, 255>>, <<1, 2, 3, 1, 2, 3>>))
 })
 
-/// design §4: `getPixels` answers the part of its rectangle within the
-/// pixmap, and no bytes for a rectangle of width and height 0, and what it
-/// answered does not change with a later write.
+// design §4: `getPixels` answers the part of its rectangle within the
+// pixmap, and no bytes for a rectangle of width and height 0, and what it
+// answered does not change with a later write.
 let partlyOutside = Test.Case(name = "getPixels answers the part within the pixmap", run = fn() = {
     let pixmap = create(2, 2, Rgb);
     fill(pixmap, rgb(1, 2, 3));
@@ -1228,9 +1228,9 @@ let partlyOutside = Test.Case(name = "getPixels answers the part within the pixm
                #(<<>>, <<1, 2, 3>>, <<1, 2, 3>>, <<>>))
 })
 
-/// design §4: in an area operation a source pixel lands where its place in
-/// the rectangle puts it, the rectangle beginning outside the source or
-/// overlapping itself.
+// design §4: in an area operation a source pixel lands where its place in
+// the rectangle puts it, the rectangle beginning outside the source or
+// overlapping itself.
 let landed = Test.Case(name = "an area operation's pixels land in their places", run = fn() = {
     let source = create(3, 1, Rgb);
     putPixels(source, 0, 0, 3, 1, Rgb, <<1, 1, 1, 2, 2, 2, 3, 3, 3>>);
@@ -1242,8 +1242,8 @@ let landed = Test.Case(name = "an area operation's pixels land in their places",
                #(<<0, 0, 0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 0, 0, 0>>, <<1, 1, 1, 1, 1, 1, 2, 2, 2>>))
 })
 
-/// design §5: the library refuses a channel, an alpha and a fade outside 0
-/// to 255, and bytes of another size, before epx is called.
+// design §5: the library refuses a channel, an alpha and a fade outside 0
+// to 255, and bytes of another size, before epx is called.
 let refused = Test.Case(name = "the library's own faults", run = fn() = {
     let pixmap = create(2, 1, Argb);
     let tooRed = Color(alpha = 255, red = 256, green = 0, blue = 0);
@@ -1262,8 +1262,8 @@ let refused = Test.Case(name = "the library's own faults", run = fn() = {
                 "the bytes are not width times height pixels in the format"])
 })
 
-/// design §5: epx refuses a negative width or height, and its cause names
-/// its function.
+// design §5: epx refuses a negative width or height, and its cause names
+// its function.
 let refusedByEpx = Test.Case(name = "epx's faults", run = fn() = {
     let pixmap = create(1, 1, Argb);
     let made = fn() = {
@@ -1278,8 +1278,8 @@ let refusedByEpx = Test.Case(name = "epx's faults", run = fn() = {
                 "foreign function epx:pixmap_set_clip/2 raised error:badarg"])
 })
 
-/// design §6: `toPpm` writes the header and then each pixel's red, green
-/// and blue, its alpha dropped.
+// design §6: `toPpm` writes the header and then each pixel's red, green
+// and blue, its alpha dropped.
 let ppm = Test.Case(name = "toPpm writes a P6 file", run = fn() = {
     let pixmap = create(2, 1, Argb);
     fill(pixmap, Color(alpha = 0, red = 1, green = 2, blue = 3));
