@@ -12,3 +12,23 @@ The commands run from the repository's root once `make` has built the library, w
 | [`clock_face.ern`](clock_face.ern) | a clock's dial at the time the program runs, in UTC, written to the file named as a PPM image | one context set before each part it draws and read by the drawing functions, a hand drawn as a triangle where a wide line would lie beside its ends, a thin line smoothed by `Antialiased` | `Epx.Gc`'s *The keys* and *In place and shared*, `drawEllipse`, `drawLine`, `drawTriangle`, `toPpm` |
 
 Each is built and run with the library and epx on the load path, `--load-path build --load-path lib/epx/ebin`, as its first comment shows.
+
+## The pictures
+
+What each program draws, from `assets/`, where [`assets/README.md`](../assets/README.md) says how a picture is made.
+
+`mandelbrot.ern`:
+
+![The Mandelbrot set](../assets/mandelbrot.png)
+
+`sierpinski.ern`:
+
+![The Sierpinski gasket](../assets/sierpinski.png)
+
+`raytracer.ern`:
+
+![The Boing ball above a mirror floor](../assets/raytracer.png)
+
+`clock_face.ern`:
+
+![A clock face](../assets/clock_face.png)

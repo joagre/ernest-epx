@@ -10,7 +10,9 @@ The library is two modules over epx, the pixel library for Erlang. `Epx`, over e
 
 Each function but `toPpm` and `drawLine` calls the epx functions its table names, each at most once: the table below for the pixmap's functions, §7's for the context's, §9's for the drawing functions. Where one epx function does a function's work exactly, the function is a `foreign fn` over it, and where it differs, Ernest closes the difference around the call.
 
-The differences closed are these, each stated where its rule is (§2 to §10): a `Color` crosses as the tuple epx takes, and a `Format`, an `Operation` or a `Style` as its atoms; epx's `ok` is `Unit`; a width or a height below 0 is 0; a precondition of §5 or §10 is checked before the call; a new pixmap is filled; a new context's border lies within its shape; a horizontal or vertical line wider than 1 is drawn as a rectangle; and `getPixels` answers a rectangle of width and height 0 without epx, which answers its whole memory for one at `0`, `0`.
+The differences closed are these, each stated where its rule is (§2 to §10): a `Color` crosses as the tuple epx takes, and a `Format`, an `Operation` or a `Style` as its atoms; epx's `ok` is `Unit`; a width or a height below 0 is 0; a precondition of §5 or §10 is checked before the call.
+
+Also closed: a new pixmap is filled; a new context's border lies within its shape; a horizontal or vertical line wider than 1 is drawn as a rectangle; and `getPixels` answers a rectangle of width and height 0 without epx, which answers its whole memory for one at `0`, `0`.
 
 | Function | epx | What it does |
 |---|---|---|
