@@ -1,0 +1,155 @@
+//
+// Clock face: the time of day on a clock's dial, drawn into a pixmap and
+// written as PPM
+//
+// A dial with a border, sixty ticks around its edge, the twelve of the
+// hours longer and thicker, and three hands at the time the program runs:
+// the hour's and the minute's long triangles of two widths, and the
+// second's a thin line, smoothed by the style `Antialiased`. The time is
+// UTC, read from `Clock.now`, since the standard library reads no time
+// zone. The pixmap is written to the file named on the command line as a
+// PPM image, which an image viewer opens. Run with no file, it says how it
+// is called and ends with status 2; a file it cannot write is reported on
+// standard error, and it ends with status 1.
+//
+// What to look at:
+//
+// - A context holds what a drawing function draws with (`Epx.Gc`'s page,
+//   *The keys*): `face`, `drawTick` and `drawSecondHand` set the fill, the
+//   border and the line of one context before each part they draw, and the
+//   drawing functions read them.
+// - A context is changed in place, as a pixmap is (*In place and shared*):
+//   `face` sets the fill's color to the ink once the dial is drawn, and the
+//   hands and the cap drawn after it are filled in the ink.
+// - A hand is a triangle and not a wide line: a line wider than one pixel
+//   that is neither horizontal nor vertical lies beside its ends, not
+//   centered on them (`Epx.drawLine`), where a triangle's corners are its
+//   own.
+// - `hours`, `minutes` and `seconds` take the time apart, and `pointAt`
+//   places a point on the dial: pure arithmetic beside the parts that act,
+//   `main`, `write`, `face`, `drawTick`, `drawHand` and `drawSecondHand`.
+// - `Epx.toPpm` makes the bytes of the file, and `Fs.write` writes them,
+//   its failure a value (report Appendix E.17).
+//
+// Run it from the repository's root once `make` has built the library:
+//
+//     LOAD="--load-path build --load-path lib/epx/ebin"
+//     ern build $LOAD examples/clock_face.ern
+//     ern run $LOAD examples/clock_face.erc build/clock_face.ppm
+//
+
+// The picture's width and height in pixels, the dial's center, and its
+// radius.
+let size : Int = 256
+
+let center : Int = size / 2
+
+let radius : Int = 112
+
+// The colors of the picture.
+let paper : Epx.Color = Epx.rgb(224, 228, 236)
+
+let dial : Epx.Color = Epx.rgb(252, 250, 244)
+
+let ink : Epx.Color = Epx.rgb(32, 32, 40)
+
+let second : Epx.Color = Epx.rgb(200, 30, 30)
+
+export fn main() : Unit =
+    match Os.arguments {
+        [name] ->
+            write(name, Clock.now())
+      | _ -> {
+            Io.printlnError("usage: clock_face file.ppm");
+            Os.exit(2)
+        }
+    }
+
+// The face at the time drawn and written to the file, or why it could not
+// be, on standard error.
+fn write(name : String, time : Int) : Unit = {
+    let pixmap = Epx.create(size, size, Epx.Rgb);
+    Epx.fill(pixmap, paper);
+    face(pixmap, Epx.Gc.create(), time);
+    match Fs.write(Path(name), Epx.toPpm(pixmap), 5000) {
+        Right(_) ->
+            Unit
+      | Left(error) -> {
+            Io.printlnError("clock_face: " <> name <> ": " <> Io.show(error));
+            Os.exit(1)
+        }
+    }
+}
+
+// The dial, its ticks and its hands at the time, drawn with one context.
+fn face(pixmap : Epx.Pixmap, context : Epx.Context, time : Int) : Unit = {
+    Epx.Gc.setFillColor(context, dial);
+    Epx.Gc.setBorderColor(context, ink);
+    Epx.Gc.setBorderWidth(context, 5);
+    Epx.drawEllipse(pixmap, context, center - radius, center - radius, 2 * radius, 2 * radius);
+    Epx.Gc.setForeground(context, ink);
+    List.forEach(List.range(0, 59), fn(mark) = drawTick(pixmap, context, mark));
+    Epx.Gc.setFillColor(context, ink);
+    drawHand(pixmap, context, hours(time) * 5 + minutes(time) / 12, 64, 12);
+    drawHand(pixmap, context, minutes(time), 94, 8);
+    drawSecondHand(pixmap, context, seconds(time));
+    Epx.Gc.setBorderWidth(context, 0);
+    Epx.drawEllipse(pixmap, context, center - 5, center - 5, 10, 10)
+}
+
+// The tick at the mark, the twelve of the hours longer and thicker.
+fn drawTick(pixmap : Epx.Pixmap, context : Epx.Context, mark : Int) : Unit = {
+    let hour = mark % 5 == 0;
+    let inner = if hour then radius - 20 else radius - 12;
+    Epx.Gc.setLineWidth(context, if hour then 4 else 1);
+    match #(pointAt(mark, inner), pointAt(mark, radius - 6)) {
+        #(#(x1, y1), #(x2, y2)) -> Epx.drawLine(pixmap, context, x1, y1, x2, y2)
+    }
+}
+
+// The hand from the center toward the mark, as long as given and as wide
+// at the center: the triangle of its tip and the two corners a quarter
+// turn either side of it.
+fn drawHand(pixmap : Epx.Pixmap,
+            context : Epx.Context,
+            mark : Int,
+            length : Int,
+            width : Int) : Unit =
+    match #(pointAt(mark, length), pointAt(mark + 15, width / 2), pointAt(mark - 15, width / 2)) {
+        #(#(x1, y1), #(x2, y2), #(x3, y3)) ->
+            Epx.drawTriangle(pixmap, context, x1, y1, x2, y2, x3, y3)
+    }
+
+// The second hand, a line from the center toward the mark, one pixel wide
+// in its color.
+fn drawSecondHand(pixmap : Epx.Pixmap, context : Epx.Context, mark : Int) : Unit = {
+    Epx.Gc.setLineWidth(context, 1);
+    Epx.Gc.setLineStyle(context, Epx.Gc.Antialiased);
+    Epx.Gc.setForeground(context, second);
+    match pointAt(mark, 100) {
+        #(x, y) -> Epx.drawLine(pixmap, context, center, center, x, y)
+    }
+}
+
+// The point at the distance from the center toward the mark, one of the
+// dial's sixty, 0 at the top and growing clockwise.
+fn pointAt(mark : Int, distance : Int) : #(Int, Int) = {
+    let angle = 2.0 * Float.pi * Int.toFloat(mark) / 60.0;
+    let reach = Int.toFloat(distance);
+    #(center + Float.round(reach * Float.sin(angle)),
+      center - Float.round(reach * Float.cos(angle)))
+}
+
+// The hour, from 0 to 11, the minute and the second of the day the time
+// falls in, the time being milliseconds since the epoch, in UTC.
+fn hours(time : Int) : Int =
+    secondOfDay(time) / 3600 % 12
+
+fn minutes(time : Int) : Int =
+    secondOfDay(time) / 60 % 60
+
+fn seconds(time : Int) : Int =
+    secondOfDay(time) % 60
+
+fn secondOfDay(time : Int) : Int =
+    time / 1000 % 86400

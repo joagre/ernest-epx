@@ -1,0 +1,929 @@
+/// Graphics contexts, the colors, the styles and the widths `Epx`'s
+/// drawing functions draw with, held outside any process over epx's
+/// graphics context.
+///
+/// Use it to make the `Epx.Context` that `Epx.drawPoint`, `Epx.drawLine`,
+/// `Epx.drawRectangle`, `Epx.drawEllipse` and `Epx.drawTriangle` take, and
+/// to set what they draw with. It is in the library `Epx` is in, and a
+/// program that has `Epx` on its load path has it.
+///
+/// **The keys.** A context has eight keys, each set by its setter and read
+/// by its getter:
+///
+/// - the fill's style and color, which `drawRectangle`, `drawEllipse` and
+///   `drawTriangle` fill with; a fill style of `None` is no fill;
+/// - the line's style and width, which `drawLine` draws with, `drawPoint`
+///   the style alone, and `drawTriangle` its edges where it has no fill;
+/// - the border's style, color and width, which `drawRectangle` and
+///   `drawEllipse` draw their border with, within the shape;
+/// - the foreground, the color of a point, a line and a triangle's edges.
+///
+/// **The defaults.** `create` makes a context of epx's defaults: a fill of
+/// `Solid` in opaque red, a line of `Solid` one pixel wide, a border of
+/// `Solid` in opaque black and of width 0, and an opaque blue foreground.
+///
+/// **In place and shared.** A context is not a value. A setter changes it
+/// in place, and every process that holds it sees the change: a context
+/// sent in a message, or captured by a spawned function, is the same
+/// context there. A drawing function reads the keys it needs as it runs, so
+/// that a key another process sets meanwhile is read before the change or
+/// after it. `copy` makes a context that shares nothing with the first. A
+/// context lives while a process holds it, and the host frees it once none
+/// does: there is no `close`. It stays on the node that made it.
+///
+/// **Widths and colors.** A width below 0 is 0, and a setter given a width
+/// above 16777216 faults, with the cause `a width or height is beyond
+/// 16777216`. A setter given a `Color` with a channel outside 0 to 255
+/// faults, with the cause `a channel of a Color is outside 0 to 255`.
+///
+/// ## Examples
+///
+/// A context set to draw a thick white line, and the line drawn:
+///
+/// ```ernest
+/// {
+///     let pixmap = Epx.create(5, 5, Epx.Rgb);
+///     let context = Epx.Gc.create();
+///     Epx.Gc.setForeground(context, Epx.rgb(255, 255, 255));
+///     Epx.Gc.setLineWidth(context, 3);
+///     Epx.drawLine(pixmap, context, 0, 2, 4, 2);
+///     #(Epx.getPixel(pixmap, 2, 1), Epx.getPixel(pixmap, 2, 4))
+/// }
+/// // => #(Color(alpha = 255, red = 255, green = 255, blue = 255), Color(alpha = 255, red = 0, green = 0, blue = 0))
+/// ```
+///
+/// A circle with a border and no fill, written to a file as PPM:
+///
+/// ```ernest
+/// {
+///     let pixmap = Epx.create(64, 64, Epx.Rgb);
+///     let context = Epx.Gc.create();
+///     Epx.Gc.setFillStyle(context, None);
+///     Epx.Gc.setBorderColor(context, Epx.rgb(255, 255, 255));
+///     Epx.Gc.setBorderWidth(context, 3);
+///     Epx.drawEllipse(pixmap, context, 2, 2, 60, 60);
+///     Fs.write(Path("circle.ppm"), Epx.toPpm(pixmap), 5000)
+/// }
+/// ```
+///
+/// ## See also
+///
+/// `Epx` for the pixmaps and the drawing functions.
+///
+/// since 0.2.0
+
+//
+// Types
+//
+
+/// How a drawing function writes a pixel in a color. A context's line and
+/// border each have one, and its fill an `Optional(Style)`, of which `None`
+/// is no fill.
+///
+/// ### Examples
+///
+/// ```ernest
+/// Epx.Gc.lineStyle(Epx.Gc.create())
+/// // => Solid
+/// ```
+export type Style =
+    /// The color written as it is, its alpha among its channels.
+    Solid
+  /// The color combined with the pixel as the operation `Epx.SrcBlend`
+  /// combines a source pixel with a target pixel: each channel of the
+  /// pixel, alpha among them, moves toward the color's by the color's
+  /// alpha, and an opaque color is written as it is.
+  | Blend
+  /// As `Blend`, and in a line one pixel wide that is neither horizontal nor
+  /// vertical, and along the edge of an ellipse's fill, a pixel the edge
+  /// passes through is blended by how near the edge passes to it.
+  | Antialiased
+
+//
+// Making a context
+//
+
+/// A new context of epx's defaults: a fill of `Solid` in opaque red, a
+/// line of `Solid` one pixel wide, a border of `Solid` in opaque black and
+/// of width 0, and an opaque blue foreground.
+///
+/// ### Errors
+///
+/// Faults where the host cannot allocate the context, with epx's cause:
+/// `foreign function epx:gc_create/0 raised error:badarg`.
+///
+/// ### Examples
+///
+/// ```ernest
+/// {
+///     let context = Epx.Gc.create();
+///     #(Epx.Gc.fillStyle(context), Epx.Gc.lineWidth(context), Epx.Gc.borderWidth(context))
+/// }
+/// // => #(Some(Solid), 1, 0)
+/// ```
+export fn create() : Epx.Context = {
+    let context = rawCreate();
+    // epx's own context draws a border outside its rectangle, a pixel off
+    // (design §8, epx_bugs.md 11).
+    setBorderStyle(context, Solid);
+    context
+}
+
+foreign fn rawCreate() : Epx.Context =
+    "epx:gc_create/0"
+
+/// A new context with the same keys, which shares nothing with the first.
+///
+/// ### Errors
+///
+/// Faults where the host cannot allocate the context, with epx's cause:
+/// `foreign function epx:gc_copy/1 raised error:badarg`.
+///
+/// ### Examples
+///
+/// ```ernest
+/// {
+///     let context = Epx.Gc.create();
+///     let copied = Epx.Gc.copy(context);
+///     Epx.Gc.setLineWidth(context, 5);
+///     #(Epx.Gc.lineWidth(context), Epx.Gc.lineWidth(copied))
+/// }
+/// // => #(5, 1)
+/// ```
+export foreign fn copy(context : Epx.Context) : Epx.Context =
+    "epx:gc_copy/1"
+
+//
+// The fill
+//
+
+/// Sets the style the context's fill is drawn by, `None` for no fill.
+///
+/// ### Examples
+///
+/// ```ernest
+/// {
+///     let context = Epx.Gc.create();
+///     Epx.Gc.setFillStyle(context, Some(Epx.Gc.Blend));
+///     Epx.Gc.fillStyle(context)
+/// }
+/// // => Some(Blend)
+/// ```
+export fn setFillStyle(context : Epx.Context, style : Optional(Style)) : Unit =
+    setStyle(context, "fill_style", match style {
+        Some(given) -> styleAtoms(given)
+      | None -> []
+    })
+
+/// The style the context's fill is drawn by, `None` where it has no fill.
+///
+/// ### Errors
+///
+/// Faults on a style that foreign code set and that is none of `Style`'s,
+/// with the cause `the context's style is none of Style's`.
+///
+/// ### Examples
+///
+/// ```ernest
+/// {
+///     let context = Epx.Gc.create();
+///     Epx.Gc.setFillStyle(context, None);
+///     Epx.Gc.fillStyle(context)
+/// }
+/// // => None
+/// ```
+export fn fillStyle(context : Epx.Context) : Optional(Style) = {
+    let atoms = rawGetStyle(context, Foreign.atom("fill_style"));
+    if List.isEmpty(atoms) then None else Some(styleOf(atoms))
+}
+
+/// Sets the color the context's fill is drawn in.
+///
+/// ### Errors
+///
+/// Faults on a color with a channel outside 0 to 255, with the cause `a
+/// channel of a Color is outside 0 to 255`.
+///
+/// ### Examples
+///
+/// ```ernest
+/// {
+///     let context = Epx.Gc.create();
+///     Epx.Gc.setFillColor(context, Epx.rgb(0, 128, 255));
+///     Epx.Gc.fillColor(context)
+/// }
+/// // => Color(alpha = 255, red = 0, green = 128, blue = 255)
+/// ```
+export fn setFillColor(context : Epx.Context, color : Epx.Color) : Unit =
+    setColor(context, "fill_color", color)
+
+/// The color the context's fill is drawn in.
+///
+/// ### Examples
+///
+/// ```ernest
+/// Epx.Gc.fillColor(Epx.Gc.create())
+/// // => Color(alpha = 255, red = 255, green = 0, blue = 0)
+/// ```
+export fn fillColor(context : Epx.Context) : Epx.Color =
+    colorOf(rawGetColor(context, Foreign.atom("fill_color")))
+
+//
+// The line
+//
+
+/// Sets the style a point, a line and a triangle's edges are drawn by.
+///
+/// ### Examples
+///
+/// ```ernest
+/// {
+///     let context = Epx.Gc.create();
+///     Epx.Gc.setLineStyle(context, Epx.Gc.Antialiased);
+///     Epx.Gc.lineStyle(context)
+/// }
+/// // => Antialiased
+/// ```
+export fn setLineStyle(context : Epx.Context, style : Style) : Unit =
+    setStyle(context, "line_style", styleAtoms(style))
+
+/// The style a point, a line and a triangle's edges are drawn by.
+///
+/// ### Errors
+///
+/// Faults on a style that foreign code set and that is none of `Style`'s,
+/// with the cause `the context's style is none of Style's`.
+///
+/// ### Examples
+///
+/// ```ernest
+/// Epx.Gc.lineStyle(Epx.Gc.create())
+/// // => Solid
+/// ```
+export fn lineStyle(context : Epx.Context) : Style =
+    styleOf(rawGetStyle(context, Foreign.atom("line_style")))
+
+/// Sets the width a line and a triangle's edges are drawn in, in pixels. A
+/// width below 0 is 0.
+///
+/// ### Errors
+///
+/// Faults on a width above 16777216, with the cause `a width or height is
+/// beyond 16777216`.
+///
+/// ### Examples
+///
+/// ```ernest
+/// {
+///     let context = Epx.Gc.create();
+///     Epx.Gc.setLineWidth(context, -3);
+///     Epx.Gc.lineWidth(context)
+/// }
+/// // => 0
+/// ```
+export fn setLineWidth(context : Epx.Context, width : Int) : Unit =
+    setWidth(context, "line_width", width)
+
+/// The width a line and a triangle's edges are drawn in, in pixels.
+///
+/// ### Examples
+///
+/// ```ernest
+/// Epx.Gc.lineWidth(Epx.Gc.create())
+/// // => 1
+/// ```
+export fn lineWidth(context : Epx.Context) : Int =
+    rawGetWidth(context, Foreign.atom("line_width"))
+
+//
+// The border
+//
+
+/// Sets the style the border of a rectangle and of an ellipse is drawn by.
+///
+/// ### Examples
+///
+/// ```ernest
+/// {
+///     let context = Epx.Gc.create();
+///     Epx.Gc.setBorderStyle(context, Epx.Gc.Blend);
+///     Epx.Gc.borderStyle(context)
+/// }
+/// // => Blend
+/// ```
+export fn setBorderStyle(context : Epx.Context, style : Style) : Unit =
+    // design §8: the border lies within its shape.
+    setStyle(context, "border_style", styleAtoms(style) <> [inside])
+
+/// The style the border of a rectangle and of an ellipse is drawn by.
+///
+/// ### Errors
+///
+/// Faults on a style that foreign code set and that is none of `Style`'s,
+/// with the cause `the context's style is none of Style's`.
+///
+/// ### Examples
+///
+/// ```ernest
+/// Epx.Gc.borderStyle(Epx.Gc.create())
+/// // => Solid
+/// ```
+export fn borderStyle(context : Epx.Context) : Style = {
+    // epx answers the placement inside as both inside and center
+    // (design §8, epx_bugs.md 11).
+    let placed = rawGetStyle(context, Foreign.atom("border_style"));
+    styleOf(List.filter(placed, fn(atom) = atom != inside && atom != center))
+}
+
+/// Sets the color the border of a rectangle and of an ellipse is drawn in.
+///
+/// ### Errors
+///
+/// Faults on a color with a channel outside 0 to 255, with the cause `a
+/// channel of a Color is outside 0 to 255`.
+///
+/// ### Examples
+///
+/// ```ernest
+/// {
+///     let context = Epx.Gc.create();
+///     Epx.Gc.setBorderColor(context, Epx.rgb(255, 255, 255));
+///     Epx.Gc.borderColor(context)
+/// }
+/// // => Color(alpha = 255, red = 255, green = 255, blue = 255)
+/// ```
+export fn setBorderColor(context : Epx.Context, color : Epx.Color) : Unit =
+    setColor(context, "border_color", color)
+
+/// The color the border of a rectangle and of an ellipse is drawn in.
+///
+/// ### Examples
+///
+/// ```ernest
+/// Epx.Gc.borderColor(Epx.Gc.create())
+/// // => Color(alpha = 255, red = 0, green = 0, blue = 0)
+/// ```
+export fn borderColor(context : Epx.Context) : Epx.Color =
+    colorOf(rawGetColor(context, Foreign.atom("border_color")))
+
+/// Sets the width of the border of a rectangle and of an ellipse, in
+/// pixels. A width below 0 is 0, and a border of width 0 is none where the
+/// shape has a fill.
+///
+/// ### Errors
+///
+/// Faults on a width above 16777216, with the cause `a width or height is
+/// beyond 16777216`.
+///
+/// ### Examples
+///
+/// ```ernest
+/// {
+///     let context = Epx.Gc.create();
+///     Epx.Gc.setBorderWidth(context, 4);
+///     Epx.Gc.borderWidth(context)
+/// }
+/// // => 4
+/// ```
+export fn setBorderWidth(context : Epx.Context, width : Int) : Unit =
+    setWidth(context, "border_width", width)
+
+/// The width of the border of a rectangle and of an ellipse, in pixels.
+///
+/// ### Examples
+///
+/// ```ernest
+/// Epx.Gc.borderWidth(Epx.Gc.create())
+/// // => 0
+/// ```
+export fn borderWidth(context : Epx.Context) : Int =
+    rawGetWidth(context, Foreign.atom("border_width"))
+
+//
+// The foreground
+//
+
+/// Sets the color a point, a line and a triangle's edges are drawn in.
+///
+/// ### Errors
+///
+/// Faults on a color with a channel outside 0 to 255, with the cause `a
+/// channel of a Color is outside 0 to 255`.
+///
+/// ### Examples
+///
+/// ```ernest
+/// {
+///     let context = Epx.Gc.create();
+///     Epx.Gc.setForeground(context, Epx.Color(alpha = 128, red = 0, green = 0, blue = 0));
+///     Epx.Gc.foreground(context)
+/// }
+/// // => Color(alpha = 128, red = 0, green = 0, blue = 0)
+/// ```
+export fn setForeground(context : Epx.Context, color : Epx.Color) : Unit =
+    setColor(context, "foreground_color", color)
+
+/// The color a point, a line and a triangle's edges are drawn in.
+///
+/// ### Examples
+///
+/// ```ernest
+/// Epx.Gc.foreground(Epx.Gc.create())
+/// // => Color(alpha = 255, red = 0, green = 0, blue = 255)
+/// ```
+export fn foreground(context : Epx.Context) : Epx.Color =
+    colorOf(rawGetColor(context, Foreign.atom("foreground_color")))
+
+//
+// What crosses to epx
+//
+
+// A key set: epx's `gc_set` answers `ok`.
+fn setStyle(context : Epx.Context, key : String, atoms : List(Foreign.Term)) : Unit = {
+    let _ = rawSetStyle(context, Foreign.atom(key), atoms);
+    Unit
+}
+
+fn setColor(context : Epx.Context, key : String, color : Epx.Color) : Unit = {
+    let _ = rawSetColor(context, Foreign.atom(key), channels(color));
+    Unit
+}
+
+fn setWidth(context : Epx.Context, key : String, width : Int) : Unit = {
+    let _ = rawSetWidth(context, Foreign.atom(key), extent(width));
+    Unit
+}
+
+foreign fn rawSetStyle(context : Epx.Context,
+                       key : Foreign.Term,
+                       style : List(Foreign.Term)) : Foreign.Term =
+    "epx:gc_set/3"
+
+foreign fn rawSetColor(context : Epx.Context,
+                       key : Foreign.Term,
+                       color : #(Int, Int, Int, Int)) : Foreign.Term =
+    "epx:gc_set/3"
+
+foreign fn rawSetWidth(context : Epx.Context, key : Foreign.Term, width : Int) : Foreign.Term =
+    "epx:gc_set/3"
+
+foreign fn rawGetStyle(context : Epx.Context, key : Foreign.Term) : List(Foreign.Term) =
+    "epx:gc_get/2"
+
+foreign fn rawGetColor(context : Epx.Context, key : Foreign.Term) : #(Int, Int, Int, Int) =
+    "epx:gc_get/2"
+
+foreign fn rawGetWidth(context : Epx.Context, key : Foreign.Term) : Int =
+    "epx:gc_get/2"
+
+// The atoms epx names a style by (design §8).
+fn styleAtoms(style : Style) : List(Foreign.Term) =
+    match style {
+        Solid -> [Foreign.atom("solid")]
+      | Blend -> [Foreign.atom("blend")]
+      | Antialiased -> [Foreign.atom("blend"), Foreign.atom("aalias")]
+    }
+
+// The style of the atoms epx answers, in the order it answers them
+// (design §8).
+fn styleOf(atoms : List(Foreign.Term)) : Style =
+    match List.find(styles, fn(known) = styleAtoms(known) == atoms) {
+        Some(found) -> found
+      | None -> fault("the context's style is none of Style's")
+    }
+
+let styles : List(Style) = [Solid, Blend, Antialiased]
+
+// The placement of a border within its shape, and the atom epx answers
+// beside it (design §8).
+let inside : Foreign.Term = Foreign.atom("inside")
+
+let center : Foreign.Term = Foreign.atom("center")
+
+// A color as epx answers it, `{A, R, G, B}`.
+fn colorOf(channels : #(Int, Int, Int, Int)) : Epx.Color =
+    match channels {
+        #(alpha, red, green, blue) ->
+            Epx.Color(alpha = alpha, red = red, green = green, blue = blue)
+    }
+
+// The checks `Epx` makes of a width and a color, which it keeps private:
+// the same rules and causes (design §5, §10).
+
+// The farthest from 0 a width goes (design §4).
+let limit : Int = 16777216
+
+// A width as epx takes it: one below 0 is 0, and one past the limit
+// faults (design §7).
+fn extent(value : Int) : Int =
+    if value > limit then
+        fault("a width or height is beyond 16777216")
+    else if value < 0 then
+        0
+    else
+        value
+
+// A color as epx takes it, `{A, R, G, B}`, once each channel is known to
+// be in range: epx takes a channel outside 0 to 255 as the nearer end
+// (design §10).
+fn channels(color : Epx.Color) : #(Int, Int, Int, Int) =
+    if isByte(color.alpha) && isByte(color.red) && isByte(color.green) && isByte(color.blue) then
+        #(color.alpha, color.red, color.green, color.blue)
+    else
+        fault("a channel of a Color is outside 0 to 255")
+
+fn isByte(value : Int) : Bool =
+    value >= 0 && value <= 255
+
+//
+// Tests
+//
+
+// What ends a process that runs `f`: the cause where it faults, and its
+// reason as `Io.show` writes it otherwise.
+fn ending(f : () -> Unit) : String receiving Down = {
+    let _ = spawnMonitored(f, fn(down) = down);
+    receive {
+        down ->
+            match down.reason {
+                Fault(cause) -> cause
+              | reason -> Io.show(reason)
+            }
+    }
+}
+
+let white : Epx.Color = Epx.rgb(255, 255, 255)
+
+let black : Epx.Color = Epx.rgb(0, 0, 0)
+
+let red : Epx.Color = Epx.rgb(255, 0, 0)
+
+let blue : Epx.Color = Epx.rgb(0, 0, 255)
+
+// A white pixmap of that size, in `Rgb`.
+fn blank(width : Int, height : Int) : Epx.Pixmap = {
+    let pixmap = Epx.create(width, height, Epx.Rgb);
+    Epx.fill(pixmap, white);
+    pixmap
+}
+
+// Each pixel of the pixmap's row `y` as a letter: `.` white, `B` black,
+// `R` red, `L` blue, and `?` any other color.
+fn row(pixmap : Epx.Pixmap, y : Int) : String =
+    String.join(List.map(List.range(0, Epx.width(pixmap) - 1),
+                         fn(x) = letter(Epx.getPixel(pixmap, x, y))),
+                "")
+
+fn rows(pixmap : Epx.Pixmap) : List(String) =
+    List.map(List.range(0, Epx.height(pixmap) - 1), fn(y) = row(pixmap, y))
+
+fn letter(color : Epx.Color) : String =
+    if color == white then
+        "."
+    else if color == black then
+        "B"
+    else if color == red then
+        "R"
+    else if color == blue then
+        "L"
+    else
+        "?"
+
+// design §3: a context is equal to itself and to no other, its copy among
+// them.
+let compared = Test.Case(name = "a context is equal to itself alone", run = fn() = {
+    let context = create();
+    let same = context;
+    Test.equal(#(context == same, context == copy(context)), #(true, false))
+})
+
+// design §7: a new context has epx's defaults, its border's style read as
+// Solid.
+let defaults = Test.Case(name = "a new context has epx's defaults", run = fn() = {
+    let context = create();
+    Test.equal(#(fillStyle(context),
+                 fillColor(context),
+                 lineStyle(context),
+                 lineWidth(context),
+                 borderStyle(context),
+                 borderColor(context),
+                 borderWidth(context),
+                 foreground(context)),
+               #(Some(Solid), red, Solid, 1, Solid, black, 0, blue))
+})
+
+// design §7: each getter answers what its setter last set.
+let setAndRead = Test.Case(name = "each key is read as it was set", run = fn() = {
+    let context = create();
+    let translucent = Epx.Color(alpha = 7, red = 1, green = 2, blue = 3);
+    setFillStyle(context, Some(Blend));
+    setFillColor(context, translucent);
+    setLineStyle(context, Antialiased);
+    setLineWidth(context, 16777216);
+    setBorderStyle(context, Blend);
+    setBorderColor(context, white);
+    setBorderWidth(context, 9);
+    setForeground(context, Epx.rgb(4, 5, 6));
+    let first =
+        #(fillStyle(context),
+          fillColor(context),
+          lineStyle(context),
+          lineWidth(context),
+          borderStyle(context),
+          borderColor(context),
+          borderWidth(context),
+          foreground(context));
+    setFillStyle(context, None);
+    setBorderStyle(context, Antialiased);
+    Test.equal(#(first, fillStyle(context), borderStyle(context)),
+               #(#(Some(Blend),
+                   translucent,
+                   Antialiased,
+                   16777216,
+                   Blend,
+                   white,
+                   9,
+                   Epx.rgb(4, 5, 6)),
+                 None,
+                 Antialiased))
+})
+
+// design §7: a width below 0 is 0.
+let widthBelowZero = Test.Case(name = "a width below 0 is 0", run = fn() = {
+    let context = create();
+    setLineWidth(context, -1);
+    setBorderWidth(context, -16777217);
+    Test.equal(#(lineWidth(context), borderWidth(context)), #(0, 0))
+})
+
+// design §7: a context set by another process is set here, and a copy
+// shares nothing with the first.
+let shared = Test.Case(name = "a context is shared and a copy is not", run = fn() = {
+    let context = create();
+    let copied = copy(context);
+    let ended = ending(fn() = setForeground(context, white));
+    Test.equal(#(ended, foreground(context), foreground(copied)), #("Returned", white, blue))
+})
+
+// design §8: each style crosses as its atoms, the border's beside the
+// placement inside, and no fill as no atoms.
+let stylesCross = Test.Case(name = "each style crosses as its atoms", run = fn() = {
+    let context = create();
+    let read = fn(key : String) : List(Foreign.Term) = rawGetStyle(context, Foreign.atom(key));
+    let atoms = fn(names : List(String)) : List(Foreign.Term) = List.map(names, Foreign.atom);
+    let crossed = List.map(styles, fn(style) = {
+        setLineStyle(context, style);
+        setBorderStyle(context, style);
+        #(read("line_style") == styleAtoms(style),
+          List.filter(read("border_style"), fn(atom) = atom != center)
+              == styleAtoms(style) <> [inside])
+    });
+    setFillStyle(context, None);
+    Test.equal(#(crossed,
+                 read("fill_style") == [],
+                 styleAtoms(Antialiased) == atoms(["blend", "aalias"])),
+               #([#(true, true), #(true, true), #(true, true)], true, true))
+})
+
+// design §8: Solid writes the color's alpha as it is, and Blend combines
+// it with the pixel as SrcBlend does.
+let solidAndBlend = Test.Case(name = "Solid writes the color, Blend blends it", run = fn() = {
+    let translucent = Epx.Color(alpha = 128, red = 0, green = 0, blue = 0);
+    let drawn = fn(style : Style) : Epx.Color = {
+        let pixmap = Epx.create(1, 1, Epx.Argb);
+        Epx.fill(pixmap, white);
+        let context = create();
+        setLineStyle(context, style);
+        setForeground(context, translucent);
+        Epx.drawPoint(pixmap, context, 0, 0);
+        Epx.getPixel(pixmap, 0, 0)
+    };
+    let source = Epx.create(1, 1, Epx.Argb);
+    let target = Epx.create(1, 1, Epx.Argb);
+    Epx.fill(source, translucent);
+    Epx.fill(target, white);
+    Epx.operationArea(source, target, Epx.SrcBlend, 0, 0, 0, 0, 1, 1);
+    Test.equal(#(drawn(Solid), drawn(Blend), drawn(Antialiased)),
+               #(translucent, Epx.getPixel(target, 0, 0), Epx.getPixel(target, 0, 0)))
+})
+
+// design §8: Antialiased smooths a line of width 1 that is neither
+// horizontal nor vertical and the edge of an ellipse's fill, where Blend
+// writes each pixel whole.
+let antialiased = Test.Case(name = "Antialiased smooths a thin line and an ellipse", run = fn() = {
+    let partial = fn(style : Style) : #(Bool, Bool) = {
+        let context = create();
+        setLineStyle(context, style);
+        setFillStyle(context, Some(style));
+        setForeground(context, black);
+        setFillColor(context, black);
+        let line = blank(16, 6);
+        Epx.drawLine(line, context, 0, 0, 15, 5);
+        let ellipse = blank(16, 12);
+        Epx.drawEllipse(ellipse, context, 1, 1, 13, 9);
+        #(List.any(rows(line), fn(text) = String.contains(text, "?")),
+          List.any(rows(ellipse), fn(text) = String.contains(text, "?")))
+    };
+    Test.equal(#(partial(Blend), partial(Antialiased)), #(#(false, false), #(true, true)))
+})
+
+// design §8: a style that foreign code set and that is none of Style's
+// faults where it is read.
+let foreignStyle = Test.Case(name = "a style none of Style's faults", run = fn() = {
+    let context = create();
+    let _ = rawSetStyle(context, Foreign.atom("line_style"), [Foreign.atom("sum")]);
+    let read = fn() = {
+        let _ = lineStyle(context);
+        Unit
+    };
+    Test.equal(ending(read), "the context's style is none of Style's")
+})
+
+//
+// Tests of `Epx`'s drawing functions
+//
+
+// They stand here, since a context is made and set by this module, which
+// `Epx` cannot name: report §4.1 refuses a cycle.
+
+// design §9: a point is the foreground at its pixel, within the clip, and
+// the line's width is not read.
+let point = Test.Case(name = "drawPoint sets one pixel in the foreground", run = fn() = {
+    let pixmap = blank(3, 1);
+    let context = create();
+    setLineWidth(context, 5);
+    Epx.drawPoint(pixmap, context, 1, 0);
+    Epx.setClip(pixmap, 0, 0, 1, 1);
+    Epx.drawPoint(pixmap, context, 2, 0);
+    Epx.drawPoint(pixmap, context, 7, 7);
+    Epx.setClip(pixmap, 0, 0, 3, 1);
+    Test.equal(row(pixmap, 0), ".L.")
+})
+
+// design §9: a line of width 0 draws nothing, one of width 1 both its
+// ends, and a horizontal or vertical one wider the rectangle across it,
+// width / 2 above or left of it.
+let lines = Test.Case(name = "drawLine draws by the line's width", run = fn() = {
+    let drawn = fn(width : Int) : List(String) = {
+        let pixmap = blank(7, 7);
+        let context = create();
+        setLineWidth(context, width);
+        Epx.drawLine(pixmap, context, 1, 1, 5, 1);
+        Epx.drawLine(pixmap, context, 5, 6, 5, 4);
+        rows(pixmap)
+    };
+    Test.equal(List.map([0, 1, 2, 3], drawn),
+               [[".......", ".......", ".......", ".......", ".......", ".......", "......."],
+                [".......", ".LLLLL.", ".......", ".......", ".....L.", ".....L.", ".....L."],
+                [".LLLLL.", ".LLLLL.", ".......", ".......", "....LL.", "....LL.", "....LL."],
+                [".LLLLL.", ".LLLLL.", ".LLLLL.", ".......", "....LLL", "....LLL", "....LLL"]])
+})
+
+// design §9: a horizontal or vertical line wider than 1 is written within
+// the clip and within the pixmap, at the last row and column among them,
+// and one wholly outside writes nothing.
+let linesClipped = Test.Case(name = "a wide line stays within the clip", run = fn() = {
+    let context = create();
+    setLineWidth(context, 9);
+    let edges = blank(4, 2);
+    Epx.drawLine(edges, context, 0, 1, 3, 1);
+    let corner = blank(6, 3);
+    Epx.drawLine(corner, context, 5, 0, 5, 1);
+    let outside = blank(4, 2);
+    Epx.drawLine(outside, context, 0, -100, 3, -100);
+    Epx.drawLine(outside, context, 100, 0, 100, 1);
+    let clipped = blank(5, 5);
+    Epx.setClip(clipped, 1, 1, 3, 3);
+    setLineWidth(context, 3);
+    Epx.drawLine(clipped, context, 0, 3, 4, 3);
+    Epx.setClip(clipped, 0, 0, 5, 5);
+    Test.equal(#(rows(edges), rows(corner), rows(outside), rows(clipped)),
+               #(["LLLL", "LLLL"],
+                 [".LLLLL", ".LLLLL", "......"],
+                 ["....", "...."],
+                 [".....", ".....", ".LLL.", ".LLL.", "....."]))
+})
+
+// design §9: a rectangle's border lies within it and its fill within the
+// border; with no fill the border alone is drawn, one pixel wide where its
+// width is 0; with a fill a border of width 0 is none.
+let rectangles = Test.Case(name = "drawRectangle's border lies within it", run = fn() = {
+    let drawn = fn(fill : Optional(Style), width : Int) : List(String) = {
+        let pixmap = blank(8, 6);
+        let context = create();
+        setFillStyle(context, fill);
+        setBorderWidth(context, width);
+        Epx.drawRectangle(pixmap, context, 1, 1, 6, 4);
+        rows(pixmap)
+    };
+    Test.equal([drawn(Some(Solid), 0), drawn(Some(Solid), 1), drawn(None, 0), drawn(None, 2)],
+               [["........", ".RRRRRR.", ".RRRRRR.", ".RRRRRR.", ".RRRRRR.", "........"],
+                ["........", ".BBBBBB.", ".BRRRRB.", ".BRRRRB.", ".BBBBBB.", "........"],
+                ["........", ".BBBBBB.", ".B....B.", ".B....B.", ".BBBBBB.", "........"],
+                ["........", ".BBBBBB.", ".BBBBBB.", ".BBBBBB.", ".BBBBBB.", "........"]])
+})
+
+// design §9: an ellipse covers one more column and row than an even width
+// and height, draws nothing below a width or height of 2, and its border
+// is a ring the border's width and one across.
+let ellipses = Test.Case(name = "drawEllipse covers its radii and its ring", run = fn() = {
+    let drawn =
+        fn(fill : Optional(Style), border : Int, width : Int, height : Int) : List(String) = {
+            let pixmap = blank(9, 7);
+            let context = create();
+            setFillStyle(context, fill);
+            setBorderWidth(context, border);
+            Epx.drawEllipse(pixmap, context, 1, 1, width, height);
+            rows(pixmap)
+        };
+    let empty =
+        [".........", ".........", ".........", ".........", ".........", ".........", "........."];
+    Test.equal([drawn(Some(Solid), 0, 6, 4), drawn(None, 0, 6, 4), drawn(Some(Solid), 0, 1, 4)],
+               [[".........",
+                 "...RRR...",
+                 ".RRRRRRR.",
+                 ".RRRRRRR.",
+                 ".RRRRRRR.",
+                 "...RRR...",
+                 "........."],
+                [".........",
+                 "...BBB...",
+                 ".BB...BB.",
+                 ".B.....B.",
+                 ".BB...BB.",
+                 "...BBB...",
+                 "........."],
+                empty])
+})
+
+// design §9: a triangle with a fill covers its corners and edges, and with
+// no fill is its edges in the foreground.
+let triangles = Test.Case(name = "drawTriangle fills or draws its edges", run = fn() = {
+    let drawn = fn(fill : Optional(Style)) : List(String) = {
+        let pixmap = blank(5, 5);
+        let context = create();
+        setFillStyle(context, fill);
+        Epx.drawTriangle(pixmap, context, 0, 0, 4, 0, 0, 4);
+        rows(pixmap)
+    };
+    Test.equal(#(drawn(Some(Solid)), drawn(None)),
+               #(["RRRRR", "RRRR.", "RRR..", "RR...", "R...."],
+                 ["LLLLL", "L..L.", "L.L..", "LL...", "L...."]))
+})
+
+// design §9: every drawing function writes only within the clip.
+let drawingClipped = Test.Case(name = "the drawing functions write within the clip", run = fn() = {
+    let context = create();
+    let written = fn(draw : (Epx.Pixmap) -> Unit) : List(String) = {
+        let pixmap = blank(4, 4);
+        Epx.setClip(pixmap, 1, 1, 2, 2);
+        draw(pixmap);
+        Epx.setClip(pixmap, 0, 0, 4, 4);
+        rows(pixmap)
+    };
+    let draws = [fn(pixmap) = {
+                     Epx.drawPoint(pixmap, context, 0, 0);
+                     Epx.drawPoint(pixmap, context, 1, 1)
+                 },
+                 fn(pixmap) = Epx.drawLine(pixmap, context, 0, 0, 3, 3),
+                 fn(pixmap) = Epx.drawRectangle(pixmap, context, 0, 0, 4, 4),
+                 fn(pixmap) = Epx.drawEllipse(pixmap, context, 0, 0, 3, 3),
+                 fn(pixmap) = Epx.drawTriangle(pixmap, context, 0, 0, 3, 0, 0, 3)];
+    Test.equal(List.map(draws, written),
+               [["....", ".L..", "....", "...."],
+                ["....", ".L..", "..L.", "...."],
+                ["....", ".RR.", ".RR.", "...."],
+                ["....", ".RR.", ".R..", "...."],
+                ["....", ".RR.", ".R..", "...."]])
+})
+
+// design §10: the library refuses a coordinate, a width, an ellipse's
+// size and a channel past their bounds before epx is called.
+let refused = Test.Case(name = "the drawing functions' and the context's faults", run = fn() = {
+    let pixmap = blank(2, 2);
+    let context = create();
+    let tooRed = Epx.Color(alpha = 255, red = 256, green = 0, blue = 0);
+    let unseen = Epx.Color(alpha = -1, red = 0, green = 0, blue = 0);
+    Test.equal([ending(fn() = Epx.drawPoint(pixmap, context, 16777217, 0)),
+                ending(fn() = Epx.drawLine(pixmap, context, 0, 0, 0, -16777217)),
+                ending(fn() = Epx.drawTriangle(pixmap, context, 0, 0, 1, 1, -16777217, 0)),
+                ending(fn() = Epx.drawRectangle(pixmap, context, 0, 0, 1, 16777217)),
+                ending(fn() = Epx.drawEllipse(pixmap, context, -16777217, 0, 1, 1)),
+                ending(fn() = Epx.drawEllipse(pixmap, context, 0, 0, 131072, 1)),
+                ending(fn() = setLineWidth(context, 16777217)),
+                ending(fn() = setBorderWidth(context, 16777217)),
+                ending(fn() = setFillColor(context, tooRed)),
+                ending(fn() = setBorderColor(context, unseen)),
+                ending(fn() = setForeground(context, tooRed))],
+               ["a coordinate is beyond 16777216",
+                "a coordinate is beyond 16777216",
+                "a coordinate is beyond 16777216",
+                "a width or height is beyond 16777216",
+                "a coordinate is beyond 16777216",
+                "an ellipse's width or height is beyond 131071",
+                "a width or height is beyond 16777216",
+                "a width or height is beyond 16777216",
+                "a channel of a Color is outside 0 to 255",
+                "a channel of a Color is outside 0 to 255",
+                "a channel of a Color is outside 0 to 255"])
+})

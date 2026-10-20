@@ -1,6 +1,6 @@
 # Epx
 
-An Ernest library over [epx](https://github.com/tonyrog/epx), the pixel library for Erlang: a 2-D library of pixmaps and their pixels, with a window that shows a pixmap on the screen and takes nothing back from it: nothing of epx's events. Its one module is `Epx`, whose page is [`docs/man/epx.md`](docs/man/epx.md), which `make man` writes and a release commits. It is a library and not a program: a program adds it to its load path, as *Using it* says. Its first cut is written; [`docs/plan.md`](docs/plan.md) says where it stands.
+An Ernest library over [epx](https://github.com/tonyrog/epx), the pixel library for Erlang: a 2-D library of pixmaps and their pixels, with a window that shows a pixmap on the screen and takes nothing back from it: nothing of epx's events. Its modules are `Epx`, over pixmaps and the drawing functions, and `Epx.Gc`, over the graphics context they draw with, whose pages are [`docs/man/epx.md`](docs/man/epx.md) and `docs/man/epx/gc.md`, which `make man` writes and a release commits. It is a library and not a program: a program adds it to its load path, as *Using it* says. Its first and second cuts are written; [`docs/plan.md`](docs/plan.md) says where it stands.
 
 ![Three pictures the examples draw: the Sierpinski gasket, the Boing ball above a mirror floor, and the Mandelbrot set](assets/collage.png)
 
@@ -23,11 +23,11 @@ It needs [Ernest](https://github.com/joagre/ernest) on your `PATH`, the floor th
 
 ```
 make            builds: lib/ filled, epx and then the library compiled
-make test       the layout, the module's tests, the documents, and examples/
+make test       the layout, the modules' tests, the documents, and examples/
 make release    the archive, build/epx-VERSION.tar.gz
 ```
 
-Clone with `--recursive`: epx is a git submodule under `erl/`, which `make lib` builds by its own `make`, its NIF among it, and links under `lib/epx/` as `ebin` and `priv`. epx's NIF needs a C compiler and the X11 and xcb headers. `make doc` writes the module's page under `build/`, `make man` copies it into `docs/man/`, `make format` lays the modules out, and `make clean` removes what the build and `make lib` wrote.
+Clone with `--recursive`: epx is a git submodule under `erl/`, which `make lib` builds by its own `make`, its NIF among it, and links under `lib/epx/` as `ebin` and `priv`. epx's NIF needs a C compiler and the X11 and xcb headers. `make doc` writes the modules' pages under `build/`, `make man` copies them into `docs/man/`, `make format` lays the modules out, and `make clean` removes what the build and `make lib` wrote.
 
 ## The documents
 
