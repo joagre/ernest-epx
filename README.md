@@ -14,7 +14,7 @@ A program outside this repository puts the library's build on its load path when
 
 ```
 ern build --load-path <repo>/build main.ern
-ern run --load-path <repo>/build --load-path <repo>/lib/epx/ebin main.erc
+ern run --load-path <repo>/build --load-path <repo>/lib/epx/ebin --load-path <repo>/lib/tree_db/ebin main.erc
 ```
 
 The archive `make release` writes, built on Linux x86-64 with the NIF compiled there, unpacks to the same layout, `build/` beside `lib/epx/`, so that an operator names its directory in place of `<repo>`. A program begun from [`ernest-template`](https://github.com/joagre/ernest-template) that names the archive among its `DEPS` lists epx among its own `ERL_DEPS` too, a submodule under its `erl/`, since its load path reaches no `lib/` inside a dependency.
@@ -29,7 +29,7 @@ make test       the layout, the modules' tests, the documents, and examples/
 make release    the archive, build/epx-VERSION.tar.gz
 ```
 
-Clone with `--recursive`: epx is a git submodule under `erl/`, which `make lib` builds by its own `make`, its NIF among it, and links under `lib/epx/` as `ebin` and `priv`. epx's NIF needs a C compiler and the X11 and xcb headers. `make doc` writes the modules' pages under `build/`, `make man` copies them into `docs/man/`, `make format` lays the modules out, and `make clean` removes what the build and `make lib` wrote.
+Clone with `--recursive`: epx and tree_db, which epx's application depends on, are git submodules under `erl/`, which `make lib` builds by their own `make`, its NIF among it, and links under `lib/epx/` as `ebin` and `priv`. epx's NIF needs a C compiler and the X11 and xcb headers. `make doc` writes the modules' pages under `build/`, `make man` copies them into `docs/man/`, `make format` lays the modules out, and `make clean` removes what the build and `make lib` wrote.
 
 ## The documents
 
@@ -42,7 +42,7 @@ Clone with `--recursive`: epx is a git submodule under `erl/`, which `make lib` 
 - `language_feedback.md`, under `docs/` from its first line: what writing Ernest felt against the principles, a queue carried to Ernest by copy.
 - [`CLAUDE.md`](CLAUDE.md): the working rules.
 - [`docs/epx_bugs.md`](docs/epx_bugs.md): the defects found in epx, each a report for its tracker.
-- [`THIRD_PARTY_LICENSES`](THIRD_PARTY_LICENSES): epx's license, which the release archive carries with epx's compiled code.
+- [`THIRD_PARTY_LICENSES`](THIRD_PARTY_LICENSES): epx's license and tree_db's standing, which the release archive carries with their compiled code.
 - [`ACKNOWLEDGMENTS.md`](ACKNOWLEDGMENTS.md): the people this library stands on, by name alone.
 
 The tests live in the modules they test, which `make test` runs; `tools/` holds the checker of the documents, and [`examples/`](examples/README.md) programs that use the library, which `make test` builds and runs too.

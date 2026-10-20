@@ -22,7 +22,7 @@ NAME        = epx
 ERN_VERSION = 0.4
 LIBS        =
 DEPS        =
-ERL_DEPS    = epx
+ERL_DEPS    = tree_db epx
 # What each program of examples/ writes, named by make test: the suffix of
 # the one path it is given.
 EXAMPLE_SUFFIX = .ppm

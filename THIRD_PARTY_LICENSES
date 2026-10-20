@@ -1,6 +1,6 @@
 # Third-party licenses
 
-The code this library stands on that is not its own, each with its license, as the release archive carries it: `lib/epx/` in the archive is epx compiled from the submodule `erl/epx`, which `make lib` builds.
+The code this library stands on that is not its own, each with its license, as the release archive carries it: `lib/epx/` and `lib/tree_db/` in the archive are epx and tree_db compiled from the submodules `erl/epx` and `erl/tree_db`, which `make lib` builds.
 
 ## epx
 
@@ -32,3 +32,7 @@ shall not be used in advertising or otherwise to promote the sale, use or other
 dealings in this Software without prior written authorization.
 
 ```
+
+## tree_db
+
+https://github.com/tonyrog/tree_db, the tree-based ets storage epx's application depends on, copyright 2015 Tony Rogvall. Its repository states no license; one is asked of its author, and until it is given the archive carries its compiled code on the author's leave alone.

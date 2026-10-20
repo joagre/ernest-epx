@@ -1,3 +1,6 @@
 [submodule "erl/epx"]
 	path = erl/epx
 	url = https://github.com/tonyrog/epx.git
+[submodule "erl/tree_db"]
+	path = erl/tree_db
+	url = https://github.com/tonyrog/tree_db.git

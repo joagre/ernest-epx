@@ -27,7 +27,7 @@ The second cut is built, 2026-10-20: `Epx.Gc`, five drawing functions, the clock
 ## Milestone 2: what epx must fix first, and the next cut
 
 1. **The clip correction**: decided 2026-10-20, dropped (the log's *The clip correction dropped*). The five area operations are epx's functions exactly, and a source rectangle that begins outside the source's clip lands as epx lands it, documented in `design.md` §4 and each operation's doc block, until epx fixes `epx_clip_both` (`epx_bugs.md` 6).
-2. **The reports of `epx_bugs.md` filed with epx**, by the user, and the submodule moved to a release that has the fixes.
+2. **The reports of `epx_bugs.md` filed with epx**, by the user, and the submodule moved to a release that has the fixes; and a license asked for tree_db, whose repository states none, since the archive carries its compiled code.
 3. **`sub` and `scroll`**, once epx's fixes 1 to 3 are in the submodule, as the proposal's section 2 has them, `scroll`'s `rotate` a type of two named constructors (shape rule 9).
 4. **The next cut**: decided 2026-10-20, [`proposals/gc/proposal.md`](proposals/gc/proposal.md), its seven decisions as recommended (the log's *The second cut*), and built the same day (the log's *The second cut built*): `Epx.Gc` with eight keys and `Style`, the type `Epx.Context` in `Epx`, five drawing functions, the border placed inside, and `examples/clock_face.ern`.
 7. **The rounded rectangle and the polygon**, once epx has the fixes of `epx_bugs.md` 13 and 14, as `sub` and `scroll` wait on 1 to 3; and the fill of a polygon once report 14's colors are gone.
