@@ -44,3 +44,7 @@ Clone with `--recursive`: epx is a git submodule under `erl/`, which `make lib` 
 - [`ACKNOWLEDGMENTS.md`](ACKNOWLEDGMENTS.md): the people this library stands on, by name alone.
 
 The tests live in the modules they test, which `make test` runs; `tools/` holds the checker of the documents, and [`examples/`](examples/README.md) programs that use the library, which `make test` builds and runs too.
+
+## License
+
+Epx is released under the Zero-Clause BSD license, 0BSD, the terms in [`LICENSE`](LICENSE). epx itself is under the MIT license, carried with its notice in [`THIRD_PARTY_LICENSES`](THIRD_PARTY_LICENSES).
