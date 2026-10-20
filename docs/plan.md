@@ -35,11 +35,15 @@ The first cut is built and released as 0.1.0, 2026-10-20: `Epx` with twenty func
 
 After the clock face and the collage of four: the release as [`release.md`](release.md) says, the two readers over the new page, `Epx.Gc`, and the drawing functions among them, `make man` with the second page, the tag `v0.2.0` and the archive with `THIRD_PARTY_LICENSES`, its notes naming epx's commit and the platform the NIF was built on. Decided 2026-10-20 with the user.
 
+## Milestone 8: a window that shows
+
+`Epx.Window`, a window on the screen that shows a pixmap and takes nothing back: epx's backend started, a window made and attached, a pixmap attached and drawn into it, and the window synced, each a shim, with no event flag set so that no event is ever sent to the Ernest process; a window closes with the program. Each example gains a way to show its picture on the screen as it is drawn, the ray tracer's rows appearing as its workers write them, with a slower trace where that shows it better. Designed in a proposal first, after the second cut and the release 0.2.0; decided 2026-10-20 with the user (the log's *A Window That Shows*), which reverses that part of *Where the Library Stops*.
+
 ## Milestone 5: Whitted's spheres
 
 `examples/whitted.ern`, after the clock face: the classic scene of several spheres over a checkered floor, with reflection and refraction, traced as `raytracer.ern` traces, the workers and the one pixmap the same, so that a richer picture costs a few dozen lines of the pure half and nothing of the acting half.
 
-Decided 2026-10-20 with the user, who also decided where the library stops: a 2-D library of pixmaps and pixels, no mesh, no image reading and no window; a mesh is a library's work, and drawing on the screen is a windows library's, with the tracer's rows arriving on screen as its first example when one exists (the log's *Where the Library Stops*).
+Decided 2026-10-20 with the user, who also decided where the library stops: a 2-D library of pixmaps and pixels, no mesh and no image reading; a mesh is a library's work (the log's *Where the Library Stops*). A window that shows came in later the same day, milestone 8.
 
 ## Milestone 6: after Ernest's MVP 3.28, the end
 

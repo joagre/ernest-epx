@@ -1,6 +1,6 @@
 # Epx
 
-An Ernest library over [epx](https://github.com/tonyrog/epx), the pixel library for Erlang: a 2-D library of pixmaps and their pixels, and nothing of epx's windows and events. Its one module is `Epx`, whose page is [`docs/man/epx.md`](docs/man/epx.md), which `make man` writes and a release commits. It is a library and not a program: a program adds it to its load path, as *Using it* says. Its first cut is written; [`docs/plan.md`](docs/plan.md) says where it stands.
+An Ernest library over [epx](https://github.com/tonyrog/epx), the pixel library for Erlang: a 2-D library of pixmaps and their pixels, with a window that shows a pixmap on the screen and takes nothing back from it: nothing of epx's events. Its one module is `Epx`, whose page is [`docs/man/epx.md`](docs/man/epx.md), which `make man` writes and a release commits. It is a library and not a program: a program adds it to its load path, as *Using it* says. Its first cut is written; [`docs/plan.md`](docs/plan.md) says where it stands.
 
 ![Three pictures the examples draw: the Sierpinski gasket, the Boing ball above a mirror floor, and the Mandelbrot set](assets/collage.png)
 

@@ -49,3 +49,7 @@ What the review taught the template is `TEMPLATE.md`'s, its `v0.5.0`; a tool tha
 ## Where the Library Stops
 
 *2026-10-20.* A 2-D library of pixmaps and pixels, and nothing more: the Utah teapot needs a mesh read from a file and a bounding-volume tree, each a library's work by the rules, a textured picture needs `epx_image`'s adapter, and a picture drawn on the screen as it is traced needs epx's windows and events, which were cut out at the first proposal and stay out: principle 2, one job, and principle 5. What a richer picture can be within one program is Whitted's spheres, milestone 5. The progressive render is noted for a windows library, where it would be the first example, since the tracer's workers already write row by row.
+
+## A Window That Shows
+
+*2026-10-20.* *Where the Library Stops* kept every window out; this keeps the half of a window that only shows. A window that shows a pixmap is six foreign functions of the shape `Epx` already has, epx's backend started, a window made and attached, a pixmap attached, drawn into it and synced, and nothing comes back across the boundary where the window is made with no event flag, so the question that kept windows out, an Erlang message shape no Ernest type names, does not arise. What it buys is the picture the library exists to teach: eight workers writing their rows into one pixmap, seen as they write. Receiving from the window stays out, and would stay out even as a later cut, since it is Ernest's question before it is epx's: principle 2, one job, the window shows. Decided with the user.
