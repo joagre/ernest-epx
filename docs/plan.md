@@ -37,7 +37,9 @@ After the clock face and the collage of four: the release as [`release.md`](rele
 
 ## Milestone 8: a window that shows
 
-`Epx.Window`, a window on the screen that shows a pixmap and takes nothing back: epx's backend started, a window made and attached, a pixmap attached and drawn into it, and the window synced, each a shim, with no event flag set so that no event is ever sent to the Ernest process; a window closes with the program. Each example gains a way to show its picture on the screen as it is drawn, the ray tracer's rows appearing as its workers write them, with a slower trace where that shows it better. Designed in a proposal first, after the second cut and the release 0.2.0; decided 2026-10-20 with the user (the log's *A Window That Shows*), which reverses that part of *Where the Library Stops*.
+`Epx.Window`, a window on the screen that shows a pixmap and takes nothing back: epx's backend started, a window made and attached, a pixmap attached and drawn into it, and the window synced, each a shim, with no event flag set so that no event is ever sent to the Ernest process; a window closes with the program.
+
+Each example gains a way to show its picture on the screen as it is drawn, the ray tracer's rows appearing as its workers write them, with a slower trace where that shows it better, and each still writes its PPM, which `make test` holds to. Designed in a proposal first, after the second cut and the release 0.2.0; decided 2026-10-20 with the user (the log's *A Window That Shows*), which reverses that part of *Where the Library Stops*.
 
 ## Milestone 5: Whitted's spheres
 
