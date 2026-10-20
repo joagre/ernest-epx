@@ -8,7 +8,7 @@ Read *Where we are* first, then the table of milestones; the milestones to come 
 
 The first cut is built and released as 0.1.0, 2026-10-20: `Epx` with twenty functions over epx's pixmaps, its design in `design.md`, the manual page under `docs/man/`, and three examples, the ray tracer among them, milestone 4. `sub` and `scroll` wait on epx, milestone 2, and the area functions are epx's exactly.
 
-The second cut is built, 2026-10-20: `Epx.Gc`, five drawing functions, the clock face, the fourth example, and the pages for both modules. What is left, in order: the window that shows, milestone 8; Whitted's spheres, the slow tracer, milestone 5; the collage of the pictures; what waits on Ernest's MVP 3.28, milestone 6, once the user says it is out; the release 0.2.0, milestone 3b, not before that word; and the last release, milestone 7, with `sub` and `scroll` once epx has its fixes.
+The second cut is built, 2026-10-20, and the window that shows, 2026-10-21: `Epx.Gc`, five drawing functions, the clock face, `Epx.Screen`, and the word `show` on every example. What is left, in order: Whitted's spheres, the slow tracer, milestone 5; the collage of the pictures; what waits on Ernest's MVP 3.28, milestone 6, once the user says it is out; the release 0.2.0, milestone 3b, not before that word; and the last release, milestone 7, with `sub` and `scroll` once epx has its fixes.
 
 ## Milestones
 
@@ -17,6 +17,7 @@ The second cut is built, 2026-10-20: `Epx.Gc`, five drawing functions, the clock
 | Milestone 1 | the design and the first cut | 2026-10-20 | the log's *epx and tree_db as submodules*, *The first cut*, *The first cut built*, *The clip correction dropped* |
 | Milestone 3 | the release 0.1.0 | 2026-10-20 | the log's *The release review* |
 | Milestone 4 | the ray tracer | 2026-10-20 | [`proposals/raytracer/`](proposals/raytracer/); the log's *The ray tracer*, *The ray tracer built* |
+| Milestone 8 | a window that shows, `Epx.Screen` | 2026-10-21 | [`proposals/window/`](proposals/window/); the log's *A Window That Shows*, *The window decided*, *The window built* |
 
 ## Milestone 1: the design
 
@@ -30,7 +31,7 @@ The second cut is built, 2026-10-20: `Epx.Gc`, five drawing functions, the clock
 2. **The reports of `epx_bugs.md` filed with epx**, by the user, and the submodule moved to a release that has the fixes; and a license asked for tree_db, whose repository states none, since the archive carries its compiled code.
 3. **`sub` and `scroll`**, once epx's fixes 1 to 3 are in the submodule, as the proposal's section 2 has them, `scroll`'s `rotate` a type of two named constructors (shape rule 9).
 4. **The next cut**: decided 2026-10-20, [`proposals/gc/proposal.md`](proposals/gc/proposal.md), its seven decisions as recommended (the log's *The second cut*), and built the same day (the log's *The second cut built*): `Epx.Gc` with eight keys and `Style`, the type `Epx.Context` in `Epx`, five drawing functions, the border placed inside, and `examples/clock_face.ern`.
-7. **The rounded rectangle and the polygon**, once epx has the fixes of `epx_bugs.md` 13 and 14, as `sub` and `scroll` wait on 1 to 3; and the fill of a polygon once report 14's colors are gone.
+7. **The rounded rectangle and the polygon**, once epx has the fixes of `epx_bugs.md` 13 and 14, as `sub` and `scroll` wait on 1 to 3; and the fill of a polygon once report 14's colors are gone. The window's `close` becomes `window_detach` once report 17 is fixed, `Rgba` and `Abgr` are shown once 18 is, and a window's close button closes nothing until Ernest decides how a foreign message is checked (its feedback 137) and epx's 16 is fixed.
 8. **A wide line's band**: decided 2026-10-20 with the user, kept. `drawLine` of a width above 1, horizontal or vertical, fills its band through `pixmap_fill_area` in Ernest, since epx's own band writes past the clip and past the pixmap's memory (`epx_bugs.md` 9), at about 2.6 times epx's cost for such a line, 0.17 to 0.45 µs, and no cost for a diagonal or a one-pixel line; a band that writes outside memory is no band, and the cost stands in the log.
 5. **What waits on Ernest**: the lines the library carried to Ernest's `language_feedback.md`, 123 to 132, decided in Ernest's plan; when Ernest has 123, a foreign function answering `ok` declared `Unit`, the fourteen dropped answers go, and with 124, a `Test` function for a fault, the tests' own helper.
 6. **What waits on the template**: a tool that runs a doc block's `// =>` examples and holds the page to them, which every library wants and which the release review found nothing does here (Ernest's feedback 127).
@@ -38,25 +39,6 @@ The second cut is built, 2026-10-20: `Epx.Gc`, five drawing functions, the clock
 ## Milestone 3b: the release 0.2.0
 
 After the clock face, the window that shows and Whitted's spheres, milestones 8 and 5, the collage, and milestone 6, since the release waits for the user's word that Ernest's MVP 3.28 is out and takes what it brings: the release as [`release.md`](release.md) says, the two readers over the new pages, `Epx.Gc` and `Epx.Window`, the drawing functions and the examples' windows among them, `make man` with the second page, the tag `v0.2.0` and the archive with `THIRD_PARTY_LICENSES`, its notes naming epx's commit and the platform the NIF was built on. Decided 2026-10-20 with the user.
-
-## Milestone 8: a window that shows
-
-`Epx.Window`, a window on the screen that shows a pixmap and takes nothing back: epx's backend started, a window made and attached, a pixmap attached and drawn into it, and the window synced, each a shim, with no event flag set so that no event is ever sent to the Ernest process; a window closes with the program.
-
-Each example gains a way to show its picture on the screen as it is drawn, the ray tracer's rows appearing as its workers write them, with a slower trace where that shows it better, and each still writes its PPM, which `make test` holds to.
-
-Three questions the proposal answers, named 2026-10-20.
-
-`make test` runs with or without a display, so an example opens a window only when asked, a word on the command line as the worker count is, and the window module's tests are tried by hand on a machine with a screen and say so.
-
-A window with no events has no close button that works, so the program decides when it goes: it waits on a line from standard input, "press Enter to close", a wait on what it means.
-
-Who draws into the window: each worker after its row, which is the demonstration and which the experiment tries first, or `main` on the backend's sync.
-
-And flicker: epx's X11 backend draws off screen by default, `use_off_screen`, and its framebuffer backend double-buffers, `double_buffer`; the window is made with those on, and the experiment shows whether a row drawn at a time flickers.
-
-Designed in [`proposals/window/proposal.md`](proposals/window/proposal.md), its seven decisions taken as recommended on 2026-10-20 (the log's *The window decided*), built by an agent from it after its experiment, the page read back here; decided 2026-10-20 with the user (the log's *A Window That Shows*), which reverses that part of *Where the Library Stops*.
-
 ## Milestone 5: Whitted's spheres
 
 `examples/whitted.ern`, after the window and before the release 0.2.0: the classic scene of several spheres over a checkered floor, with reflection and refraction, traced as `raytracer.ern` traces, the workers and the one pixmap the same, so that a richer picture costs a few dozen lines of the pure half and nothing of the acting half.

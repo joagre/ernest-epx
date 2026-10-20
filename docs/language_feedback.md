@@ -1,8 +1,0 @@
-# Language feedback
-
-What writing Ernest has felt against the principles, a line each, in the shape of Ernest's file of this name: a queue, each line carried there by copy, after which the log here cites Ernest's number and the line goes (CLAUDE.md, *Who owns each fact*). The file goes when it is empty; the next is 3.
-
-1. **A library has no name for a type its module is named after** (2026-10-21, `ernest-epx`, the window). Shape rule 7 refuses `Epx.Window.Window`, a type named for its module, and §4.2 refuses a type `Window` in `epx.ern` beside a module `epx/window.ern`, their namespaces coinciding. The prelude has a way out, `Path` and `Process` its types beside the modules of their operations (§9), which a library has not. The library named the module `Epx.Screen` so that the type is `Epx.Screen.Window`, where the reader predicts `Epx.Window.open` answering an `Epx.Window`. Principle 1.
-2. **A message foreign code sends a process by its host identity is taken by a variable pattern as a message of the mailbox's type** (2026-10-21, `ernest-epx`, the window's close button). epx sends the process that made a window `{epx_event, Window, close}` when the window's close button is pressed, whatever the window's flags (`epx_bugs.md` 16).
-
-   §8.4 says a bad message faults the receiver at the wait that reaches it, but no check stands between a NIF's send and the process: a `receive` whose patterns each name a constructor leaves the message in the mailbox for good, and `receive { down -> ... }` in a process whose mailbox is `Down` took it as a `Down` whose `reason` printed as `close`. An Erlang message shape no Ernest type names, which `Epx.Screen`'s page can only warn of. Principles 3 and 1.
