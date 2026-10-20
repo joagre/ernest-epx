@@ -1,6 +1,6 @@
 # Language feedback
 
-What writing Ernest has felt against the principles, in the shape of Ernest's file of that name, so that a line is carried there by copy (CLAUDE.md, *Who owns each fact*). An entry stays until it is carried to Ernest; an entry keeps its number; the next is 3.
+What writing Ernest has felt against the principles, in the shape of Ernest's file of that name, so that a line is carried there by copy (CLAUDE.md, *Who owns each fact*). An entry stays until it is carried to Ernest, lines 1 and 2 carried on 2026-10-20 as Ernest's 123 and 124; an entry keeps its number; the next is 3.
 
 1. **An Erlang function that answers `ok` cannot be declared to answer `Unit`** (2026-10-20, `src/epx.ern`, the shims over epx). `Unit` crosses as the atom `'Unit'`, so `foreign fn flip(pixmap : Pixmap) : Unit = "epx:pixmap_flip/1"` faults at its return with `foreign return does not match Unit`. A shim of such a function is declared at `Foreign.Term` and its answer dropped, `let _ = rawFlip(pixmap); Unit`, a second declaration and four lines for each of thirteen operations of `Epx`, for the answer most of Erlang's functions of effect give. A reader who knows Erlang predicts `: Unit`. Principle 1.
 
