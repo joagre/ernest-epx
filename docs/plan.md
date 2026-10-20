@@ -6,14 +6,15 @@ Read *Where we are* first, then the table of milestones; the milestones to come 
 
 ## Where we are
 
-Begun from `ernest-template`; nothing is built yet. The first milestone is below.
+Begun from `ernest-template` on 2026-10-20; nothing is built yet. The first milestone is the library's design, discussed in a proposal before a function is declared.
 
 ## Milestones
 
 | | What | Done | Where its reasons are |
 |---|---|---|---|
 
-## Milestone 1: the first program
+## Milestone 1: the design
 
-1. **What the program does**, stated in `README.md` and designed in `design.md`'s first sections, discussed with the user before any code.
-2. **`src/<name>.ern`**, its `main` and its first tests, `make test` green.
+1. **What the library offers**, discussed in a proposal under `docs/proposals/`: which of epx's operations, pixmaps and pixels first, and in what Ernest shape, each a shim where epx's function does exactly its work and Ernest around it where not; then stated in `design.md`.
+2. **How epx is found**, a decision of the proposal: epx is Erlang with a NIF, built by rebar3, which `make lib` does not fetch and `lib/*/build` does not describe, and a `foreign fn` finds its module as a `.beam` on the load path (report §8.4, §11.2) while the NIF's library is found from the application's `priv/` by the host. Recommended: decided by trying it, a built epx under `lib/epx/` with its `ebin/` on the load path, before the shape of the Makefile's rule is chosen; what is learned goes back to `ernest-template`.
+3. **The first module**, `Epx` with pixmaps, their tests and `make test` green.

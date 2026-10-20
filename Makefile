@@ -14,7 +14,7 @@
 #   make release  the archive, build/NAME-VERSION.tar.gz, tests first
 #   make clean    removes what the build and make lib wrote
 
-NAME        = name
+NAME        = epx
 ERN_VERSION = 0.4
 LIBS        =
 DEPS        =

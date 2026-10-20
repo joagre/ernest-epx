@@ -1,0 +1,7 @@
+/// Ernest over epx, the pixel library for Erlang: pixmaps, their pixels and
+/// their drawing, and the windows and events of a backend, as `docs/design.md`
+/// states them. Nothing is written yet: the first milestone of `docs/plan.md`
+/// designs the library before a function is declared.
+
+/// The library is not written yet; this test goes with the first real one.
+let nothingYet = Test.Case(name = "nothing yet", run = fn() = Test.equal(1 + 1, 2))

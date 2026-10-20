@@ -1,6 +1,6 @@
-# NAME — Claude Instructions
+# Epx — Claude Instructions
 
-NAME is an Ernest program; `README.md` says what it does. This file is the way of working, cut from Ernest's own; it changes in the template, `ernest-template`, and is copied from there.
+Epx is an Ernest library over epx, the pixel library for Erlang; `README.md` says what it does. This file is the way of working, cut from Ernest's own; it changes in the template, `ernest-template`, and is copied from there.
 
 ## Authority
 
