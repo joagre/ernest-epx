@@ -1,0 +1,371 @@
+//
+// Raytracer: the Boing ball above a mirror floor, traced by a count of
+// processes and written as PPM
+//
+// A ball checked in red and white by latitude and longitude, as the Boing
+// ball is, hangs above a floor that mirrors it, under one light and a sky
+// of one color. A pixel's color is that of the ray from the eye through
+// it, traced to what it meets first: the ball, lit by the light with a
+// white highlight; the floor, its dark gray mixed with the ray's
+// reflection, traced again; or the sky. A point the light does not reach,
+// the ball's shadow on the floor among them, has the ambient light alone.
+//
+// The rows are shared out in turn among workers, processes that each
+// trace their rows and write them into one pixmap. Once every worker has
+// ended, the pixmap is written to the file named on the command line as a
+// PPM image, which an image viewer opens. The second argument is the count
+// of workers, 1 where it is not given. Run with no file, or with a count
+// that is not a whole number above 0, it says how it is called and ends
+// with status 2. A worker that does not return ends the program with its
+// reason on standard error and status 1, and so does a file it cannot
+// write.
+//
+// What to look at:
+//
+// - The pure half beside the acting half: `Vector`, `Ray` and `Color` with
+//   their operations, and `pixelRay`, `trace`, `nearest`, `hitSphere`,
+//   `hitFloor` and `shade`, compute a pixel's color; `main`, `write`,
+//   `start`, `awaitWorkers` and `renderRow` act.
+// - A pixmap is changed in place and shared by every process that holds it
+//   (`Epx`'s page, *In place and shared*): each worker captures the one
+//   pixmap and writes each of its rows with one `Epx.putPixels`
+//   (*Rectangles*). Worker `k` of `n` takes the rows `y` with `y % n == k`,
+//   so no two write one row, and `main` reads the pixmap only once every
+//   worker has ended.
+// - `spawnMonitored` starts each worker watched from its start, and `main`
+//   receives a `Down` for each (report §6.9); one whose reason is not
+//   `Returned` ends the program.
+// - `Float.sqrt` answers `None` below zero (report Appendix E.9), which
+//   `hitSphere` reads as the ray missing the ball.
+// - `Vector` declares its own `+` and `-`, and `Color` its `+` and `*`
+//   (report §4.8).
+//
+// Run it from the repository's root once `make` has built the library,
+// with one worker and with eight, and compare the times the shell gives:
+//
+//     LOAD="--load-path build --load-path lib/epx/ebin"
+//     ern build $LOAD examples/raytracer.ern
+//     time ern run $LOAD examples/raytracer.erc build/raytracer.ppm 1
+//     time ern run $LOAD examples/raytracer.erc build/raytracer.ppm 8
+//
+
+// A point or a direction in the scene: `x` grows to the right, `y` upward,
+// and `z` away from the eye.
+type Vector = Vector(x : Float, y : Float, z : Float)
+
+fn Vector.+(left : Vector, right : Vector) : Vector =
+    Vector(x = left.x + right.x, y = left.y + right.y, z = left.z + right.z)
+
+fn Vector.-(left : Vector, right : Vector) : Vector =
+    Vector(x = left.x - right.x, y = left.y - right.y, z = left.z - right.z)
+
+// The vector times a number. `*` is not this, since a type's own operator
+// takes two values of the type (report §4.8).
+fn scaled(vector : Vector, factor : Float) : Vector =
+    Vector(x = vector.x * factor, y = vector.y * factor, z = vector.z * factor)
+
+fn dot(left : Vector, right : Vector) : Float =
+    left.x * right.x + left.y * right.y + left.z * right.z
+
+// The vector's length. A sum of squares is never below zero, so
+// `Float.sqrt` answers `Some`.
+fn length(vector : Vector) : Float =
+    match Float.sqrt(dot(vector, vector)) {
+        Some(root) -> root
+      | None -> fault("a sum of squares is below zero")
+    }
+
+// The vector of length 1 in the vector's direction.
+fn normalized(vector : Vector) : Vector =
+    scaled(vector, 1.0 / length(vector))
+
+// The direction mirrored by a surface of that normal, a vector of length
+// 1: its part along the normal reversed.
+fn reflected(direction : Vector, normal : Vector) : Vector =
+    direction - scaled(normal, 2.0 * dot(direction, normal))
+
+// A half line from its origin, its direction of length 1.
+type Ray = Ray(origin : Vector, direction : Vector)
+
+// The point at that distance along the ray.
+fn along(ray : Ray, distance : Float) : Vector =
+    ray.origin + scaled(ray.direction, distance)
+
+// A color as it is computed, each channel from 0 for none to 1 for full,
+// which becomes the pixel's three bytes once, at the pixel.
+type Color = Color(red : Float, green : Float, blue : Float)
+
+fn Color.+(left : Color, right : Color) : Color =
+    Color(red = left.red + right.red,
+          green = left.green + right.green,
+          blue = left.blue + right.blue)
+
+// One color filtered by another, channel by channel: a surface's color in a
+// light's.
+fn Color.*(left : Color, right : Color) : Color =
+    Color(red = left.red * right.red,
+          green = left.green * right.green,
+          blue = left.blue * right.blue)
+
+// The gray of that level in every channel: a color times it is the color
+// scaled by the level.
+fn gray(level : Float) : Color =
+    Color(red = level, green = level, blue = level)
+
+// What a ray meets first, at its distance along the ray.
+type Hit = Ball(distance : Float) | Floor(distance : Float)
+
+// The picture's size in pixels.
+let width : Int = 400
+
+let height : Int = 300
+
+// The rays followed for one pixel: the eye's, and its reflection in the
+// floor.
+let depth : Int = 2
+
+// The ball, its lowest point 0.2 above the floor, which is the plane where
+// `y` is 0.
+let center : Vector = Vector(x = 0.0, y = 1.2, z = 0.0)
+
+let radius : Float = 1.0
+
+// The eye, and the directions of the picture from it: ahead to a point 0.5
+// below the ball's center, so that the ball and its reflection in the floor
+// are both in the picture; upward square to that within the plane where `x`
+// is 0; and rightward along `x`.
+let eye : Vector = Vector(x = 0.0, y = 1.5, z = -5.0)
+
+let ahead : Vector = normalized(Vector(x = 0.0, y = 0.7, z = 0.0) - eye)
+
+let upward : Vector = Vector(x = 0.0, y = ahead.z, z = -ahead.y)
+
+let rightward : Vector = Vector(x = 1.0, y = 0.0, z = 0.0)
+
+// The distance between two neighboring pixels on the plane 1 ahead of the
+// eye, across and down alike: the picture spans 0.85 of it from top to
+// bottom.
+let spacing : Float = 0.85 / Int.toFloat(height)
+
+// The light, a point above the ball and to its left, and how its light
+// falls: the ambient part on every point, the diffuse part on a point it
+// reaches by Lambert's law, and the white highlight's strength and how
+// tight it is.
+let light : Vector = Vector(x = -5.0, y = 7.0, z = -2.0)
+
+let ambient : Float = 0.2
+
+let diffuse : Float = 0.8
+
+let highlight : Float = 0.6
+
+let shininess : Float = 40.0
+
+// The colors of the scene, and the share of the floor's color that is its
+// reflection.
+let sky : Color = Color(red = 0.55, green = 0.65, blue = 0.85)
+
+let ballRed : Color = Color(red = 0.85, green = 0.05, blue = 0.05)
+
+let ballWhite : Color = gray(0.95)
+
+let floorGray : Color = gray(0.25)
+
+let mirror : Float = 0.5
+
+// The ball's checks: its bands of latitude from top to bottom, and of
+// longitude around it.
+let latitudeBands : Int = 8
+
+let longitudeBands : Int = 16
+
+export fn main() : Unit receiving Down =
+    match commandLine(Os.arguments) {
+        Some(#(name, count)) ->
+            write(name, count)
+      | None -> {
+            Io.printlnError("usage: raytracer file.ppm [workers]");
+            Os.exit(2)
+        }
+    }
+
+// The file named and the count of workers, 1 where none is given, or
+// `None` for no file, more than a count, or a count that is not a whole
+// number above 0.
+fn commandLine(arguments : List(String)) : Optional(#(String, Int)) =
+    match arguments {
+        [name] ->
+            Some(#(name, 1))
+      | [name, count] ->
+            match String.toInt(count) {
+                Some(workers) when workers > 0 -> Some(#(name, workers))
+              | _ -> None
+            }
+      | _ ->
+            None
+    }
+
+// The picture traced by `count` workers and written to the file, or why it
+// could not be, on standard error.
+fn write(name : String, count : Int) : Unit receiving Down = {
+    let pixmap = Epx.create(width, height, Epx.Rgb);
+    List.forEach(List.range(0, count - 1), fn(index) = start(pixmap, index, count));
+    awaitWorkers(count);
+    match Fs.write(Path(name), Epx.toPpm(pixmap), 5000) {
+        Right(_) ->
+            Unit
+      | Left(error) -> {
+            Io.printlnError("raytracer: " <> name <> ": " <> Io.show(error));
+            Os.exit(1)
+        }
+    }
+}
+
+// Worker `index` of `count`, which renders the rows `y` with
+// `y % count == index` into the pixmap, started and watched from its start.
+fn start(pixmap : Epx.Pixmap, index : Int, count : Int) : Unit receiving Down = {
+    let rows = List.filter(List.range(0, height - 1), fn(y) = y % count == index);
+    let _ =
+        spawnMonitored(fn() = List.forEach(rows, fn(y) = renderRow(pixmap, y)), fn(down) = down);
+    Unit
+}
+
+// Waits for the `Down` of each of `count` workers; one whose reason is not
+// `Returned` ends the program with that reason on standard error.
+fn awaitWorkers(count : Int) : Unit receiving Down =
+    if count == 0 then
+        Unit
+    else receive {
+        Down(reason = Returned) ->
+            awaitWorkers(count - 1)
+      | Down(reason = reason) -> {
+            Io.printlnError("raytracer: a worker ended: " <> Io.show(reason));
+            Os.exit(1)
+        }
+    }
+
+// The row `y` traced a pixel at a time and written into the pixmap with
+// one `Epx.putPixels`.
+fn renderRow(pixmap : Epx.Pixmap, y : Int) : Unit = {
+    let pixels = List.map(List.range(0, width - 1), fn(x) = pixel(trace(pixelRay(x, y), depth)));
+    Epx.putPixels(pixmap, 0, y, width, 1, Epx.Rgb, Bytes.join(pixels, <<>>))
+}
+
+// The color as the pixel's three bytes in the format `Rgb`. A channel above
+// 1, where the highlight adds to the light, is written as 1.
+fn pixel(color : Color) : Bytes =
+    <<channel(color.red), channel(color.green), channel(color.blue)>>
+
+fn channel(level : Float) : Int =
+    Float.round(Float.min(level, 1.0) * 255.0)
+
+// The ray from the eye through the middle of the pixel at `x`, `y`, `y`
+// growing downward as in the pixmap.
+fn pixelRay(x : Int, y : Int) : Ray = {
+    let across = (Int.toFloat(x) + 0.5 - Int.toFloat(width) / 2.0) * spacing;
+    let up = (Int.toFloat(height) / 2.0 - Int.toFloat(y) - 0.5) * spacing;
+    Ray(origin = eye,
+        direction = normalized(ahead + scaled(rightward, across) + scaled(upward, up)))
+}
+
+// The color the ray sees, following at most `depth` rays, itself among
+// them: the ball's shaded check; the floor's own shaded gray, mixed with
+// the color its reflection sees while a ray is left to follow; or the sky.
+fn trace(ray : Ray, depth : Int) : Color =
+    match nearest(ray) {
+        Some(Ball(distance = distance)) -> {
+            let point = along(ray, distance);
+            let normal = scaled(point - center, 1.0 / radius);
+            shade(point, normal, ray.direction, check(normal))
+        }
+      | Some(Floor(distance = distance)) -> {
+            let point = along(ray, distance);
+            let normal = Vector(x = 0.0, y = 1.0, z = 0.0);
+            let own = shade(point, normal, ray.direction, floorGray);
+            if depth > 1 then {
+                let mirrored = Ray(origin = point, direction = reflected(ray.direction, normal));
+                own * gray(1.0 - mirror) + trace(mirrored, depth - 1) * gray(mirror)
+            } else
+                own
+        }
+      | None ->
+            sky
+    }
+
+// The nearer of the ball and the floor along the ray, or `None` where it
+// meets neither.
+fn nearest(ray : Ray) : Optional(Hit) =
+    match #(hitSphere(ray), hitFloor(ray)) {
+        #(Some(toBall), Some(toFloor)) when toFloor < toBall -> Some(Floor(distance = toFloor))
+      | #(Some(toBall), _) -> Some(Ball(distance = toBall))
+      | #(None, Some(toFloor)) -> Some(Floor(distance = toFloor))
+      | #(None, None) -> None
+    }
+
+// The distance along the ray to where it first meets the ball, or `None`
+// where it misses it or the ball is behind it. Every ray traced begins
+// outside the ball, so the nearer of the two points where the ray's line
+// meets the ball's surface is the one, if it is ahead.
+fn hitSphere(ray : Ray) : Optional(Float) = {
+    let offset = ray.origin - center;
+    let half = dot(offset, ray.direction);
+    match Float.sqrt(half * half - dot(offset, offset) + radius * radius) {
+        Some(root) when root < -half -> Some(-half - root)
+      | _ -> None
+    }
+}
+
+// The distance along the ray to the floor, or `None` where the ray does
+// not go down. Every ray traced begins on the floor or above it.
+fn hitFloor(ray : Ray) : Optional(Float) =
+    if ray.direction.y < 0.0 then Some(-ray.origin.y / ray.direction.y) else None
+
+// The color of a point of a surface of that color and normal, seen along
+// the direction: the ambient part, and where the light reaches the point,
+// Lambert's part and the white highlight.
+fn shade(point : Vector, normal : Vector, direction : Vector, surface : Color) : Color =
+    if reached(point, normal) then {
+        let toLight = normalized(light - point);
+        let shine = Float.max(0.0, dot(reflected(direction, normal), toLight));
+        surface * gray(ambient + diffuse * dot(normal, toLight)) + gray(glint(shine))
+    } else
+        surface * gray(ambient)
+
+// Whether the light reaches the point: the point faces the light, and the
+// ball does not stand between them.
+fn reached(point : Vector, normal : Vector) : Bool = {
+    let toLight = light - point;
+    dot(normal, toLight) > 0.0
+        && match hitSphere(Ray(origin = point, direction = normalized(toLight))) {
+            Some(distance) -> distance > length(toLight)
+          | None -> true
+        }
+}
+
+// The highlight's level where the reflection of the direction seen along
+// points `shine` toward the light, from 0 to 1. A base not below zero to a
+// positive power, so `Float.pow` answers `Some`.
+fn glint(shine : Float) : Float =
+    match Float.pow(shine, shininess) {
+        Some(level) -> highlight * level
+      | None -> fault("a base below zero to a fractional power")
+    }
+
+// The ball's color at the point of that normal: red where the point's band
+// of latitude and its band of longitude are both even or both odd, and
+// white where one is even and the other odd. Latitude runs from 0 at the
+// top to pi at the bottom, and longitude from -pi to pi around the
+// vertical.
+fn check(normal : Vector) : Color = {
+    let latitude = Float.atan2(length(Vector(x = normal.x, y = 0.0, z = normal.z)), normal.y);
+    let longitude = Float.atan2(normal.z, normal.x);
+    let bands =
+        band(latitude, Float.pi, latitudeBands)
+            + band(longitude + Float.pi, 2.0 * Float.pi, longitudeBands);
+    if bands % 2 == 0 then ballRed else ballWhite
+}
+
+// The band from 0 that an angle from 0 to `span` falls in, of `count`
+// equal bands.
+fn band(angle : Float, span : Float, count : Int) : Int =
+    Float.floor(angle / span * Int.toFloat(count))
