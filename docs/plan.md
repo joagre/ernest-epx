@@ -6,7 +6,9 @@ Read *Where we are* first, then the table of milestones; the milestones to come 
 
 ## Where we are
 
-The first cut is built and released as 0.1.0, 2026-10-20: `Epx` with twenty functions over epx's pixmaps, its design in `design.md`, two examples, and the manual page under `docs/man/`. `sub` and `scroll` of the proposal wait on epx, milestone 2, and the area operations are epx's exactly, a source rectangle that begins outside the clip landing as epx lands it. The ray tracer is built, milestone 4, so the examples are three. Milestone 2 waits on epx, on Ernest and on the template; the next cut, `Epx.Gc`, is its item 4 and begins with a proposal.
+The first cut is built and released as 0.1.0, 2026-10-20: `Epx` with twenty functions over epx's pixmaps, its design in `design.md`, the manual page under `docs/man/`, and three examples, the ray tracer among them, milestone 4. `sub` and `scroll` wait on epx, milestone 2, and the area functions are epx's exactly.
+
+What is left, in order: the second cut, `Epx.Gc` and the drawing functions with the clock face, milestone 2's item 4, being built; the window that shows, milestone 8; Whitted's spheres, the slow tracer, milestone 5; the collage of the pictures; the release 0.2.0, milestone 3b; what waits on Ernest's MVP 3.28, milestone 6; and the last release, milestone 7.
 
 ## Milestones
 
