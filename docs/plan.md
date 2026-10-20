@@ -8,7 +8,7 @@ Read *Where we are* first, then the table of milestones; the milestones to come 
 
 The first cut is built and released as 0.1.0, 2026-10-20: `Epx` with twenty functions over epx's pixmaps, its design in `design.md`, the manual page under `docs/man/`, and three examples, the ray tracer among them, milestone 4. `sub` and `scroll` wait on epx, milestone 2, and the area functions are epx's exactly.
 
-The second cut is built, 2026-10-20, and the window that shows, 2026-10-21: `Epx.Gc`, five drawing functions, the clock face, `Epx.Screen`, and the word `show` on every example. What is left, in order: Whitted's spheres, the slow tracer, milestone 5; the collage of the pictures; what waits on Ernest's MVP 3.28, milestone 6, once the user says it is out; the release 0.2.0, milestone 3b, not before that word; and the last release, milestone 7, with `sub` and `scroll` once epx has its fixes.
+The second cut is built, 2026-10-20, and the window that shows, 2026-10-21: `Epx.Gc`, five drawing functions, the clock face, `Epx.Screen`, and the word `show` on every example. Whitted's spheres, the slow tracer, is built, 2026-10-21, the fifth example. What is left, in order: the collage of the pictures; what waits on Ernest's MVP 3.28, milestone 6, once the user says it is out; the release 0.2.0, milestone 3b, not before that word; and the last release, milestone 7, with `sub` and `scroll` once epx has its fixes.
 
 ## Milestones
 
@@ -17,6 +17,7 @@ The second cut is built, 2026-10-20, and the window that shows, 2026-10-21: `Epx
 | Milestone 1 | the design and the first cut | 2026-10-20 | the log's *epx and tree_db as submodules*, *The first cut*, *The first cut built*, *The clip correction dropped* |
 | Milestone 3 | the release 0.1.0 | 2026-10-20 | the log's *The release review* |
 | Milestone 4 | the ray tracer | 2026-10-20 | [`proposals/raytracer/`](proposals/raytracer/); the log's *The ray tracer*, *The ray tracer built* |
+| Milestone 5 | Whitted's spheres, the slow tracer | 2026-10-21 | [`proposals/whitted/`](proposals/whitted/); the log's *Whitted's spheres decided*, *Cook's Sampling*, *Whitted's spheres built* |
 | Milestone 8 | a window that shows, `Epx.Screen` | 2026-10-21 | [`proposals/window/`](proposals/window/); the log's *A Window That Shows*, *The window decided*, *The window built* |
 
 ## Milestone 1: the design
@@ -39,16 +40,6 @@ The second cut is built, 2026-10-20, and the window that shows, 2026-10-21: `Epx
 ## Milestone 3b: the release 0.2.0
 
 After the clock face, the window that shows and Whitted's spheres, milestones 8 and 5, the collage, and milestone 6, since the release waits for the user's word that Ernest's MVP 3.28 is out and takes what it brings: the release as [`release.md`](release.md) says, the two readers over the new pages, `Epx.Gc` and `Epx.Window`, the drawing functions and the examples' windows among them, `make man` with the second page, the tag `v0.2.0` and the archive with `THIRD_PARTY_LICENSES`, its notes naming epx's commit and the platform the NIF was built on. Decided 2026-10-20 with the user.
-## Milestone 5: Whitted's spheres
-
-`examples/whitted.ern`, after the window and before the release 0.2.0: the classic scene of several spheres over a checkered floor, with reflection and refraction, traced as `raytracer.ern` traces, the workers and the one pixmap the same, so that a richer picture costs a few dozen lines of the pure half and nothing of the acting half.
-
-It is also the slow tracer, for the window of milestone 8: anti-aliasing by `n` by `n` samples a pixel, soft shadows from an area light with `m` shadow rays a hit, and a glossy floor with several scattered reflected rays, the rays a pixel the product of the counts, so that sixteen samples with sixteen shadow rays take minutes on one worker and under a minute on eight.
-
-The counts are the program's third argument after the file and the workers, as the worker count is, so that `make test` runs it with one sample in a second; the sample points come from `Random` seeded by the row, as `snake.ern` seeds its steps, so that a seed draws one picture whatever the worker count. Designed in [`proposals/whitted/proposal.md`](proposals/whitted/proposal.md), its seven decisions taken as recommended on 2026-10-21 (the log's *Whitted's spheres decided*), built by an agent from it and read back here.
-
-Decided 2026-10-20 with the user, who also decided where the library stops: a 2-D library of pixmaps and pixels, no mesh and no image reading; a mesh is a library's work (the log's *Where the Library Stops*). A window that shows came in later the same day, milestone 8.
-
 ## Milestone 6: after Ernest's MVP 3.28, the end
 
 When Ernest's MVP 3.28 is released, the parts of the library that wait on it are taken in one item: the fourteen dropped `Foreign.Term` answers become `Unit` declarations, the tests' own fault helper becomes `Test.faults`, the page's `// =>` lines are held by `ern test`, the copy of the style rules goes where Ernest installs them, Ernest's own libraries come off `make lib` once they are on the default load path, and `--libs lib` replaces the `--load-path` of each Erlang application's `ebin` in the Makefile, the launcher and the examples' headers, as the template then has it.
