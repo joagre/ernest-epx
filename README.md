@@ -12,7 +12,7 @@ make test       the layout, every module's tests, the documents, and test/ where
 make release    the archive, build/epx-VERSION.tar.gz, which a program names as a dependency
 ```
 
-`make lib` fills `lib/` with Ernest's own libraries the Makefile's `LIBS` names, linked from the installation, and each dependency `DEPS` names by the URL of its release archive, fetched and unpacked once. Everything the library loads beyond the standard library stands under `lib/<name>/build`, which is the whole load path. How epx itself, Erlang with a NIF, is found is the first milestone's decision. `make doc` writes each module's documentation under `build/`, `make format` lays the modules out, and `make clean` removes what the build and `make lib` wrote.
+Clone with `--recursive`: epx and tree_db are git submodules under `erl/`, which `make lib` builds by their own `make`, epx's NIF among them, and links under `lib/` as `ebin` and `priv`; everything the library loads beyond the standard library stands under `lib/`, which is the whole load path. epx's NIF needs a C compiler and the X11 and xcb headers. `make doc` writes each module's documentation under `build/`, `make format` lays the modules out, and `make clean` removes what the build and `make lib` wrote.
 
 ## The documents
 

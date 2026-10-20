@@ -8,7 +8,8 @@
 #                 test/ where it exists
 #   make run      runs the program through its launcher
 #   make lib      fills lib/: Ernest's own libraries linked, each dependency
-#                 fetched and unpacked where it is not there
+#                 fetched and unpacked where it is not there, and each Erlang
+#                 application under erl/ built by its own make and linked
 #   make doc      the documentation of every module, as CommonMark under build/
 #   make format   lays every module out
 #   make release  the archive, build/NAME-VERSION.tar.gz, tests first
@@ -18,6 +19,7 @@ NAME        = epx
 ERN_VERSION = 0.4
 LIBS        =
 DEPS        =
+ERL_DEPS    = tree_db epx
 
 # The ern on PATH, or ERN=path/to/ern; where its libraries are, beside it as
 # an installation and a checkout each lay them out.
@@ -26,9 +28,11 @@ ERN_DIR     = $(dir $(realpath $(shell command -v $(ERN))))
 ERNEST_LIBS = $(firstword $(wildcard $(ERN_DIR)../lib/ernest/build/libs \
                                     $(ERN_DIR)../build/libs))
 
-# Everything beyond the standard library stands under lib/<name>/build, so
-# the load path is one glob, here and in the launcher.
-LOAD_PATH   = $(addprefix --load-path ,$(shell ls -d lib/*/build 2>/dev/null))
+# Everything beyond the standard library stands under lib/: an Ernest
+# library's or a dependency's build, and an Erlang application's ebin, whose
+# priv/ the host finds beside it. The load path is one glob, here and in the
+# launcher.
+LOAD_PATH   = $(addprefix --load-path ,$(shell ls -d lib/*/build lib/*/ebin 2>/dev/null))
 DEP_DIRS    = $(addprefix lib/,$(notdir $(basename $(basename $(DEPS)))))
 VERSION     = $(shell cat VERSION)
 
@@ -57,6 +61,15 @@ lib:
 	    dir=lib/$$(basename $$url .tar.gz); \
 	    test -d $$dir && continue; \
 	    echo "fetching $$url" && curl -fsSL "$$url" | tar -xzf - -C lib || exit 1; \
+	done
+	@for app in $(ERL_DEPS); do \
+	    test -f erl/$$app/Makefile || \
+	        { echo "erl/$$app is empty: git submodule update --init"; exit 1; }; \
+	    $(MAKE) -C erl/$$app || exit 1; \
+	    mkdir -p lib/$$app && \
+	    for part in ebin priv; do \
+	        test -e lib/$$app/$$part || ln -s ../../erl/$$app/$$part lib/$$app/$$part; \
+	    done; \
 	done
 
 # Each dependency is built by this ern from its source, in the order DEPS

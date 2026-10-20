@@ -6,7 +6,7 @@ Read *Where we are* first, then the table of milestones; the milestones to come 
 
 ## Where we are
 
-Begun from `ernest-template` on 2026-10-20; nothing is built yet. The first milestone is the library's design, discussed in a proposal before a function is declared.
+Begun from `ernest-template` on 2026-10-20; epx and tree_db build and load, milestone 1's item 2, and nothing of the library is written yet. Next is the library's design, item 1, discussed in a proposal before a function is declared.
 
 ## Milestones
 
@@ -16,5 +16,5 @@ Begun from `ernest-template` on 2026-10-20; nothing is built yet. The first mile
 ## Milestone 1: the design
 
 1. **What the library offers**, discussed in a proposal under `docs/proposals/`: which of epx's operations, pixmaps and pixels first, and in what Ernest shape, each a shim where epx's function does exactly its work and Ernest around it where not; then stated in `design.md`.
-2. **How epx is found**, a decision of the proposal: epx is Erlang with a NIF, built by rebar3, which `make lib` does not fetch and `lib/*/build` does not describe, and a `foreign fn` finds its module as a `.beam` on the load path (report §8.4, §11.2) while the NIF's library is found from the application's `priv/` by the host. Recommended: decided by trying it, a built epx under `lib/epx/` with its `ebin/` on the load path, before the shape of the Makefile's rule is chosen; what is learned goes back to `ernest-template`.
+2. **How epx is found**: decided 2026-10-20 (the log's *epx and tree_db as submodules*). epx and tree_db are read-only git submodules under `erl/`, which `make lib` builds by their own `make` and links as `lib/<app>/ebin` and `priv`, on the load path; a pixmap was made, filled and read through the NIF from a scratch Ernest program. Built into `ernest-template` as its `v0.2.0`.
 3. **The first module**, `Epx` with pixmaps, their tests and `make test` green.
