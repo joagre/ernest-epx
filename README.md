@@ -2,6 +2,10 @@
 
 An Ernest library over [epx](https://github.com/tonyrog/epx), the pixel library for Erlang: a 2-D library of pixmaps and their pixels, and nothing of epx's windows and events. Its one module is `Epx`, whose page is [`docs/man/epx.md`](docs/man/epx.md), which `make man` writes and a release commits. It is a library and not a program: a program adds it to its load path, as *Using it* says. Its first cut is written; [`docs/plan.md`](docs/plan.md) says where it stands.
 
+![Three pictures the examples draw: the Sierpinski gasket, the Boing ball above a mirror floor, and the Mandelbrot set](assets/collage.png)
+
+The three pictures are what [`examples/`](examples/README.md) draws, each a program of a page or two; [`assets/README.md`](assets/README.md) says how a picture is made from a program's output.
+
 ## Using it
 
 A program outside this repository puts the library's build on its load path when it is compiled and when it is run, and epx's `ebin` when it is run, `<repo>` standing for this repository's path once `make` has built it:
