@@ -122,7 +122,7 @@ let height : Int = 300
 
 // The rays followed for one pixel: the eye's, and its reflection in the
 // floor.
-let depth : Int = 2
+let rays : Int = 2
 
 // The ball, its lowest point 0.2 above the floor, which is the plane where
 // `y` is 0.
@@ -247,7 +247,7 @@ fn awaitWorkers(count : Int) : Unit receiving Down =
 // The row `y` traced a pixel at a time and written into the pixmap with
 // one `Epx.putPixels`.
 fn renderRow(pixmap : Epx.Pixmap, y : Int) : Unit = {
-    let pixels = List.map(List.range(0, width - 1), fn(x) = pixel(trace(pixelRay(x, y), depth)));
+    let pixels = List.map(List.range(0, width - 1), fn(x) = pixel(trace(pixelRay(x, y), rays)));
     Epx.putPixels(pixmap, 0, y, width, 1, Epx.Rgb, Bytes.join(pixels, <<>>))
 }
 

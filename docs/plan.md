@@ -6,7 +6,7 @@ Read *Where we are* first, then the table of milestones; the milestones to come 
 
 ## Where we are
 
-The first cut is built and released as 0.1.0, 2026-10-20: `Epx` with twenty functions over epx's pixmaps, its design in `design.md`, two examples, and the manual page under `docs/man/`. `sub` and `scroll` of the proposal wait on epx, milestone 2, and the area operations are epx's exactly, a source rectangle that begins outside the clip landing as epx lands it. Next is milestone 4, the ray tracer; milestone 2 waits on epx, on Ernest and on the template.
+The first cut is built and released as 0.1.0, 2026-10-20: `Epx` with twenty functions over epx's pixmaps, its design in `design.md`, two examples, and the manual page under `docs/man/`. `sub` and `scroll` of the proposal wait on epx, milestone 2, and the area operations are epx's exactly, a source rectangle that begins outside the clip landing as epx lands it. The ray tracer is built, milestone 4, so the examples are three. Milestone 2 waits on epx, on Ernest and on the template; the next cut, `Epx.Gc`, is its item 4 and begins with a proposal.
 
 ## Milestones
 
@@ -14,6 +14,7 @@ The first cut is built and released as 0.1.0, 2026-10-20: `Epx` with twenty func
 |---|---|---|---|
 | Milestone 1 | the design and the first cut | 2026-10-20 | the log's *epx and tree_db as submodules*, *The first cut*, *The first cut built*, *The clip correction dropped* |
 | Milestone 3 | the release 0.1.0 | 2026-10-20 | the log's *The release review* |
+| Milestone 4 | the ray tracer | 2026-10-20 | [`proposals/raytracer/`](proposals/raytracer/); the log's *The ray tracer*, *The ray tracer built* |
 
 ## Milestone 1: the design
 
@@ -29,9 +30,3 @@ The first cut is built and released as 0.1.0, 2026-10-20: `Epx` with twenty func
 4. **The next cut**: the drawing functions with the graphics context, `Epx.Gc`, as the proposal's section 2 leaves them, designed in a proposal of their own.
 5. **What waits on Ernest**: the lines the library carried to Ernest's `language_feedback.md`, 123 to 132, decided in Ernest's plan; when Ernest has 123, a foreign function answering `ok` declared `Unit`, the fourteen dropped answers go, and with 124, a `Test` function for a fault, the tests' own helper.
 6. **What waits on the template**: a tool that runs a doc block's `// =>` examples and holds the page to them, which every library wants and which the release review found nothing does here (Ernest's feedback 127).
-
-## Milestone 4: the ray tracer
-
-`examples/raytracer.ern`: the Boing ball, a sphere in red and white checks, above a mirror floor, traced with one light, Lambert shading, a highlight and a reflection to a depth of two, over a `Vector` record with its own operators; the rows shared out in turn among a count of processes the command line gives, each monitored, each writing its rows into the one pixmap with `putPixels`, `main` receiving a `Down` for each and then writing the PPM.
-
-The third row of `examples/README.md`, run by `make test` with a small count. Designed in [`proposals/raytracer/proposal.md`](proposals/raytracer/proposal.md), its six decisions taken as recommended on 2026-10-20 (the log's *The ray tracer*); built by an agent from it and read back; what writing floats and processes together feels against the principles goes to `language_feedback.md`.
