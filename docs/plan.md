@@ -43,7 +43,15 @@ After the clock face, the window that shows and Whitted's spheres, milestones 8 
 
 Each example gains a way to show its picture on the screen as it is drawn, the ray tracer's rows appearing as its workers write them, with a slower trace where that shows it better, and each still writes its PPM, which `make test` holds to.
 
-Three questions the proposal answers, named 2026-10-20. `make test` runs with or without a display, so an example opens a window only when asked, a word on the command line as the worker count is, and the window module's tests are tried by hand on a machine with a screen and say so. A window with no events has no close button that works, so the program decides when it goes: it waits on a line from standard input, "press Enter to close", a wait on what it means. Who draws into the window: each worker after its row, which is the demonstration and which the experiment tries first, or `main` on the backend's sync. And flicker: epx's X11 backend draws off screen by default, `use_off_screen`, and its framebuffer backend double-buffers, `double_buffer`; the window is made with those on, and the experiment shows whether a row drawn at a time flickers.
+Three questions the proposal answers, named 2026-10-20.
+
+`make test` runs with or without a display, so an example opens a window only when asked, a word on the command line as the worker count is, and the window module's tests are tried by hand on a machine with a screen and say so.
+
+A window with no events has no close button that works, so the program decides when it goes: it waits on a line from standard input, "press Enter to close", a wait on what it means.
+
+Who draws into the window: each worker after its row, which is the demonstration and which the experiment tries first, or `main` on the backend's sync.
+
+And flicker: epx's X11 backend draws off screen by default, `use_off_screen`, and its framebuffer backend double-buffers, `double_buffer`; the window is made with those on, and the experiment shows whether a row drawn at a time flickers.
 
 Designed in a proposal first, after the second cut and before the release 0.2.0; decided 2026-10-20 with the user (the log's *A Window That Shows*), which reverses that part of *Where the Library Stops*.
 
