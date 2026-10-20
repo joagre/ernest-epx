@@ -2,6 +2,7 @@
 build/
 test/build/
 tools/build/
+examples/build/
 *.erc
 
 # What make lib fills: Ernest's libraries linked, each dependency unpacked

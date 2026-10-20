@@ -1,7 +1,1288 @@
-/// Ernest over epx, the pixel library for Erlang: pixmaps, their pixels and
-/// their drawing, and the windows and events of a backend, as `docs/design.md`
-/// states them. Nothing is written yet: the first milestone of `docs/plan.md`
-/// designs the library before a function is declared.
+/// Pixmaps, rectangles of pixels held outside any process, made, read,
+/// written, copied, scaled and blended over epx, the pixel library for
+/// Erlang.
+///
+/// Use it where a program makes a picture pixel by pixel or a rectangle at
+/// a time: a pixmap is changed in place, where a `Bytes` would be made
+/// again at each change. A picture kept as a value is the bytes `getPixels`
+/// answers, or the file `toPpm` writes.
+///
+/// A program puts the library's build and the `ebin` directories of epx
+/// and of tree_db on its load path when it is compiled and when it is run;
+/// epx finds its NIF in the `priv` directory beside its `ebin`.
+///
+/// **A pixmap's life.** A pixmap lives while a process holds it, and the
+/// host frees it once none does: there is no `close`. Its width, its height
+/// and its format are fixed when it is made, and every pixel of a new
+/// pixmap is 0 in every channel. It stays on the node that made it.
+///
+/// **In place and shared.** A pixmap is not a value. `fill`, `putPixel` and
+/// every other operation that writes change it in place, and every process
+/// that holds it sees the change: a pixmap sent in a message, or captured
+/// by a spawned function, is the same pixmap there. Nothing orders the
+/// writes of two processes but the order in which they run. `copy` makes a
+/// pixmap that shares nothing with the first.
+///
+/// **Coordinates.** A pixel is at `x`, `y`, where `0`, `0` is the top left
+/// pixel, `x` grows to the right and `y` downward. A rectangle is its top
+/// left pixel, its width and its height. A negative width or height faults,
+/// and so does a coordinate beyond 32 bits with a sign or a size beyond 32
+/// bits without, each with epx's cause, such as `foreign function
+/// epx:pixmap_fill_area/6 raised error:badarg`.
+///
+/// **The clip.** Each pixmap has a clip, a rectangle within it, which is
+/// the whole pixmap until `setClip` sets another. `putPixel`, `putPixels`,
+/// `fillArea`, `scale`, `copyArea` and the blends, `blendArea`,
+/// `fadeArea`, `shadowArea` and `operationArea`, write only within the
+/// target's clip, `copyArea` and the blends read only within the source's,
+/// and `getPixel` answers opaque black outside it; `fill`, `flip`, `copyTo`
+/// and `getPixels` do not read it. A rectangle that reaches outside what an
+/// operation reads or writes is cut to the part within it.
+///
+/// **Colors.** A `Color` is four channels from 0 to 255, alpha 255 being
+/// opaque. An operation given a channel outside that range faults, with the
+/// cause `a channel of a Color is outside 0 to 255`.
+///
+/// ## Examples
+///
+/// A pixmap filled, a pixel set, and the pixel read back:
+///
+/// ```ernest
+/// {
+///     let pixmap = Epx.create(4, 3, Epx.Argb);
+///     Epx.fill(pixmap, Epx.rgb(0, 0, 255));
+///     Epx.putPixel(pixmap, 1, 2, Epx.rgb(255, 0, 0));
+///     Epx.getPixel(pixmap, 1, 2)
+/// }
+/// // => Color(alpha = 255, red = 255, green = 0, blue = 0)
+/// ```
+///
+/// A picture written to a file as PPM, which an image viewer opens:
+///
+/// ```ernest
+/// {
+///     let pixmap = Epx.create(64, 64, Epx.Rgb);
+///     Epx.fill(pixmap, Epx.rgb(255, 255, 255));
+///     Fs.write(Path("white.ppm"), Epx.toPpm(pixmap), 5000)
+/// }
+/// ```
+///
+/// ## See also
+///
+/// `Bytes` for the pixels held as a value.
+///
+/// since 0.1.0
 
-/// The library is not written yet; this test goes with the first real one.
-let nothingYet = Test.Case(name = "nothing yet", run = fn() = Test.equal(1 + 1, 2))
+//
+// Types
+//
+
+/// A rectangle of pixels held by epx outside any process, changed in place
+/// and shared by every process that holds it.
+///
+/// ### Examples
+///
+/// ```ernest
+/// Epx.create(640, 480, Epx.Argb)
+/// ```
+export foreign type Pixmap
+
+/// The order of a pixel's bytes, one byte a channel, in which `getPixels`
+/// answers them and `putPixels` reads them. `Rgb` and `Bgr` hold no alpha:
+/// a pixel of either is read with alpha 255, and the alpha it is written
+/// with is dropped.
+///
+/// ### Examples
+///
+/// ```ernest
+/// Epx.format(Epx.create(1, 1, Epx.Rgb))
+/// // => Rgb
+/// ```
+export type Format =
+    /// Alpha, red, green and blue, four bytes a pixel.
+    Argb
+  /// Red, green, blue and alpha, four bytes a pixel.
+  | Rgba
+  /// Alpha, blue, green and red, four bytes a pixel.
+  | Abgr
+  /// Blue, green, red and alpha, four bytes a pixel.
+  | Bgra
+  /// Red, green and blue, three bytes a pixel.
+  | Rgb
+  /// Blue, green and red, three bytes a pixel.
+  | Bgr
+
+/// A color as four channels, each from 0 to 255. A channel is stored as it
+/// is given, not multiplied by the alpha.
+///
+/// ### Examples
+///
+/// ```ernest
+/// Epx.Color(alpha = 128, red = 255, green = 0, blue = 0)
+/// // => Color(alpha = 128, red = 255, green = 0, blue = 0)
+/// ```
+export type Color = Color(
+    /// How opaque the color is: 255 is opaque and 0 transparent.
+    alpha : Int,
+    /// The red channel.
+    red : Int,
+    /// The green channel.
+    green : Int,
+    /// The blue channel.
+    blue : Int)
+
+/// How `operationArea` combines a pixel of the source with the pixel of
+/// the target it falls on, giving the target's new pixel. Below, a channel
+/// scaled by an alpha `a` is the channel times `a / 256`, and one pixel
+/// blended into another by `a` has each channel of the other moved `a /
+/// 256` of the way to the first's, each rounded down.
+///
+/// ### Examples
+///
+/// ```ernest
+/// Epx.SrcOver
+/// // => SrcOver
+/// ```
+export type Operation =
+    /// Transparent black, whatever the two pixels.
+    Clear
+  /// The source, its color channels scaled by its alpha.
+  | Src
+  /// The target, its color channels scaled by its alpha.
+  | Dst
+  /// The source over the target: the source's color blended by its alpha
+  /// into the target's, whose color channels are first scaled by its alpha,
+  /// and the target's alpha moved toward 255 by the source's.
+  | SrcOver
+  /// The target over the source, as `SrcOver` with the two swapped.
+  | DstOver
+  /// The source where the target is: its alpha the source's scaled by the
+  /// target's, and the source's color channels scaled by that alpha.
+  | SrcIn
+  /// The target where the source is, as `SrcIn` with the two swapped.
+  | DstIn
+  /// The source where the target is not: its alpha the source's scaled by
+  /// 255 less the target's, and the source's color channels scaled by that
+  /// alpha.
+  | SrcOut
+  /// The target where the source is not, as `SrcOut` with the two swapped.
+  | DstOut
+  /// The source atop the target: the target's alpha, and the source's color
+  /// blended by its alpha into the target's, both first scaled by the
+  /// target's alpha.
+  | SrcAtop
+  /// The target atop the source, as `SrcAtop` with the two swapped.
+  | DstAtop
+  /// The source where the target is not, and the target where the source
+  /// is not.
+  | Xor
+  /// The source as it is, its alpha among its channels.
+  | Copy
+  /// Each channel, alpha among them, the source's and the target's summed,
+  /// 255 at most.
+  | Add
+  /// Each channel, alpha among them, the source's less the target's, 0 at
+  /// least.
+  | Sub
+  /// The source blended into the target by the source's alpha, alpha among
+  /// the channels blended.
+  | SrcBlend
+  /// The target blended into the source by the target's alpha, as
+  /// `SrcBlend` with the two swapped.
+  | DstBlend
+
+//
+// Making a pixmap and reading what it is
+//
+
+/// A new pixmap of that width, height and format, every pixel 0 in every
+/// channel: transparent black, which a format without alpha reads as
+/// opaque black. Its clip is the whole pixmap. Making it writes every pixel
+/// once.
+///
+/// ### Errors
+///
+/// Faults on a negative width or height, on one beyond 32 bits, and on one
+/// whose pixels the host cannot allocate, with epx's cause: `foreign
+/// function epx:pixmap_create/3 raised error:badarg`.
+///
+/// ### Examples
+///
+/// ```ernest
+/// {
+///     let pixmap = Epx.create(3, 2, Epx.Argb);
+///     #(Epx.width(pixmap), Epx.height(pixmap), Epx.getPixel(pixmap, 0, 0))
+/// }
+/// // => #(3, 2, Color(alpha = 0, red = 0, green = 0, blue = 0))
+/// ```
+export fn create(width : Int, height : Int, format : Format) : Pixmap = {
+    // epx leaves a new pixmap's memory as the host gave it (design §2).
+    let pixmap = rawCreate(width, height, formatAtom(format));
+    let _ = rawFill(pixmap, #(0, 0, 0, 0));
+    pixmap
+}
+
+foreign fn rawCreate(width : Int, height : Int, format : Foreign.Term) : Pixmap =
+    "epx:pixmap_create/3"
+
+/// A new pixmap of the same width, height, format and pixels, which shares
+/// nothing with the first. Its clip is the whole pixmap, whatever the
+/// first's.
+///
+/// ### Examples
+///
+/// ```ernest
+/// {
+///     let pixmap = Epx.create(1, 1, Epx.Argb);
+///     let copied = Epx.copy(pixmap);
+///     Epx.fill(pixmap, Epx.rgb(255, 255, 255));
+///     Epx.getPixel(copied, 0, 0)
+/// }
+/// // => Color(alpha = 0, red = 0, green = 0, blue = 0)
+/// ```
+export foreign fn copy(pixmap : Pixmap) : Pixmap =
+    "epx:pixmap_copy/1"
+
+/// The pixmap's width, in pixels.
+export fn width(pixmap : Pixmap) : Int =
+    rawInfo(pixmap, Foreign.atom("width"))
+
+/// The pixmap's height, in pixels.
+export fn height(pixmap : Pixmap) : Int =
+    rawInfo(pixmap, Foreign.atom("height"))
+
+foreign fn rawInfo(pixmap : Pixmap, key : Foreign.Term) : Int =
+    "epx:pixmap_info_/2"
+
+/// The pixmap's format.
+///
+/// ### Errors
+///
+/// Faults on a pixmap that foreign code made in a format `Format` does not
+/// name, with the cause `the pixmap's format is none of Format's`.
+export fn format(pixmap : Pixmap) : Format = {
+    let term = rawInfoTerm(pixmap, Foreign.atom("pixel_format"));
+    match List.find(formats, fn(known) = formatAtom(known) == term) {
+        Some(found) -> found
+      | None -> fault("the pixmap's format is none of Format's")
+    }
+}
+
+let formats : List(Format) = [Argb, Rgba, Abgr, Bgra, Rgb, Bgr]
+
+foreign fn rawInfoTerm(pixmap : Pixmap, key : Foreign.Term) : Foreign.Term =
+    "epx:pixmap_info_/2"
+
+//
+// Pixels
+//
+
+/// Sets every pixel of the pixmap to the color. The clip is not read.
+///
+/// ### Errors
+///
+/// Faults on a color with a channel outside 0 to 255, with the cause `a
+/// channel of a Color is outside 0 to 255`.
+export fn fill(pixmap : Pixmap, color : Color) : Unit = {
+    let _ = rawFill(pixmap, channels(color));
+    Unit
+}
+
+foreign fn rawFill(pixmap : Pixmap, color : #(Int, Int, Int, Int)) : Foreign.Term =
+    "epx:pixmap_fill/2"
+
+/// Sets every pixel of the rectangle at `x`, `y` to the color, within the
+/// clip; the rest of the rectangle is left as it was.
+///
+/// ### Errors
+///
+/// Faults on a color with a channel outside 0 to 255, with the cause `a
+/// channel of a Color is outside 0 to 255`. Faults on a negative width or
+/// height with epx's cause: `foreign function epx:pixmap_fill_area/6 raised
+/// error:badarg`.
+///
+/// ### Examples
+///
+/// ```ernest
+/// {
+///     let pixmap = Epx.create(3, 1, Epx.Rgb);
+///     Epx.fillArea(pixmap, 1, 0, 9, 9, Epx.rgb(255, 255, 255));
+///     Epx.getPixels(pixmap, 0, 0, 3, 1)
+/// }
+/// // => <<0, 0, 0, 255, 255, 255, 255, 255, 255>>
+/// ```
+export fn fillArea(pixmap : Pixmap,
+                   x : Int,
+                   y : Int,
+                   width : Int,
+                   height : Int,
+                   color : Color) : Unit = {
+    let _ = rawFillArea(pixmap, x, y, width, height, channels(color));
+    Unit
+}
+
+foreign fn rawFillArea(pixmap : Pixmap,
+                       x : Int,
+                       y : Int,
+                       width : Int,
+                       height : Int,
+                       color : #(Int, Int, Int, Int)) : Foreign.Term =
+    "epx:pixmap_fill_area/6"
+
+/// The color of the pixel at `x`, `y`, or opaque black, `Color(alpha =
+/// 255, red = 0, green = 0, blue = 0)`, where the point is outside the clip
+/// or outside the pixmap. A pixel of a format without alpha is read with
+/// alpha 255.
+///
+/// ### Errors
+///
+/// Faults on a coordinate beyond 32 bits, with epx's cause: `foreign
+/// function epx:pixmap_get_pixel/3 raised error:badarg`.
+///
+/// ### Examples
+///
+/// ```ernest
+/// Epx.getPixel(Epx.create(2, 2, Epx.Rgb), 5, 5)
+/// // => Color(alpha = 255, red = 0, green = 0, blue = 0)
+/// ```
+export fn getPixel(pixmap : Pixmap, x : Int, y : Int) : Color =
+    match rawGetPixel(pixmap, x, y) {
+        #(alpha, red, green, blue) -> Color(alpha = alpha, red = red, green = green, blue = blue)
+    }
+
+foreign fn rawGetPixel(pixmap : Pixmap, x : Int, y : Int) : #(Int, Int, Int, Int) =
+    "epx:pixmap_get_pixel/3"
+
+/// Sets the pixel at `x`, `y` to the color. A point outside the clip is
+/// left as it was.
+///
+/// ### Errors
+///
+/// Faults on a color with a channel outside 0 to 255, with the cause `a
+/// channel of a Color is outside 0 to 255`. Faults on a coordinate beyond
+/// 32 bits with epx's cause: `foreign function epx:pixmap_put_pixel/4
+/// raised error:badarg`.
+export fn putPixel(pixmap : Pixmap, x : Int, y : Int, color : Color) : Unit = {
+    let _ = rawPutPixel(pixmap, x, y, channels(color));
+    Unit
+}
+
+foreign fn rawPutPixel(pixmap : Pixmap,
+                       x : Int,
+                       y : Int,
+                       color : #(Int, Int, Int, Int)) : Foreign.Term =
+    "epx:pixmap_put_pixel/4"
+
+/// The pixels of the rectangle at `x`, `y`, row by row from the top, as
+/// bytes in the pixmap's format. A rectangle that reaches outside the
+/// pixmap answers the bytes of the part within it, and one wholly outside,
+/// or of width and height 0, answers none. The clip is not read. The bytes
+/// are a value: a later write to the pixmap does not change them.
+///
+/// ### Errors
+///
+/// Faults on a negative width or height, with epx's cause: `foreign
+/// function epx:pixmap_get_pixels/5 raised error:badarg`.
+///
+/// ### Examples
+///
+/// ```ernest
+/// {
+///     let pixmap = Epx.create(2, 2, Epx.Argb);
+///     Epx.fill(pixmap, Epx.rgb(1, 2, 3));
+///     #(Epx.getPixels(pixmap, 1, 1, 5, 5), Epx.getPixels(pixmap, 0, 0, 0, 0))
+/// }
+/// // => #(<<255, 1, 2, 3>>, <<>>)
+/// ```
+export fn getPixels(pixmap : Pixmap, x : Int, y : Int, width : Int, height : Int) : Bytes =
+    // For a rectangle of width and height 0, epx answers its whole memory,
+    // the padding of its rows among it, as bytes that change as the pixmap
+    // is written (design §4).
+    if width == 0 && height == 0 then <<>> else rawGetPixels(pixmap, x, y, width, height)
+
+foreign fn rawGetPixels(pixmap : Pixmap, x : Int, y : Int, width : Int, height : Int) : Bytes =
+    "epx:pixmap_get_pixels/5"
+
+/// Sets the pixels of the rectangle at `x`, `y` from the bytes, row by row
+/// from the top, the bytes read in the format given and written in the
+/// pixmap's. The part of the rectangle within the clip is written, and the
+/// rest of the bytes is not read.
+///
+/// ### Errors
+///
+/// Faults where the bytes are not `width` times `height` pixels in the
+/// format, with the cause `the bytes are not width times height pixels in
+/// the format`. Faults on a negative width or height with epx's cause:
+/// `foreign function epx:pixmap_put_pixels/7 raised error:badarg`.
+///
+/// ### Examples
+///
+/// ```ernest
+/// {
+///     let pixmap = Epx.create(2, 1, Epx.Argb);
+///     Epx.putPixels(pixmap, 0, 0, 2, 1, Epx.Rgb, <<1, 2, 3, 4, 5, 6>>);
+///     Epx.getPixel(pixmap, 1, 0)
+/// }
+/// // => Color(alpha = 255, red = 4, green = 5, blue = 6)
+/// ```
+export fn putPixels(pixmap : Pixmap,
+                    x : Int,
+                    y : Int,
+                    width : Int,
+                    height : Int,
+                    format : Format,
+                    bytes : Bytes) : Unit =
+    // epx writes nothing from bytes too few by a pixel or more, reads past
+    // their end where they are too few by less, and leaves too many unread
+    // (design §5).
+    if width >= 0 && height >= 0 && Bytes.size(bytes) != width * height * pixelSize(format) then
+        fault("the bytes are not width times height pixels in the format")
+    else {
+        let _ = rawPutPixels(pixmap, x, y, width, height, formatAtom(format), bytes);
+        Unit
+    }
+
+foreign fn rawPutPixels(pixmap : Pixmap,
+                        x : Int,
+                        y : Int,
+                        width : Int,
+                        height : Int,
+                        format : Foreign.Term,
+                        bytes : Bytes) : Foreign.Term =
+    "epx:pixmap_put_pixels/7"
+
+//
+// One pixmap into another
+//
+
+/// Copies the source's pixels into the target, in the target's format: the
+/// rectangle at the top left of both, as wide as the narrower and as high
+/// as the lower. Neither clip is read.
+///
+/// ### Examples
+///
+/// ```ernest
+/// {
+///     let source = Epx.create(1, 1, Epx.Argb);
+///     let target = Epx.create(2, 1, Epx.Rgb);
+///     Epx.fill(source, Epx.rgb(7, 8, 9));
+///     Epx.copyTo(source, target);
+///     Epx.getPixels(target, 0, 0, 2, 1)
+/// }
+/// // => <<7, 8, 9, 0, 0, 0>>
+/// ```
+export fn copyTo(source : Pixmap, target : Pixmap) : Unit = {
+    let _ = rawCopyTo(source, target);
+    Unit
+}
+
+foreign fn rawCopyTo(source : Pixmap, target : Pixmap) : Foreign.Term =
+    "epx:pixmap_copy_to/2"
+
+/// Copies the source's rectangle at `sourceX`, `sourceY` into the target at
+/// `targetX`, `targetY`, in the target's format, its alpha copied and not
+/// blended. A pixel outside the source's clip or outside the target's is
+/// left out, and the others land where their places in the rectangle put
+/// them. The source and the target may be one pixmap, the two rectangles
+/// overlapping.
+///
+/// ### Errors
+///
+/// Faults on a negative width or height, with epx's cause: `foreign
+/// function epx:pixmap_copy_area/8 raised error:badarg`.
+///
+/// ### Examples
+///
+/// ```ernest
+/// {
+///     let source = Epx.create(2, 1, Epx.Rgb);
+///     let target = Epx.create(3, 1, Epx.Rgb);
+///     Epx.putPixels(source, 0, 0, 2, 1, Epx.Rgb, <<1, 1, 1, 2, 2, 2>>);
+///     Epx.copyArea(source, target, -1, 0, 0, 0, 3, 1);
+///     Epx.getPixels(target, 0, 0, 3, 1)
+/// }
+/// // => <<0, 0, 0, 1, 1, 1, 2, 2, 2>>
+/// ```
+export fn copyArea(source : Pixmap,
+                   target : Pixmap,
+                   sourceX : Int,
+                   sourceY : Int,
+                   targetX : Int,
+                   targetY : Int,
+                   width : Int,
+                   height : Int) : Unit = {
+    let area = cut(source, sourceX, sourceY, targetX, targetY, width, height);
+    let _ =
+        rawCopyArea(source,
+                    target,
+                    area.sourceX,
+                    area.sourceY,
+                    area.targetX,
+                    area.targetY,
+                    area.width,
+                    area.height);
+    Unit
+}
+
+foreign fn rawCopyArea(source : Pixmap,
+                       target : Pixmap,
+                       sourceX : Int,
+                       sourceY : Int,
+                       targetX : Int,
+                       targetY : Int,
+                       width : Int,
+                       height : Int) : Foreign.Term =
+    "epx:pixmap_copy_area/8"
+
+/// Scales the whole source to `width` by `height` pixels and writes it into
+/// the target at its top left, within the target's clip. Scaled up, a
+/// pixel is mixed from the source's pixels around its place; scaled down,
+/// from those it covers. A width or a height of 0 writes nothing.
+///
+/// ### Errors
+///
+/// Faults on a negative width or height, with epx's cause: `foreign
+/// function epx:pixmap_scale/4 raised error:badarg`.
+///
+/// ### Examples
+///
+/// ```ernest
+/// {
+///     let source = Epx.create(1, 1, Epx.Rgb);
+///     let target = Epx.create(2, 2, Epx.Rgb);
+///     Epx.fill(source, Epx.rgb(9, 9, 9));
+///     Epx.scale(source, target, 2, 2);
+///     Epx.getPixel(target, 1, 1)
+/// }
+/// // => Color(alpha = 255, red = 9, green = 9, blue = 9)
+/// ```
+export fn scale(source : Pixmap, target : Pixmap, width : Int, height : Int) : Unit = {
+    let _ = rawScale(source, target, width, height);
+    Unit
+}
+
+foreign fn rawScale(source : Pixmap, target : Pixmap, width : Int, height : Int) : Foreign.Term =
+    "epx:pixmap_scale/4"
+
+/// Reverses the order of the pixmap's rows in place, the top row becoming
+/// the bottom one. The clip is not read.
+///
+/// ### Examples
+///
+/// ```ernest
+/// {
+///     let pixmap = Epx.create(1, 2, Epx.Rgb);
+///     Epx.putPixel(pixmap, 0, 0, Epx.rgb(255, 255, 255));
+///     Epx.flip(pixmap);
+///     Epx.getPixels(pixmap, 0, 0, 1, 2)
+/// }
+/// // => <<0, 0, 0, 255, 255, 255>>
+/// ```
+export fn flip(pixmap : Pixmap) : Unit = {
+    let _ = rawFlip(pixmap);
+    Unit
+}
+
+foreign fn rawFlip(pixmap : Pixmap) : Foreign.Term =
+    "epx:pixmap_flip/1"
+
+//
+// Blends
+//
+
+/// Blends the source's rectangle into the target's by `alpha`: each color
+/// channel of the target moves `alpha / 256` of the way to the source's,
+/// rounded down. The source's alpha is not read, and the target keeps its
+/// own. An alpha of 0 leaves the target as it was. The rectangles are
+/// placed and cut as `copyArea` places and cuts them.
+///
+/// Where both pixmaps hold four bytes a pixel in one format and the
+/// rectangle is 8 pixels wide or more, epx may blend with the machine's
+/// vector instructions, whose result may differ by one from the one rounded
+/// down.
+///
+/// ### Errors
+///
+/// Faults on an alpha outside 0 to 255, with the cause `the alpha is
+/// outside 0 to 255`. Faults on a negative width or height with epx's
+/// cause: `foreign function epx:pixmap_alpha_area/9 raised error:badarg`.
+///
+/// ### Examples
+///
+/// ```ernest
+/// {
+///     let source = Epx.create(1, 1, Epx.Argb);
+///     let target = Epx.create(1, 1, Epx.Argb);
+///     Epx.fill(source, Epx.rgb(200, 200, 200));
+///     Epx.fill(target, Epx.rgb(0, 0, 0));
+///     Epx.blendArea(source, target, 128, 0, 0, 0, 0, 1, 1);
+///     Epx.getPixel(target, 0, 0)
+/// }
+/// // => Color(alpha = 255, red = 100, green = 100, blue = 100)
+/// ```
+export fn blendArea(source : Pixmap,
+                    target : Pixmap,
+                    alpha : Int,
+                    sourceX : Int,
+                    sourceY : Int,
+                    targetX : Int,
+                    targetY : Int,
+                    width : Int,
+                    height : Int) : Unit =
+    // epx takes an alpha above 255 as 255 (design §5).
+    if isChannel(alpha) then {
+        let area = cut(source, sourceX, sourceY, targetX, targetY, width, height);
+        let _ =
+            rawAlphaArea(source,
+                         target,
+                         alpha,
+                         area.sourceX,
+                         area.sourceY,
+                         area.targetX,
+                         area.targetY,
+                         area.width,
+                         area.height);
+        Unit
+    } else
+        fault("the alpha is outside 0 to 255")
+
+foreign fn rawAlphaArea(source : Pixmap,
+                        target : Pixmap,
+                        alpha : Int,
+                        sourceX : Int,
+                        sourceY : Int,
+                        targetX : Int,
+                        targetY : Int,
+                        width : Int,
+                        height : Int) : Foreign.Term =
+    "epx:pixmap_alpha_area/9"
+
+/// Blends the source's rectangle into the target's by the source's own
+/// alpha scaled by `fade`: each channel of the target, alpha among them,
+/// moves `a / 256` of the way to the source's, where `a` is the source's
+/// alpha times `fade / 256`, each rounded down. A fade of 0 leaves the
+/// target as it was, and one of 255 blends by the source's alpha as it is,
+/// as `SrcBlend` does. The rectangles are placed and cut as `copyArea`
+/// places and cuts them.
+///
+/// Where both pixmaps hold four bytes a pixel in one format and the
+/// rectangle is 8 pixels wide or more, epx may blend with the machine's
+/// vector instructions, whose result may differ by one from the one rounded
+/// down.
+///
+/// ### Errors
+///
+/// Faults on a fade outside 0 to 255, with the cause `the fade is outside 0
+/// to 255`. Faults on a negative width or height with epx's cause:
+/// `foreign function epx:pixmap_fade_area/9 raised error:badarg`.
+///
+/// ### Examples
+///
+/// ```ernest
+/// {
+///     let source = Epx.create(1, 1, Epx.Argb);
+///     let target = Epx.create(1, 1, Epx.Argb);
+///     Epx.fill(source, Epx.Color(alpha = 128, red = 200, green = 200, blue = 200));
+///     Epx.fill(target, Epx.rgb(0, 0, 0));
+///     Epx.fadeArea(source, target, 255, 0, 0, 0, 0, 1, 1);
+///     Epx.getPixel(target, 0, 0)
+/// }
+/// // => Color(alpha = 191, red = 100, green = 100, blue = 100)
+/// ```
+export fn fadeArea(source : Pixmap,
+                   target : Pixmap,
+                   fade : Int,
+                   sourceX : Int,
+                   sourceY : Int,
+                   targetX : Int,
+                   targetY : Int,
+                   width : Int,
+                   height : Int) : Unit =
+    // epx takes a fade above 255 as 255 (design §5).
+    if isChannel(fade) then {
+        let area = cut(source, sourceX, sourceY, targetX, targetY, width, height);
+        let _ =
+            rawFadeArea(source,
+                        target,
+                        fade,
+                        area.sourceX,
+                        area.sourceY,
+                        area.targetX,
+                        area.targetY,
+                        area.width,
+                        area.height);
+        Unit
+    } else
+        fault("the fade is outside 0 to 255")
+
+foreign fn rawFadeArea(source : Pixmap,
+                       target : Pixmap,
+                       fade : Int,
+                       sourceX : Int,
+                       sourceY : Int,
+                       targetX : Int,
+                       targetY : Int,
+                       width : Int,
+                       height : Int) : Foreign.Term =
+    "epx:pixmap_fade_area/9"
+
+/// Darkens the target by the source's rectangle: each channel of the
+/// target, alpha among them, is multiplied by `(256 - l) / 256` and rounded
+/// down, where `l` is the luminance of the source's pixel, `(299 * red +
+/// 587 * green + 114 * blue) / 1000`. A black source leaves the target as it
+/// was, and a white one makes it transparent black. The source's alpha is
+/// not read. The rectangles are placed and cut as `copyArea` places and
+/// cuts them.
+///
+/// ### Errors
+///
+/// Faults on a negative width or height, with epx's cause: `foreign
+/// function epx:pixmap_shadow_area/8 raised error:badarg`.
+///
+/// ### Examples
+///
+/// ```ernest
+/// {
+///     let source = Epx.create(1, 1, Epx.Argb);
+///     let target = Epx.create(1, 1, Epx.Argb);
+///     Epx.fill(source, Epx.rgb(128, 128, 128));
+///     Epx.fill(target, Epx.rgb(100, 100, 100));
+///     Epx.shadowArea(source, target, 0, 0, 0, 0, 1, 1);
+///     Epx.getPixel(target, 0, 0)
+/// }
+/// // => Color(alpha = 127, red = 50, green = 50, blue = 50)
+/// ```
+export fn shadowArea(source : Pixmap,
+                     target : Pixmap,
+                     sourceX : Int,
+                     sourceY : Int,
+                     targetX : Int,
+                     targetY : Int,
+                     width : Int,
+                     height : Int) : Unit = {
+    let area = cut(source, sourceX, sourceY, targetX, targetY, width, height);
+    let _ =
+        rawShadowArea(source,
+                      target,
+                      area.sourceX,
+                      area.sourceY,
+                      area.targetX,
+                      area.targetY,
+                      area.width,
+                      area.height);
+    Unit
+}
+
+foreign fn rawShadowArea(source : Pixmap,
+                         target : Pixmap,
+                         sourceX : Int,
+                         sourceY : Int,
+                         targetX : Int,
+                         targetY : Int,
+                         width : Int,
+                         height : Int) : Foreign.Term =
+    "epx:pixmap_shadow_area/8"
+
+/// Combines the source's rectangle with the target's by the operation,
+/// pixel by pixel, and writes the result into the target; `Operation` says
+/// what each gives. The rectangles are placed and cut as `copyArea` places
+/// and cuts them.
+///
+/// ### Errors
+///
+/// Faults on a negative width or height, with epx's cause: `foreign
+/// function epx:pixmap_operation_area/9 raised error:badarg`.
+///
+/// ### Examples
+///
+/// ```ernest
+/// {
+///     let source = Epx.create(1, 1, Epx.Argb);
+///     let target = Epx.create(1, 1, Epx.Argb);
+///     Epx.fill(source, Epx.rgb(200, 0, 100));
+///     Epx.fill(target, Epx.rgb(100, 10, 200));
+///     Epx.operationArea(source, target, Epx.Add, 0, 0, 0, 0, 1, 1);
+///     Epx.getPixel(target, 0, 0)
+/// }
+/// // => Color(alpha = 255, red = 255, green = 10, blue = 255)
+/// ```
+export fn operationArea(source : Pixmap,
+                        target : Pixmap,
+                        operation : Operation,
+                        sourceX : Int,
+                        sourceY : Int,
+                        targetX : Int,
+                        targetY : Int,
+                        width : Int,
+                        height : Int) : Unit = {
+    let area = cut(source, sourceX, sourceY, targetX, targetY, width, height);
+    let _ =
+        rawOperationArea(source,
+                         target,
+                         operationAtom(operation),
+                         area.sourceX,
+                         area.sourceY,
+                         area.targetX,
+                         area.targetY,
+                         area.width,
+                         area.height);
+    Unit
+}
+
+foreign fn rawOperationArea(source : Pixmap,
+                            target : Pixmap,
+                            operation : Foreign.Term,
+                            sourceX : Int,
+                            sourceY : Int,
+                            targetX : Int,
+                            targetY : Int,
+                            width : Int,
+                            height : Int) : Foreign.Term =
+    "epx:pixmap_operation_area/9"
+
+//
+// The clip
+//
+
+/// Sets the pixmap's clip to the part of the rectangle at `x`, `y` within
+/// the pixmap, which may be empty. The clip of the whole pixmap is set
+/// again with `setClip(pixmap, 0, 0, width(pixmap), height(pixmap))`.
+///
+/// ### Errors
+///
+/// Faults on a negative width or height, with epx's cause: `foreign
+/// function epx:pixmap_set_clip/2 raised error:badarg`.
+///
+/// ### Examples
+///
+/// ```ernest
+/// {
+///     let pixmap = Epx.create(2, 1, Epx.Rgb);
+///     Epx.setClip(pixmap, 0, 0, 1, 1);
+///     Epx.fillArea(pixmap, 0, 0, 2, 1, Epx.rgb(255, 255, 255));
+///     Epx.getPixels(pixmap, 0, 0, 2, 1)
+/// }
+/// // => <<255, 255, 255, 0, 0, 0>>
+/// ```
+export fn setClip(pixmap : Pixmap, x : Int, y : Int, width : Int, height : Int) : Unit = {
+    let _ = rawSetClip(pixmap, #(x, y, width, height));
+    Unit
+}
+
+foreign fn rawSetClip(pixmap : Pixmap, rectangle : #(Int, Int, Int, Int)) : Foreign.Term =
+    "epx:pixmap_set_clip/2"
+
+//
+// Colors and files
+//
+
+/// The opaque color of those channels, its alpha 255. Its channels are
+/// checked where it is used, not here.
+///
+/// ### Examples
+///
+/// ```ernest
+/// Epx.rgb(255, 128, 0)
+/// // => Color(alpha = 255, red = 255, green = 128, blue = 0)
+/// ```
+export fn rgb(red : Int, green : Int, blue : Int) : Color =
+    Color(alpha = 255, red = red, green = green, blue = blue)
+
+/// The pixmap as a PPM file in its binary form, `P6`: a header of the text
+/// `P6`, the width and the height in decimal, and `255`, each followed by a
+/// line feed but the width, which a space follows; then the pixels, row by
+/// row from the top, each as its red, green and blue bytes. A pixel's alpha
+/// is dropped, and its color channels are written as they are.
+///
+/// ### Examples
+///
+/// ```ernest
+/// Epx.toPpm(Epx.create(1, 1, Epx.Rgb))
+/// // => <<80, 54, 10, 49, 32, 49, 10, 50, 53, 53, 10, 0, 0, 0>>
+/// ```
+export fn toPpm(pixmap : Pixmap) : Bytes = {
+    let columns = width(pixmap);
+    let rows = height(pixmap);
+    let raster = create(columns, rows, Rgb);
+    copyTo(pixmap, raster);
+    let header = "P6\n" <> Int.toString(columns) <> " " <> Int.toString(rows) <> "\n255\n";
+    String.toUtf8(header) <> getPixels(raster, 0, 0, columns, rows)
+}
+
+//
+// What crosses to epx
+//
+
+// A color as epx takes it, `{A, R, G, B}`, once each channel is known to
+// be in range: epx takes a channel outside 0 to 255 as the nearer end
+// (design §5).
+fn channels(color : Color) : #(Int, Int, Int, Int) =
+    if isChannel(color.alpha)
+        && isChannel(color.red)
+        && isChannel(color.green)
+        && isChannel(color.blue) then
+        #(color.alpha, color.red, color.green, color.blue)
+    else
+        fault("a channel of a Color is outside 0 to 255")
+
+fn isChannel(value : Int) : Bool =
+    value >= 0 && value <= 255
+
+// The atom epx names a format by (design §3).
+fn formatAtom(format : Format) : Foreign.Term =
+    Foreign.atom(match format {
+        Argb -> "argb"
+      | Rgba -> "rgba"
+      | Abgr -> "abgr"
+      | Bgra -> "bgra"
+      | Rgb -> "rgb"
+      | Bgr -> "bgr"
+    })
+
+// The bytes a pixel of the format takes (design §3).
+fn pixelSize(format : Format) : Int =
+    match format {
+        Rgb -> 3
+      | Bgr -> 3
+      | _ -> 4
+    }
+
+// The atom epx names an operation by (design §3).
+fn operationAtom(operation : Operation) : Foreign.Term =
+    Foreign.atom(match operation {
+        Clear -> "clear"
+      | Src -> "src"
+      | Dst -> "dst"
+      | SrcOver -> "src_over"
+      | DstOver -> "dst_over"
+      | SrcIn -> "src_in"
+      | DstIn -> "dst_in"
+      | SrcOut -> "src_out"
+      | DstOut -> "dst_out"
+      | SrcAtop -> "src_atop"
+      | DstAtop -> "dst_atop"
+      | Xor -> "xor"
+      | Copy -> "copy"
+      | Add -> "add"
+      | Sub -> "sub"
+      | SrcBlend -> "src_blend"
+      | DstBlend -> "dst_blend"
+    })
+
+// An area operation's two rectangles: the source's corner, the target's,
+// and the size they share.
+type Area =
+    Area(sourceX : Int, sourceY : Int, targetX : Int, targetY : Int, width : Int, height : Int)
+
+// The area with the source's rectangle cut at the left and the top of the
+// source's clip, the target's corner moved with it. epx cuts the source's
+// rectangle there without moving the target's, so that the rest would land
+// where the part cut off would have (design §4). A negative width or height
+// is left for epx to refuse.
+fn cut(source : Pixmap,
+       sourceX : Int,
+       sourceY : Int,
+       targetX : Int,
+       targetY : Int,
+       width : Int,
+       height : Int) : Area =
+    if width < 0 || height < 0 then
+        Area(sourceX = sourceX,
+             sourceY = sourceY,
+             targetX = targetX,
+             targetY = targetY,
+             width = width,
+             height = height)
+    else match rawInfoClip(source, Foreign.atom("clip")) {
+        #(clipX, clipY, _, _) -> {
+            let left = Int.max(clipX - sourceX, 0);
+            let top = Int.max(clipY - sourceY, 0);
+            Area(sourceX = sourceX + left,
+                 sourceY = sourceY + top,
+                 targetX = targetX + left,
+                 targetY = targetY + top,
+                 width = Int.max(width - left, 0),
+                 height = Int.max(height - top, 0))
+        }
+    }
+
+foreign fn rawInfoClip(pixmap : Pixmap, key : Foreign.Term) : #(Int, Int, Int, Int) =
+    "epx:pixmap_info_/2"
+
+//
+// Tests
+//
+
+// What ends a process that runs `f`: the cause where it faults, and its
+// reason as `Io.show` writes it otherwise.
+fn ending(f : () -> Unit) : String receiving Down = {
+    let _ = spawnMonitored(f, fn(down) = down);
+    receive {
+        down ->
+            match down.reason {
+                Fault(cause) -> cause
+              | reason -> Io.show(reason)
+            }
+    }
+}
+
+let white : Color = rgb(255, 255, 255)
+
+let black : Color = rgb(0, 0, 0)
+
+let transparent : Color = Color(alpha = 0, red = 0, green = 0, blue = 0)
+
+/// design §1: a pixmap is made, filled, written and read back through epx.
+let roundTrip = Test.Case(name = "a pixmap made, filled, written and read", run = fn() = {
+    let pixmap = create(4, 3, Argb);
+    fill(pixmap, rgb(0, 0, 255));
+    putPixel(pixmap, 1, 2, rgb(255, 0, 0));
+    Test.equal(#(width(pixmap), height(pixmap), getPixel(pixmap, 0, 0), getPixel(pixmap, 1, 2)),
+               #(4, 3, rgb(0, 0, 255), rgb(255, 0, 0)))
+})
+
+/// design §1: `putPixels` reads the bytes in the format given and writes
+/// them in the pixmap's.
+let putInFormat = Test.Case(name = "putPixels converts the format", run = fn() = {
+    let pixmap = create(2, 1, Argb);
+    putPixels(pixmap, 0, 0, 2, 1, Bgr, <<3, 2, 1, 6, 5, 4>>);
+    Test.equal(getPixels(pixmap, 0, 0, 2, 1), <<255, 1, 2, 3, 255, 4, 5, 6>>)
+})
+
+/// design §1: `copyTo` copies the rectangle at the top left of both
+/// pixmaps, in the target's format.
+let copiedTo = Test.Case(name = "copyTo copies the rectangle both hold", run = fn() = {
+    let source = create(3, 1, Argb);
+    let target = create(2, 2, Rgb);
+    fill(source, rgb(7, 8, 9));
+    copyTo(source, target);
+    Test.equal(getPixels(target, 0, 0, 2, 2), <<7, 8, 9, 7, 8, 9, 0, 0, 0, 0, 0, 0>>)
+})
+
+/// design §1: `blendArea` moves the target's color toward the source's by
+/// the alpha, and the target keeps its own alpha.
+let blended = Test.Case(name = "blendArea blends by the alpha", run = fn() = {
+    let source = create(1, 1, Argb);
+    let target = create(1, 1, Argb);
+    fill(source, white);
+    fill(target, Color(alpha = 100, red = 0, green = 0, blue = 0));
+    blendArea(source, target, 0, 0, 0, 0, 0, 1, 1);
+    let untouched = getPixel(target, 0, 0);
+    blendArea(source, target, 128, 0, 0, 0, 0, 1, 1);
+    Test.equal(#(untouched, getPixel(target, 0, 0)),
+               #(Color(alpha = 100, red = 0, green = 0, blue = 0),
+                 Color(alpha = 100, red = 127, green = 127, blue = 127)))
+})
+
+/// design §1: `fadeArea` blends by the source's alpha scaled by the fade.
+let faded = Test.Case(name = "fadeArea blends by the source's alpha scaled", run = fn() = {
+    let source = create(1, 1, Argb);
+    let target = create(1, 1, Argb);
+    fill(source, Color(alpha = 128, red = 200, green = 200, blue = 200));
+    fill(target, black);
+    fadeArea(source, target, 0, 0, 0, 0, 0, 1, 1);
+    let untouched = getPixel(target, 0, 0);
+    fadeArea(source, target, 128, 0, 0, 0, 0, 1, 1);
+    Test.equal(#(untouched, getPixel(target, 0, 0)),
+               #(black, Color(alpha = 223, red = 50, green = 50, blue = 50)))
+})
+
+/// design §1: `shadowArea` darkens the target by the source's luminance.
+let shadowed = Test.Case(name = "shadowArea darkens by the luminance", run = fn() = {
+    let shaded = fn(color : Color) : Color = {
+        let source = create(1, 1, Argb);
+        let target = create(1, 1, Argb);
+        fill(source, color);
+        fill(target, rgb(100, 100, 100));
+        shadowArea(source, target, 0, 0, 0, 0, 1, 1);
+        getPixel(target, 0, 0)
+    };
+    Test.equal(List.map([black, white, rgb(128, 128, 128)], shaded),
+               [rgb(100, 100, 100),
+                transparent,
+                Color(alpha = 127, red = 50, green = 50, blue = 50)])
+})
+
+/// design §1: `scale` writes the whole source at the size given into the
+/// target's top left, and `flip` reverses the rows.
+let scaledAndFlipped =
+    Test.Case(name = "scale writes the source at a size, and flip", run = fn() = {
+        let source = create(1, 1, Rgb);
+        let target = create(3, 2, Rgb);
+        fill(source, white);
+        scale(source, target, 2, 1);
+        let scaled = getPixels(target, 0, 0, 3, 2);
+        flip(target);
+        Test.equal(#(scaled, getPixels(target, 0, 0, 3, 2)),
+                   #(<<255, 255, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>>,
+                     <<0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 0, 0, 0>>))
+    })
+
+/// design §2: every pixel of a new pixmap is 0 in every channel its format
+/// holds.
+let newIsZero = Test.Case(name = "a new pixmap is 0 in every channel", run = fn() = {
+    let pixmap = create(2, 1, Argb);
+    let opaque = create(1, 1, Rgb);
+    Test.equal(#(getPixels(pixmap, 0, 0, 2, 1), getPixel(opaque, 0, 0)),
+               #(<<0, 0, 0, 0, 0, 0, 0, 0>>, black))
+})
+
+/// design §2: a pixmap written by another process is written here, and a
+/// copy shares nothing with the first.
+let shared = Test.Case(name = "a pixmap is shared and a copy is not", run = fn() = {
+    let pixmap = create(1, 1, Argb);
+    let copied = copy(pixmap);
+    let ended = ending(fn() = fill(pixmap, white));
+    Test.equal(#(ended, getPixel(pixmap, 0, 0), getPixel(copied, 0, 0)),
+               #("Returned", white, transparent))
+})
+
+/// design §3: each format is its atom to epx and back, a pixel's bytes in
+/// the order its name lists.
+let formatsCross = Test.Case(name = "each format crosses and orders its bytes", run = fn() = {
+    let color = Color(alpha = 7, red = 1, green = 2, blue = 3);
+    let read = List.map(formats, fn(known) = {
+        let pixmap = create(1, 1, known);
+        fill(pixmap, color);
+        #(format(pixmap), getPixels(pixmap, 0, 0, 1, 1))
+    });
+    Test.equal(read,
+               [#(Argb, <<7, 1, 2, 3>>),
+                #(Rgba, <<1, 2, 3, 7>>),
+                #(Abgr, <<7, 3, 2, 1>>),
+                #(Bgra, <<3, 2, 1, 7>>),
+                #(Rgb, <<1, 2, 3>>),
+                #(Bgr, <<3, 2, 1>>)])
+})
+
+/// design §3: `rgb` is the color of alpha 255, and a format without alpha
+/// reads every pixel with alpha 255.
+let opaqueColors = Test.Case(name = "rgb is opaque, and Rgb reads alpha 255", run = fn() = {
+    let pixmap = create(1, 1, Rgb);
+    fill(pixmap, Color(alpha = 7, red = 1, green = 2, blue = 3));
+    Test.equal(#(rgb(1, 2, 3), getPixel(pixmap, 0, 0)),
+               #(Color(alpha = 255, red = 1, green = 2, blue = 3), rgb(1, 2, 3)))
+})
+
+/// design §3: an operation crosses as its atom and combines as its
+/// constructor's doc block says.
+let operations = Test.Case(name = "operationArea combines as each operation says", run = fn() = {
+    let source = Color(alpha = 255, red = 200, green = 0, blue = 100);
+    let target = Color(alpha = 255, red = 100, green = 10, blue = 200);
+    let combined = fn(operation : Operation) : Color = {
+        let from = create(1, 1, Argb);
+        let into = create(1, 1, Argb);
+        fill(from, source);
+        fill(into, target);
+        operationArea(from, into, operation, 0, 0, 0, 0, 1, 1);
+        getPixel(into, 0, 0)
+    };
+    Test.equal(List.map([Copy, Add, Sub, Clear, Dst], combined),
+               [source,
+                Color(alpha = 255, red = 255, green = 10, blue = 255),
+                Color(alpha = 0, red = 100, green = 0, blue = 0),
+                transparent,
+                Color(alpha = 255, red = 99, green = 9, blue = 199)])
+})
+
+/// design §4: outside the clip `putPixel` writes nothing and `getPixel`
+/// answers opaque black, as it does outside the pixmap, while `getPixels`
+/// reads past the clip.
+let clipped = Test.Case(name = "the clip bounds putPixel and getPixel", run = fn() = {
+    let pixmap = create(3, 1, Argb);
+    fill(pixmap, white);
+    setClip(pixmap, 0, 0, 1, 1);
+    putPixel(pixmap, 2, 0, rgb(1, 1, 1));
+    Test.equal(#(getPixel(pixmap, 0, 0),
+                 getPixel(pixmap, 2, 0),
+                 getPixel(pixmap, 9, 0),
+                 getPixels(pixmap, 2, 0, 1, 1)),
+               #(white, black, black, <<255, 255, 255, 255>>))
+})
+
+/// design §4: `fillArea` writes within the clip, and `fill` and `flip` do
+/// not read it.
+let clipIgnored = Test.Case(name = "fillArea reads the clip, fill and flip do not", run = fn() = {
+    let pixmap = create(1, 2, Rgb);
+    setClip(pixmap, 0, 0, 1, 1);
+    fillArea(pixmap, 0, 0, 1, 2, white);
+    let areaFilled = getPixels(pixmap, 0, 0, 1, 2);
+    flip(pixmap);
+    let flipped = getPixels(pixmap, 0, 0, 1, 2);
+    fill(pixmap, rgb(1, 2, 3));
+    Test.equal(#(areaFilled, flipped, getPixels(pixmap, 0, 0, 1, 2)),
+               #(<<255, 255, 255, 0, 0, 0>>, <<0, 0, 0, 255, 255, 255>>, <<1, 2, 3, 1, 2, 3>>))
+})
+
+/// design §4: `getPixels` answers the part of its rectangle within the
+/// pixmap, and no bytes for a rectangle of width and height 0, and what it
+/// answered does not change with a later write.
+let partlyOutside = Test.Case(name = "getPixels answers the part within the pixmap", run = fn() = {
+    let pixmap = create(2, 2, Rgb);
+    fill(pixmap, rgb(1, 2, 3));
+    let empty = getPixels(pixmap, 0, 0, 0, 0);
+    let corner = getPixels(pixmap, 1, 1, 4, 4);
+    let before = getPixels(pixmap, -1, 0, 2, 1);
+    fill(pixmap, white);
+    Test.equal(#(empty, corner, before, getPixels(pixmap, 5, 5, 1, 1)),
+               #(<<>>, <<1, 2, 3>>, <<1, 2, 3>>, <<>>))
+})
+
+/// design §4: in an area operation a source pixel lands where its place in
+/// the rectangle puts it, the rectangle beginning outside the source or
+/// overlapping itself.
+let landed = Test.Case(name = "an area operation's pixels land in their places", run = fn() = {
+    let source = create(3, 1, Rgb);
+    putPixels(source, 0, 0, 3, 1, Rgb, <<1, 1, 1, 2, 2, 2, 3, 3, 3>>);
+    let target = create(5, 1, Rgb);
+    copyArea(source, target, -1, 0, 1, 0, 3, 1);
+    let overlapped = copy(source);
+    copyArea(overlapped, overlapped, 0, 0, 1, 0, 2, 1);
+    Test.equal(#(getPixels(target, 0, 0, 5, 1), getPixels(overlapped, 0, 0, 3, 1)),
+               #(<<0, 0, 0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 0, 0, 0>>, <<1, 1, 1, 1, 1, 1, 2, 2, 2>>))
+})
+
+/// design §5: the library refuses a channel, an alpha and a fade outside 0
+/// to 255, and bytes of another size, before epx is called.
+let refused = Test.Case(name = "the library's own faults", run = fn() = {
+    let pixmap = create(2, 1, Argb);
+    let tooRed = Color(alpha = 255, red = 256, green = 0, blue = 0);
+    let unseen = Color(alpha = -1, red = 0, green = 0, blue = 0);
+    Test.equal([ending(fn() = fill(pixmap, tooRed)),
+                ending(fn() = fillArea(pixmap, 0, 0, 1, 1, tooRed)),
+                ending(fn() = putPixel(pixmap, 0, 0, unseen)),
+                ending(fn() = blendArea(pixmap, pixmap, 256, 0, 0, 0, 0, 1, 1)),
+                ending(fn() = fadeArea(pixmap, pixmap, -1, 0, 0, 0, 0, 1, 1)),
+                ending(fn() = putPixels(pixmap, 0, 0, 2, 1, Rgb, <<1, 2, 3, 4, 5>>))],
+               ["a channel of a Color is outside 0 to 255",
+                "a channel of a Color is outside 0 to 255",
+                "a channel of a Color is outside 0 to 255",
+                "the alpha is outside 0 to 255",
+                "the fade is outside 0 to 255",
+                "the bytes are not width times height pixels in the format"])
+})
+
+/// design §5: epx refuses a negative width or height, and its cause names
+/// its function.
+let refusedByEpx = Test.Case(name = "epx's faults", run = fn() = {
+    let pixmap = create(1, 1, Argb);
+    let made = fn() = {
+        let _ = create(-1, 1, Argb);
+        Unit
+    };
+    Test.equal([ending(made),
+                ending(fn() = putPixels(pixmap, 0, 0, -1, 1, Rgb, <<>>)),
+                ending(fn() = setClip(pixmap, 0, 0, 1, -1))],
+               ["foreign function epx:pixmap_create/3 raised error:badarg",
+                "foreign function epx:pixmap_put_pixels/7 raised error:badarg",
+                "foreign function epx:pixmap_set_clip/2 raised error:badarg"])
+})
+
+/// design §6: `toPpm` writes the header and then each pixel's red, green
+/// and blue, its alpha dropped.
+let ppm = Test.Case(name = "toPpm writes a P6 file", run = fn() = {
+    let pixmap = create(2, 1, Argb);
+    fill(pixmap, Color(alpha = 0, red = 1, green = 2, blue = 3));
+    putPixel(pixmap, 1, 0, rgb(4, 5, 6));
+    Test.equal(toPpm(pixmap), String.toUtf8("P6\n2 1\n255\n") <> <<1, 2, 3, 4, 5, 6>>)
+})

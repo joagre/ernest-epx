@@ -1,0 +1,74 @@
+//
+// Sierpinski: the Sierpinski gasket, drawn into a pixmap and written as PPM
+//
+// The gasket drawn by recursive subdivision: a triangle is drawn as the
+// three triangles of half its size at its corners, the middle one left
+// empty, down to triangles of one pixel, each written with `putPixel`. The
+// pixmap is written to the file named on the command line as a PPM image,
+// which an image viewer opens. Run with no file, it says how it is called
+// and ends with status 2; a file it cannot write is reported on standard
+// error, and it ends with status 1.
+//
+// The chaos game draws the same figure by random steps from a seed. The
+// subdivision is drawn here because it is the figure's definition written
+// as a function: `subdivide` calls itself three times.
+//
+// What to look at:
+//
+// - `subdivide` is the definition of the figure, and its only act is the
+//   write of a pixel at the bottom of the recursion.
+// - A pixmap is changed in place and is not a value (docs/design.md §2):
+//   the three calls write one pixmap, and `subdivide` answers `Unit`.
+// - `Epx.toPpm` makes the bytes of the file, and `Fs.write` writes them,
+//   its failure a value (report Appendix E.17).
+//
+// Run it from the repository's root once `make` has built the library:
+//
+//     LOAD="--load-path build --load-path lib/epx/ebin --load-path lib/tree_db/ebin"
+//     ern build $LOAD examples/sierpinski.ern
+//     ern run $LOAD examples/sierpinski.erc sierpinski.ppm
+//
+
+// The picture's width and height in pixels, a power of two, so that every
+// triangle halves into whole pixels.
+let size : Int = 256
+
+export fn main() : Unit =
+    match Os.arguments {
+        [name] ->
+            written(name)
+      | _ -> {
+            Io.printlnError("usage: sierpinski file.ppm");
+            Os.exit(2)
+        }
+    }
+
+// The picture drawn and written to the file, or why it could not be, on
+// standard error.
+fn written(name : String) : Unit = {
+    let pixmap = Epx.create(size, size, Epx.Rgb);
+    Epx.fill(pixmap, Epx.rgb(255, 255, 255));
+    subdivide(pixmap, 0, 0, size);
+    match Fs.write(Path(name), Epx.toPpm(pixmap), 5000) {
+        Right(_) ->
+            Unit
+      | Left(error) -> {
+            Io.printlnError("sierpinski: " <> name <> ": " <> Io.show(error));
+            Os.exit(1)
+        }
+    }
+}
+
+// The triangle in the square of that side at `x`, `y`, its apex at the
+// middle of the square's top and its base the square's bottom: the three
+// triangles of half the side at its apex and its two lower corners, and a
+// triangle of one pixel its pixel, colored by where it stands.
+fn subdivide(pixmap : Epx.Pixmap, x : Int, y : Int, side : Int) : Unit =
+    if side == 1 then
+        Epx.putPixel(pixmap, x, y, Epx.rgb(x, y, 255 - x))
+    else {
+        let half = side / 2;
+        subdivide(pixmap, x + half / 2, y, half);
+        subdivide(pixmap, x, y + half, half);
+        subdivide(pixmap, x + half, y + half, half)
+    }

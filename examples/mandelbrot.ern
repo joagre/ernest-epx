@@ -1,0 +1,120 @@
+//
+// Mandelbrot: the Mandelbrot set, drawn into a pixmap and written as PPM
+//
+// The set over a rectangle of the plane, each pixel colored by how many
+// steps its point takes to escape, black where it does not escape within
+// the steps counted. The pixels are written into a pixmap one by one and
+// the pixmap to the file named on the command line, as a PPM image, which
+// an image viewer opens. Run with no file, it says how it is called and
+// ends with status 2; a file it cannot write is reported on standard
+// error, and it ends with status 1.
+//
+// What to look at:
+//
+// - A pixmap is changed in place and is not a value (docs/design.md §2):
+//   `draw` writes each pixel with `Epx.putPixel` and answers `Unit`.
+// - `escape` and `color` are pure: a count over floats, and a color from a
+//   count. `main` and `written` are the parts that act.
+// - `Epx.toPpm` makes the bytes of the file, and `Fs.write` writes them,
+//   its failure a value (report Appendix E.17).
+//
+// Run it from the repository's root once `make` has built the library:
+//
+//     LOAD="--load-path build --load-path lib/epx/ebin --load-path lib/tree_db/ebin"
+//     ern build $LOAD examples/mandelbrot.ern
+//     ern run $LOAD examples/mandelbrot.erc mandelbrot.ppm
+//
+
+// The picture's size in pixels, and the most steps a point is followed.
+let columns : Int = 300
+
+let rows : Int = 200
+
+let steps : Int = 64
+
+// The rectangle of the plane drawn: its left and right edges on the real
+// axis, and its top on the imaginary one, which grows upward.
+let left : Float = -2.2
+
+let right : Float = 0.8
+
+let top : Float = 1.0
+
+// The distance in the plane between two neighboring pixels, across and
+// down alike.
+let spacing : Float = (right - left) / Int.toFloat(columns)
+
+export fn main() : Unit =
+    match Os.arguments {
+        [name] ->
+            written(name)
+      | _ -> {
+            Io.printlnError("usage: mandelbrot file.ppm");
+            Os.exit(2)
+        }
+    }
+
+// The picture drawn and written to the file, or why it could not be, on
+// standard error.
+fn written(name : String) : Unit = {
+    let pixmap = Epx.create(columns, rows, Epx.Rgb);
+    draw(pixmap);
+    match Fs.write(Path(name), Epx.toPpm(pixmap), 5000) {
+        Right(_) ->
+            Unit
+      | Left(error) -> {
+            Io.printlnError("mandelbrot: " <> name <> ": " <> Io.show(error));
+            Os.exit(1)
+        }
+    }
+}
+
+fn draw(pixmap : Epx.Pixmap) : Unit =
+    List.forEach(List.range(0, rows - 1),
+                 fn(y) =
+                     List.forEach(List.range(0, columns - 1),
+                                  fn(x) =
+                                      Epx.putPixel(pixmap,
+                                                   x,
+                                                   y,
+                                                   color(escape(real(x), imaginary(y))))))
+
+// Where a pixel's column and its row fall in the plane.
+fn real(x : Int) : Float =
+    left + Int.toFloat(x) * spacing
+
+fn imaginary(y : Int) : Float =
+    top - Int.toFloat(y) * spacing
+
+// The steps before the point `c` leaves the circle of radius 2 under z
+// becoming z * z + c from 0, or `steps` where it stays within them.
+fn escape(cReal : Float, cImaginary : Float) : Int =
+    follow(cReal, cImaginary, 0.0, 0.0, 0)
+
+fn follow(cReal : Float, cImaginary : Float, zReal : Float, zImaginary : Float, step : Int) : Int =
+    if step == steps || zReal * zReal + zImaginary * zImaginary > 4.0 then
+        step
+    else
+        follow(cReal,
+               cImaginary,
+               zReal * zReal - zImaginary * zImaginary + cReal,
+               2.0 * zReal * zImaginary + cImaginary,
+               step + 1)
+
+// Black for a point that did not escape; otherwise a color that runs from
+// dark blue for the points that escape at once, through light blue and
+// yellow, to red for those that take the longest. Each channel is a
+// polynomial in the share of the steps taken, below 1 from 0 to 1.
+fn color(step : Int) : Epx.Color =
+    if step == steps then
+        Epx.rgb(0, 0, 0)
+    else {
+        let taken = Int.toFloat(step) / Int.toFloat(steps);
+        let remaining = 1.0 - taken;
+        Epx.rgb(channel(9.0 * remaining * taken * taken * taken),
+                channel(15.0 * remaining * remaining * taken * taken),
+                channel(8.5 * remaining * remaining * remaining * taken))
+    }
+
+fn channel(level : Float) : Int =
+    Float.truncate(level * 255.0)
