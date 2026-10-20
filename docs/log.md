@@ -45,3 +45,7 @@ What the review taught the template is `TEMPLATE.md`'s, its `v0.5.0`; a tool tha
 ## The second cut
 
 *2026-10-20.* The proposal `proposals/gc/proposal.md` decided as recommended. The context is epx's resource mirrored, changed in place and shared as a pixmap is, since a record converted at each draw would cost ten `gc_set` calls a call or a cache the program cannot see: principles 2 and 3. Ten keys and one `Style` type of five constructors, the flags that would make a style a list left out until a program asks: principle 5. epx's defaults kept and stated rather than the library's own, so that `create` is the shim exactly and a reader knows one set: principle 1. The drawing functions stand in `Epx`, their subject the pixmap, the context second.
+
+## Where the Library Stops
+
+*2026-10-20.* A 2-D library of pixmaps and pixels, and nothing more: the Utah teapot needs a mesh read from a file and a bounding-volume tree, each a library's work by the rules, a textured picture needs `epx_image`'s adapter, and a picture drawn on the screen as it is traced needs epx's windows and events, which were cut out at the first proposal and stay out: principle 2, one job, and principle 5. What a richer picture can be within one program is Whitted's spheres, milestone 5. The progressive render is noted for a windows library, where it would be the first example, since the tracer's workers already write row by row.
