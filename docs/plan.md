@@ -39,6 +39,6 @@ Decided 2026-10-20 with the user, who also decided where the library stops: a 2-
 
 ## Milestone 6: after Ernest's MVP 3.28, the end
 
-When Ernest's MVP 3.28 is released, the parts of the library that wait on it are taken in one item: the fourteen dropped `Foreign.Term` answers become `Unit` declarations, the tests' own fault helper becomes `Test.faults`, the page's `// =>` lines are held by `ern test`, and the copy of the style rules and the load-path flags follow what the template then does.
+When Ernest's MVP 3.28 is released, the parts of the library that wait on it are taken in one item: the fourteen dropped `Foreign.Term` answers become `Unit` declarations, the tests' own fault helper becomes `Test.faults`, the page's `// =>` lines are held by `ern test`, the copy of the style rules goes where Ernest installs them, Ernest's own libraries come off `make lib` once they are on the default load path, and `--libs lib` replaces the `--load-path` of each Erlang application's `ebin` in the Makefile, the launcher and the examples' headers, as the template then has it.
 
 With that, and `sub` and `scroll` once epx has its fixes, the library is done: a 2-D library of pixmaps, pixels and the drawing functions, with its four examples, and nothing more is planned. Decided 2026-10-20 with the user.
