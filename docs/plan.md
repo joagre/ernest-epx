@@ -36,3 +36,7 @@ The first cut is built and released as 0.1.0, 2026-10-20: `Epx` with twenty func
 `examples/whitted.ern`, after the clock face: the classic scene of several spheres over a checkered floor, with reflection and refraction, traced as `raytracer.ern` traces, the workers and the one pixmap the same, so that a richer picture costs a few dozen lines of the pure half and nothing of the acting half.
 
 Decided 2026-10-20 with the user, who also decided where the library stops: a 2-D library of pixmaps and pixels, no mesh, no image reading and no window; a mesh is a library's work, and drawing on the screen is a windows library's, with the tracer's rows arriving on screen as its first example when one exists (the log's *Where the Library Stops*).
+
+## Milestone 6: after Ernest's MVP 3.28, the end
+
+When Ernest's MVP 3.28 is released, the parts of the library that wait on it are taken in one item: the fourteen dropped `Foreign.Term` answers become `Unit` declarations, the tests' own fault helper becomes `Test.faults`, the page's `// =>` lines are held by `ern test`, and the copy of the style rules and the load-path flags follow what the template then does. With that, and `sub` and `scroll` once epx has its fixes, the library is done: a 2-D library of pixmaps, pixels and the drawing functions, with its four examples, and nothing more is planned. Decided 2026-10-20 with the user.
