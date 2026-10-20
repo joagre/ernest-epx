@@ -6,7 +6,7 @@ Read *Where we are* first, then the table of milestones; the milestones to come 
 
 ## Where we are
 
-The first cut is built, 2026-10-20: `Epx` with twenty operations over epx's pixmaps, its design in `design.md`, and two examples. `sub` and `scroll` of the proposal wait on epx, milestone 2, and the cost of the area operations' clip correction is milestone 2's decision 1. Next is milestone 2.
+The first cut is built, 2026-10-20: `Epx` with twenty operations over epx's pixmaps, its design in `design.md`, and two examples. `sub` and `scroll` of the proposal wait on epx, milestone 2, and the area operations are epx's exactly, a source rectangle that begins outside the clip landing as epx lands it. Next is milestone 2.
 
 ## Milestones
 
@@ -21,7 +21,7 @@ The first cut is built, 2026-10-20: `Epx` with twenty operations over epx's pixm
 
 ## Milestone 2: what epx must fix first, and the next cut
 
-1. **The clip correction's cost**, a decision for the user: the five area operations read the source's clip before each call, which puts each pixel where the design says, where epx would misplace a rectangle that begins outside the clip (`epx_bugs.md` 6), and which about doubles a small area operation's cost, 96 to 253 ms for 200,000 one-pixel copies. Recommended: kept until epx fixes `epx_clip_both`, then removed, the cost standing in the log meanwhile.
+1. **The clip correction**: decided 2026-10-20, dropped (the log's *The clip correction dropped*). The five area operations are epx's functions exactly, and a source rectangle that begins outside the source's clip lands as epx lands it, documented in `design.md` §4 and each operation's doc block, until epx fixes `epx_clip_both` (`epx_bugs.md` 6).
 2. **The reports of `epx_bugs.md` filed with epx**, by the user, and the submodule moved to a release that has the fixes.
 3. **`sub` and `scroll`**, once epx's fixes 1 to 3 are in the submodule, as the proposal's section 2 has them, `scroll`'s `rotate` a type of two named constructors (shape rule 9).
 4. **The next cut**: the drawing functions with the graphics context, `Epx.Gc`, as the proposal's section 2 leaves them, designed in a proposal of their own.

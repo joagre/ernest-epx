@@ -481,10 +481,12 @@ foreign fn rawCopyTo(source : Pixmap, target : Pixmap) : Foreign.Term =
 
 /// Copies the source's rectangle at `sourceX`, `sourceY` into the target at
 /// `targetX`, `targetY`, in the target's format, its alpha copied and not
-/// blended. A pixel outside the source's clip or outside the target's is
-/// left out, and the others land where their places in the rectangle put
-/// them. The source and the target may be one pixmap, the two rectangles
-/// overlapping.
+/// blended. A pixel outside the target's clip is left out. A rectangle that
+/// begins left of or above the source's clip is cut to the clip and lands
+/// at `targetX`, `targetY` all the same, the pixels that remain standing
+/// left of or above where their places would put them: begin the source's
+/// rectangle within its clip. The source and the target may be one pixmap,
+/// the two rectangles overlapping.
 ///
 /// ### Errors
 ///
@@ -498,7 +500,7 @@ foreign fn rawCopyTo(source : Pixmap, target : Pixmap) : Foreign.Term =
 ///     let source = Epx.create(2, 1, Epx.Rgb);
 ///     let target = Epx.create(3, 1, Epx.Rgb);
 ///     Epx.putPixels(source, 0, 0, 2, 1, Epx.Rgb, <<1, 1, 1, 2, 2, 2>>);
-///     Epx.copyArea(source, target, -1, 0, 0, 0, 3, 1);
+///     Epx.copyArea(source, target, 0, 0, 1, 0, 2, 1);
 ///     Epx.getPixels(target, 0, 0, 3, 1)
 /// }
 /// // => <<0, 0, 0, 1, 1, 1, 2, 2, 2>>
@@ -511,16 +513,7 @@ export fn copyArea(source : Pixmap,
                    targetY : Int,
                    width : Int,
                    height : Int) : Unit = {
-    let area = cut(source, sourceX, sourceY, targetX, targetY, width, height);
-    let _ =
-        rawCopyArea(source,
-                    target,
-                    area.sourceX,
-                    area.sourceY,
-                    area.targetX,
-                    area.targetY,
-                    area.width,
-                    area.height);
+    let _ = rawCopyArea(source, target, sourceX, sourceY, targetX, targetY, width, height);
     Unit
 }
 
@@ -631,17 +624,8 @@ export fn blendArea(source : Pixmap,
                     height : Int) : Unit =
     // epx takes an alpha above 255 as 255 (design §5).
     if isChannel(alpha) then {
-        let area = cut(source, sourceX, sourceY, targetX, targetY, width, height);
         let _ =
-            rawAlphaArea(source,
-                         target,
-                         alpha,
-                         area.sourceX,
-                         area.sourceY,
-                         area.targetX,
-                         area.targetY,
-                         area.width,
-                         area.height);
+            rawAlphaArea(source, target, alpha, sourceX, sourceY, targetX, targetY, width, height);
         Unit
     } else
         fault("the alpha is outside 0 to 255")
@@ -700,17 +684,8 @@ export fn fadeArea(source : Pixmap,
                    height : Int) : Unit =
     // epx takes a fade above 255 as 255 (design §5).
     if isChannel(fade) then {
-        let area = cut(source, sourceX, sourceY, targetX, targetY, width, height);
         let _ =
-            rawFadeArea(source,
-                        target,
-                        fade,
-                        area.sourceX,
-                        area.sourceY,
-                        area.targetX,
-                        area.targetY,
-                        area.width,
-                        area.height);
+            rawFadeArea(source, target, fade, sourceX, sourceY, targetX, targetY, width, height);
         Unit
     } else
         fault("the fade is outside 0 to 255")
@@ -760,16 +735,7 @@ export fn shadowArea(source : Pixmap,
                      targetY : Int,
                      width : Int,
                      height : Int) : Unit = {
-    let area = cut(source, sourceX, sourceY, targetX, targetY, width, height);
-    let _ =
-        rawShadowArea(source,
-                      target,
-                      area.sourceX,
-                      area.sourceY,
-                      area.targetX,
-                      area.targetY,
-                      area.width,
-                      area.height);
+    let _ = rawShadowArea(source, target, sourceX, sourceY, targetX, targetY, width, height);
     Unit
 }
 
@@ -815,17 +781,16 @@ export fn operationArea(source : Pixmap,
                         targetY : Int,
                         width : Int,
                         height : Int) : Unit = {
-    let area = cut(source, sourceX, sourceY, targetX, targetY, width, height);
     let _ =
         rawOperationArea(source,
                          target,
                          operationAtom(operation),
-                         area.sourceX,
-                         area.sourceY,
-                         area.targetX,
-                         area.targetY,
-                         area.width,
-                         area.height);
+                         sourceX,
+                         sourceY,
+                         targetX,
+                         targetY,
+                         width,
+                         height);
     Unit
 }
 
@@ -968,46 +933,6 @@ fn operationAtom(operation : Operation) : Foreign.Term =
       | SrcBlend -> "src_blend"
       | DstBlend -> "dst_blend"
     })
-
-// An area operation's two rectangles: the source's corner, the target's,
-// and the size they share.
-type Area =
-    Area(sourceX : Int, sourceY : Int, targetX : Int, targetY : Int, width : Int, height : Int)
-
-// The area with the source's rectangle cut at the left and the top of the
-// source's clip, the target's corner moved with it. epx cuts the source's
-// rectangle there without moving the target's, so that the rest would land
-// where the part cut off would have (design §4). A negative width or height
-// is left for epx to refuse.
-fn cut(source : Pixmap,
-       sourceX : Int,
-       sourceY : Int,
-       targetX : Int,
-       targetY : Int,
-       width : Int,
-       height : Int) : Area =
-    if width < 0 || height < 0 then
-        Area(sourceX = sourceX,
-             sourceY = sourceY,
-             targetX = targetX,
-             targetY = targetY,
-             width = width,
-             height = height)
-    else match rawInfoClip(source, Foreign.atom("clip")) {
-        #(clipX, clipY, _, _) -> {
-            let left = Int.max(clipX - sourceX, 0);
-            let top = Int.max(clipY - sourceY, 0);
-            Area(sourceX = sourceX + left,
-                 sourceY = sourceY + top,
-                 targetX = targetX + left,
-                 targetY = targetY + top,
-                 width = Int.max(width - left, 0),
-                 height = Int.max(height - top, 0))
-        }
-    }
-
-foreign fn rawInfoClip(pixmap : Pixmap, key : Foreign.Term) : #(Int, Int, Int, Int) =
-    "epx:pixmap_info_/2"
 
 //
 // Tests
@@ -1229,8 +1154,8 @@ let partlyOutside = Test.Case(name = "getPixels answers the part within the pixm
 })
 
 // design §4: in an area operation a source pixel lands where its place in
-// the rectangle puts it, the rectangle beginning outside the source or
-// overlapping itself.
+// the rectangle puts it, a rectangle overlapping itself among them; one
+// that begins outside the source's clip is cut and lands as if it were not.
 let landed = Test.Case(name = "an area operation's pixels land in their places", run = fn() = {
     let source = create(3, 1, Rgb);
     putPixels(source, 0, 0, 3, 1, Rgb, <<1, 1, 1, 2, 2, 2, 3, 3, 3>>);
@@ -1239,7 +1164,7 @@ let landed = Test.Case(name = "an area operation's pixels land in their places",
     let overlapped = copy(source);
     copyArea(overlapped, overlapped, 0, 0, 1, 0, 2, 1);
     Test.equal(#(getPixels(target, 0, 0, 5, 1), getPixels(overlapped, 0, 0, 3, 1)),
-               #(<<0, 0, 0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 0, 0, 0>>, <<1, 1, 1, 1, 1, 1, 2, 2, 2>>))
+               #(<<0, 0, 0, 1, 1, 1, 2, 2, 2, 0, 0, 0, 0, 0, 0>>, <<1, 1, 1, 1, 1, 1, 2, 2, 2>>))
 })
 
 // design §5: the library refuses a channel, an alpha and a fade outside 0

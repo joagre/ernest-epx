@@ -8,7 +8,7 @@ The library is one module, `Epx`, over the pixmaps of epx, the pixel library for
 
 Each operation calls the epx functions the table below names, each at most once. Where one function does the operation's work exactly, the operation is a `foreign fn` over it, and where it differs, Ernest closes the difference around the call.
 
-The differences closed are these, each stated where its rule is (§2 to §5): a `Color` crosses as the tuple epx takes, and a `Format` or an `Operation` as its atom; epx's `ok` is `Unit`; a precondition of §5 is checked before the call; a new pixmap is filled; an empty rectangle is read without epx; and an area operation's source rectangle is cut at the source's clip before the call.
+The differences closed are these, each stated where its rule is (§2 to §5): a `Color` crosses as the tuple epx takes, and a `Format` or an `Operation` as its atom; epx's `ok` is `Unit`; a precondition of §5 is checked before the call; a new pixmap is filled; and an empty rectangle is read without epx.
 
 | Operation | epx | What it does |
 |---|---|---|
@@ -22,13 +22,13 @@ The differences closed are these, each stated where its rule is (§2 to §5): a 
 | `getPixels(pixmap, x, y, width, height)` | `pixmap_get_pixels/5` | the rectangle's pixels as bytes in the pixmap's format |
 | `putPixels(pixmap, x, y, width, height, format, bytes)` | `pixmap_put_pixels/7` | the rectangle's pixels from bytes in the format |
 | `copyTo(source, target)` | `pixmap_copy_to/2` | the source's pixels into the target |
-| `copyArea(source, target, sourceX, sourceY, targetX, targetY, width, height)` | `pixmap_copy_area/8`, `pixmap_info_/2` | a rectangle of the source into the target |
+| `copyArea(source, target, sourceX, sourceY, targetX, targetY, width, height)` | `pixmap_copy_area/8` | a rectangle of the source into the target |
 | `scale(source, target, width, height)` | `pixmap_scale/4` | the source scaled into the target |
 | `flip(pixmap)` | `pixmap_flip/1` | the rows in reverse order |
-| `blendArea(source, target, alpha, sourceX, sourceY, targetX, targetY, width, height)` | `pixmap_alpha_area/9`, `pixmap_info_/2` | a rectangle of the source blended into the target by `alpha` |
-| `fadeArea(source, target, fade, sourceX, sourceY, targetX, targetY, width, height)` | `pixmap_fade_area/9`, `pixmap_info_/2` | a rectangle of the source blended into the target by its own alpha, scaled by `fade` |
-| `shadowArea(source, target, sourceX, sourceY, targetX, targetY, width, height)` | `pixmap_shadow_area/8`, `pixmap_info_/2` | the target darkened by the luminance of a rectangle of the source |
-| `operationArea(source, target, operation, sourceX, sourceY, targetX, targetY, width, height)` | `pixmap_operation_area/9`, `pixmap_info_/2` | a rectangle of the source combined with the target by the operation |
+| `blendArea(source, target, alpha, sourceX, sourceY, targetX, targetY, width, height)` | `pixmap_alpha_area/9` | a rectangle of the source blended into the target by `alpha` |
+| `fadeArea(source, target, fade, sourceX, sourceY, targetX, targetY, width, height)` | `pixmap_fade_area/9` | a rectangle of the source blended into the target by its own alpha, scaled by `fade` |
+| `shadowArea(source, target, sourceX, sourceY, targetX, targetY, width, height)` | `pixmap_shadow_area/8` | the target darkened by the luminance of a rectangle of the source |
+| `operationArea(source, target, operation, sourceX, sourceY, targetX, targetY, width, height)` | `pixmap_operation_area/9` | a rectangle of the source combined with the target by the operation |
 | `setClip(pixmap, x, y, width, height)` | `pixmap_set_clip/2` | the pixmap's clip (§4) |
 | `rgb(red, green, blue)` | none | an opaque color |
 | `toPpm(pixmap)` | none | the pixmap as a PPM file (§6) |
@@ -76,7 +76,7 @@ The clip bounds what an operation writes, and what `getPixel` reads:
 - `getPixel` answers opaque black, `Color(alpha = 255, red = 0, green = 0, blue = 0)`, for a point outside the clip, and for one outside the pixmap.
 - `fill`, `flip`, `copyTo` and `getPixels` do not read the clip.
 
-A rectangle that reaches outside what an operation reads or writes is cut to the part within it, and one wholly outside is empty. In an area operation the source's pixel at `sourceX + i`, `sourceY + j` goes to the target's at `targetX + i`, `targetY + j`, and a pixel outside the source's clip or the target's is left out. `getPixels` answers the bytes of the part of its rectangle within the pixmap, row by row from the top. A rectangle of width 0 and height 0 has no pixels, and `getPixels` answers no bytes for it.
+A rectangle that reaches outside what an operation reads or writes is cut to the part within it, and one wholly outside is empty. In an area operation the source's pixel at `sourceX + i`, `sourceY + j` goes to the target's at `targetX + i`, `targetY + j`, and a pixel outside the target's clip is left out. A source rectangle that begins left of or above the source's clip is cut to the clip and lands at `targetX`, `targetY` all the same, as epx has it (`epx_bugs.md` 6): a program begins the source's rectangle within the clip. `getPixels` answers the bytes of the part of its rectangle within the pixmap, row by row from the top. A rectangle of width 0 and height 0 has no pixels, and `getPixels` answers no bytes for it.
 
 ## 5. What faults
 
