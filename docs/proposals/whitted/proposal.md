@@ -14,13 +14,9 @@ The picture is 400 by 300, `Rgb`, as the Boing ball's. The colors, the light's p
 
 ## 3. The sampling
 
-Three counts, each a loop over samples and an average:
+The sampling is Cook's distributed ray tracing: `n` by `n` rays through each pixel, at points jittered within the pixel, and each of those rays, wherever it hits, draws one point on the light's disc for its shadow ray and, on the floor, one scattered direction within a small cone around the mirror direction for its reflection; the pixel is the average of its `n` by `n` rays, and no ray branches. Over the samples the shadow comes out soft, the fraction of the disc the point sees, and the floor's reflection glossy; `n` of 1 is the Boing ball's one ray through the center, the disc's center and a mirror floor, with no draw.
 
-- **Anti-aliasing.** `n` by `n` rays through each pixel, at points jittered within the pixel, averaged; `n` of 1 is the Boing ball's one ray through the center.
-- **Soft shadows.** At each hit, `m` shadow rays to `m` points on the light's disc, the shadow the fraction that reach it; `m` of 1 is a hard shadow from the disc's center.
-- **Glossy reflection.** On the floor, `k` reflected rays scattered within a small cone around the mirror direction, averaged; `k` of 1 is a mirror.
-
-One count on the command line, `samples`, sets all three, `n`, `m` and `k` each `samples`, so that `whitted out.ppm 8 16 show` means sixteen by sixteen rays a pixel, sixteen shadow rays a hit and sixteen reflected rays a floor hit: with the depth, several thousand rays a pixel against the Boing ball's three. Three counts on the command line would be three knobs for one effect, slowness, and an example carries no options beyond its arguments.
+One count on the command line, `samples`, is `n`, so that `whitted out.ppm 8 16 show` means sixteen by sixteen rays a pixel, each with its shadow ray and its reflection, with the depth some two thousand ray operations a pixel against the Boing ball's three: about seventeen minutes on one worker and four on eight, a row every few seconds in the window. A shadow ray and a reflection drawn at every hit of every branch instead would multiply to hours (the log's *Cook's Sampling*).
 
 The jitter and the points come from `Random`, seeded by the row: `renderRow` begins with `Random.seed(y)` and threads the seed through the row's samples, so that a row's samples are the same whatever worker draws it, and the eight-worker picture is byte for byte the one-worker picture, as the Boing ball's is. A seed by the worker's index would change the picture with the worker count, since which rows a worker takes changes with it.
 
