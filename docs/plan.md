@@ -45,6 +45,8 @@ Each example gains a way to show its picture on the screen as it is drawn, the r
 
 `examples/whitted.ern`, after the window and before the release 0.2.0: the classic scene of several spheres over a checkered floor, with reflection and refraction, traced as `raytracer.ern` traces, the workers and the one pixmap the same, so that a richer picture costs a few dozen lines of the pure half and nothing of the acting half.
 
+It is also the slow tracer, for the window of milestone 8: anti-aliasing by `n` by `n` samples a pixel, soft shadows from an area light with `m` shadow rays a hit, and a glossy floor with several scattered reflected rays, the rays a pixel the product of the counts, so that sixteen samples with sixteen shadow rays take minutes on one worker and under a minute on eight. The counts are the program's third argument after the file and the workers, as the worker count is, so that `make test` runs it with one sample in a second; the sample points come from `Random` seeded by the worker's index, as `snake.ern` seeds it, so that a seed draws one picture whatever the worker count. Decided 2026-10-20 with the user, for the proposal to start from.
+
 Decided 2026-10-20 with the user, who also decided where the library stops: a 2-D library of pixmaps and pixels, no mesh and no image reading; a mesh is a library's work (the log's *Where the Library Stops*). A window that shows came in later the same day, milestone 8.
 
 ## Milestone 6: after Ernest's MVP 3.28, the end
