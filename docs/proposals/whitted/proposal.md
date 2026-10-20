@@ -22,7 +22,7 @@ Three counts, each a loop over samples and an average:
 
 One count on the command line, `samples`, sets all three, `n`, `m` and `k` each `samples`, so that `whitted out.ppm 8 16 show` means sixteen by sixteen rays a pixel, sixteen shadow rays a hit and sixteen reflected rays a floor hit: with the depth, several thousand rays a pixel against the Boing ball's three. Three counts on the command line would be three knobs for one effect, slowness, and an example carries no options beyond its arguments.
 
-The jitter and the points come from `Random`: a worker seeds with `Random.seed(index)` and threads the seed through its rows, so that the picture a seed draws is the same whatever the worker count, since worker `k` always takes the rows `y % n == k`... which it does not, when `n` changes. So the seed is per row, `Random.seed(y)`, and a row's samples are the same whatever worker draws it: one seed, one picture, under any worker count, which is what makes the eight-worker picture byte for byte the one-worker picture, as the Boing ball's is.
+The jitter and the points come from `Random`, seeded by the row: `renderRow` begins with `Random.seed(y)` and threads the seed through the row's samples, so that a row's samples are the same whatever worker draws it, and the eight-worker picture is byte for byte the one-worker picture, as the Boing ball's is. A seed by the worker's index would change the picture with the worker count, since which rows a worker takes changes with it.
 
 ## 4. The program's shape
 
