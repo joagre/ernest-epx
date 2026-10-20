@@ -39,7 +39,9 @@ The second cut is built, 2026-10-20, and the window that shows, 2026-10-21: `Epx
 
 ## Milestone 3b: the release 0.2.0
 
-After the clock face, the window that shows and Whitted's spheres, milestones 8 and 5, the collage, and milestone 6, since the release waits for the user's word that Ernest's MVP 3.28 is out and takes what it brings: the release as [`release.md`](release.md) says, the two readers over the new pages, `Epx.Gc` and `Epx.Window`, the drawing functions and the examples' windows among them, `make man` with the second page, the tag `v0.2.0` and the archive with `THIRD_PARTY_LICENSES`, its notes naming epx's commit and the platform the NIF was built on. Decided 2026-10-20 with the user.
+After the clock face, the window that shows and Whitted's spheres, milestones 8 and 5, the collage, and milestone 6, since the release waits for the user's word that Ernest's MVP 3.28 is out and takes what it brings.
+
+The release as [`release.md`](release.md) says, the two readers over the new pages, `Epx.Gc` and `Epx.Window`, the drawing functions and the examples' windows among them, `make man` with the second page, the tag `v0.2.0` and the archive with `THIRD_PARTY_LICENSES`, its notes naming epx's commit and the platform the NIF was built on. Decided 2026-10-20 with the user.
 ## Milestone 6: after Ernest's MVP 3.28, the end
 
 When Ernest's MVP 3.28 is released, the parts of the library that wait on it are taken in one item: the fourteen dropped `Foreign.Term` answers become `Unit` declarations, the tests' own fault helper becomes `Test.faults`, the page's `// =>` lines are held by `ern test`, the copy of the style rules goes where Ernest installs them, Ernest's own libraries come off `make lib` once they are on the default load path, and `--libs lib` replaces the `--load-path` of each Erlang application's `ebin` in the Makefile, the launcher and the examples' headers, as the template then has it.
