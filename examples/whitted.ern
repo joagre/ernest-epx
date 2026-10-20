@@ -1,0 +1,683 @@
+//
+// Whitted: a glass sphere and a mirror sphere over a checkered floor,
+// traced by a count of processes with a count of samples, and written as
+// PPM
+//
+// The scene of Whitted's picture of 1980, traced as `raytracer.ern` traces
+// the Boing ball, which this program grows out of. A glass sphere at the
+// left front bends the rays that pass into it and out of it and mirrors a
+// share of them, the share by Fresnel's law in Schlick's form; a mirror
+// sphere at the right back mirrors them; and a floor checked in red and
+// yellow mirrors a share of them, its reflection blurred by its gloss. One
+// light, a disc above the spheres, to their left and behind them, casts
+// the shadows forward, the glass sphere's lighter than the mirror
+// sphere's, since a share of the light passes through the glass; a ray
+// that meets nothing sees the sky. A ray is followed through at most five
+// surfaces, so that one that passes through the glass leaves it and is
+// followed on.
+//
+// The sampling is Cook's distributed ray tracing, over one count, the
+// samples, which makes the picture better, and slower. A pixel's color is
+// the average of samples by samples rays through points jittered within
+// it. Each of those rays, wherever it meets a surface, draws one point of
+// the light's disc for its shadow and, on the floor, one direction
+// scattered about the mirrored one for its reflection, so that over the
+// rays of a pixel its shadows come out soft and the floor's reflection
+// glossy, and no ray branches into many for them. With 1 sample a pixel
+// has one ray, through its middle, a shadow is cast from the disc's
+// center, and the floor is a mirror.
+//
+// The rows are shared out in turn among workers, processes that each
+// trace their rows and write them into one pixmap. Once every worker has
+// ended, the pixmap is written to the file named on the command line as a
+// PPM image, which an image viewer opens. The second argument is the count
+// of workers, and the third the count of samples, each 1 where it is not
+// given. Run with no file, or with a count that is not a whole number
+// above 0, it says how it is called and ends with status 2. A worker that
+// does not return ends the program with its reason on standard error and
+// status 1, and so does a file it cannot write.
+//
+// With the word `show` after the other arguments, it opens a window of the
+// picture's size and shows the empty picture in it before the workers
+// start, and each worker shows each row it writes, so that the rows are
+// seen filling the picture as the workers trace them. It then writes the
+// file and leaves the window on the screen until Enter is pressed. The
+// window's close button does nothing. Without the word it opens no window,
+// which is how `make test` runs it.
+//
+// What to look at:
+//
+// - The sampling is pure: `pixel` averages its rays in a loop over the
+//   samples, `jitter`, `lit` and `glossy` each draw what the ray at hand
+//   needs, and the random points come from `Random`, each drawn from the
+//   seed the draw before it left, so that each function answers its value
+//   and the seed after it (report Appendix E.13).
+// - `trace` answers the color a ray sees and the seed after the rays it
+//   follows, and carries the seed through its recursion: `glassColor`,
+//   `mirrorColor` and `floorColor` call it again for the rays they mirror
+//   and bend, each with the seed the one before it left.
+// - `renderRow` begins each row with `Random.seed(y)`, the row's own seed,
+//   and threads it through the row's pixels, so that a row is the same
+//   whatever worker traces it: the picture eight workers trace is byte for
+//   byte the picture one worker traces.
+// - `refracted` bends a ray by Snell's law, and answers `None` where none
+//   is bent, a ray inside the glass meeting its surface at a slant, since
+//   `Float.sqrt` answers `None` below zero (report Appendix E.9); the glass
+//   then mirrors the whole of it. `fresnel` gives the share it mirrors
+//   otherwise.
+// - The acting half is the Boing ball's: one pixmap captured by every
+//   worker and written a row at a time with one `Epx.putPixels`, worker `k`
+//   of `n` taking the rows `y` with `y % n == k`, `spawnMonitored` and a
+//   `Down` for each worker (report §6.9), and `Epx.Screen.showArea` after
+//   each row (`Epx`'s page, *In place and shared*, *Rectangles*, and
+//   `Epx.Screen`'s page).
+//
+// Run it from the repository's root once `make` has built the library,
+// with sixteen samples on one worker and on eight, compare the times the
+// shell gives and the two pictures, and watch the eight workers fill the
+// window on a machine with a screen:
+//
+//     LOAD="--load-path build --load-path lib/epx/ebin --load-path lib/tree_db/ebin"
+//     ern build $LOAD examples/whitted.ern
+//     time ern run $LOAD examples/whitted.erc build/whitted1.ppm 1 16
+//     time ern run $LOAD examples/whitted.erc build/whitted8.ppm 8 16
+//     cmp build/whitted1.ppm build/whitted8.ppm
+//     ern run $LOAD examples/whitted.erc build/whitted.ppm 8 16 show
+//
+
+// What the command line asks for: the file to write, the counts of workers
+// and of samples, and whether the window is shown.
+type Command = Command(name : String, workers : Int, samples : Int, shown : Bool)
+
+// A point or a direction in the scene: `x` grows to the right, `y` upward,
+// and `z` away from the eye.
+type Vector = Vector(x : Float, y : Float, z : Float)
+
+fn Vector.+(left : Vector, right : Vector) : Vector =
+    Vector(x = left.x + right.x, y = left.y + right.y, z = left.z + right.z)
+
+fn Vector.-(left : Vector, right : Vector) : Vector =
+    Vector(x = left.x - right.x, y = left.y - right.y, z = left.z - right.z)
+
+// The vector times a number. `*` is not this, since a type's own operator
+// takes two values of the type (report §4.8).
+fn scaled(vector : Vector, factor : Float) : Vector =
+    Vector(x = vector.x * factor, y = vector.y * factor, z = vector.z * factor)
+
+fn dot(left : Vector, right : Vector) : Float =
+    left.x * right.x + left.y * right.y + left.z * right.z
+
+// The vector's length. A sum of squares is never below zero.
+fn length(vector : Vector) : Float =
+    squareRoot(dot(vector, vector))
+
+// The vector of length 1 in the vector's direction.
+fn normalized(vector : Vector) : Vector =
+    scaled(vector, 1.0 / length(vector))
+
+// The direction mirrored by a surface of that normal, a vector of length
+// 1: its part along the normal reversed.
+fn reflected(direction : Vector, normal : Vector) : Vector =
+    direction - scaled(normal, 2.0 * dot(direction, normal))
+
+// The direction bent by Snell's law where it passes through a surface of
+// that normal, a vector of length 1 facing the direction, into matter
+// whose index of refraction is that of the matter it leaves divided by
+// `ratio`; or `None` where no ray passes and the surface mirrors the whole
+// of it.
+fn refracted(direction : Vector, normal : Vector, ratio : Float) : Optional(Vector) = {
+    let cosine = -dot(direction, normal);
+    Optional.map(Float.sqrt(1.0 - ratio * ratio * (1.0 - cosine * cosine)),
+                 fn(root) = scaled(direction, ratio) + scaled(normal, ratio * cosine - root))
+}
+
+// A half line from its origin, its direction of length 1.
+type Ray = Ray(origin : Vector, direction : Vector)
+
+// The point at that distance along the ray.
+fn along(ray : Ray, distance : Float) : Vector =
+    ray.origin + scaled(ray.direction, distance)
+
+// A color as it is computed, each channel from 0 for none to 1 for full,
+// which becomes the pixel's three bytes once, at the pixel.
+type Color = Color(red : Float, green : Float, blue : Float)
+
+fn Color.+(left : Color, right : Color) : Color =
+    Color(red = left.red + right.red,
+          green = left.green + right.green,
+          blue = left.blue + right.blue)
+
+// One color filtered by another, channel by channel: a surface's color in a
+// light's.
+fn Color.*(left : Color, right : Color) : Color =
+    Color(red = left.red * right.red,
+          green = left.green * right.green,
+          blue = left.blue * right.blue)
+
+// The gray of that level in every channel: a color times it is the color
+// scaled by the level.
+fn gray(level : Float) : Color =
+    Color(red = level, green = level, blue = level)
+
+// What a ray meets first, at its distance along the ray.
+type Hit = Glass(distance : Float) | Mirror(distance : Float) | Floor(distance : Float)
+
+// The picture's size in pixels.
+let width : Int = 400
+
+let height : Int = 300
+
+// The rays followed along one path at most: the eye's, and four after it,
+// so that a ray that passes into the glass and out of it is followed on.
+let maximumDepth : Int = 5
+
+// The distance along a ray below which it meets the surface it begins on,
+// which is not counted as meeting it.
+let epsilon : Float = 1.0e-9
+
+// The spheres, each of radius 1 and above the floor, which is the plane
+// where `y` is 0: the glass one at the left front and the mirror one at
+// the right back.
+let radius : Float = 1.0
+
+let glassCenter : Vector = Vector(x = -1.0, y = 1.0, z = -0.5)
+
+let mirrorCenter : Vector = Vector(x = 1.2, y = 1.0, z = 2.0)
+
+// The eye, and the directions of the picture from it, as the Boing ball's:
+// ahead to a point 0.7 above the floor; upward square to that within the
+// plane where `x` is 0; and rightward along `x`.
+let eye : Vector = Vector(x = 0.0, y = 1.5, z = -5.0)
+
+let ahead : Vector = normalized(Vector(x = 0.0, y = 0.7, z = 0.0) - eye)
+
+let upward : Vector = Vector(x = 0.0, y = ahead.z, z = -ahead.y)
+
+let rightward : Vector = Vector(x = 1.0, y = 0.0, z = 0.0)
+
+// The distance between two neighboring pixels on the plane 1 ahead of the
+// eye, across and down alike: the picture spans 0.85 of it from top to
+// bottom.
+let spacing : Float = 0.85 / Int.toFloat(height)
+
+// The light, a level disc of that center and radius above the spheres, to
+// their left and behind them, and how its light falls: the ambient part on every point,
+// the diffuse part on a point it reaches by Lambert's law, and the white
+// highlight's strength and how tight it is, each toward the disc's center.
+let light : Vector = Vector(x = -5.0, y = 4.5, z = 3.0)
+
+let lightRadius : Float = 1.0
+
+let ambient : Float = 0.2
+
+let diffuse : Float = 0.8
+
+let highlight : Float = 0.6
+
+let shininess : Float = 40.0
+
+// The glass's index of refraction, the air's being 1, and the share of the
+// light that passes through the glass sphere where it stands between a
+// point and the light.
+let glassIndex : Float = 1.5
+
+let glassShadow : Float = 0.35
+
+// The colors of the scene; the share of the light the mirror sphere and
+// the floor each mirror; the side of a check; and the gloss, the radius of
+// the disc the floor's normal is tilted within for each ray it scatters.
+let sky : Color = Color(red = 0.55, green = 0.65, blue = 0.85)
+
+let black : Color = gray(0.0)
+
+let mirrorGray : Color = gray(0.6)
+
+let floorRed : Color = Color(red = 0.85, green = 0.1, blue = 0.05)
+
+let floorYellow : Color = Color(red = 0.9, green = 0.8, blue = 0.15)
+
+let sphereMirror : Float = 0.85
+
+let floorMirror : Float = 0.25
+
+let checkSide : Float = 1.0
+
+let gloss : Float = 0.05
+
+// The point at the origin, and the floor's normal.
+let origin : Vector = Vector(x = 0.0, y = 0.0, z = 0.0)
+
+let floorNormal : Vector = Vector(x = 0.0, y = 1.0, z = 0.0)
+
+export fn main() : Unit receiving Down =
+    match commandLine(Os.arguments) {
+        Some(Command(shown = false) as command) ->
+            write(command, None)
+      | Some(command) -> {
+            let window = Epx.Screen.open(0, 0, width, height);
+            write(command, Some(window));
+            closeOnEnter(window)
+        }
+      | None -> {
+            Io.printlnError("usage: whitted file.ppm [workers [samples]] [show]");
+            Os.exit(2)
+        }
+    }
+
+// The command the arguments give: the file named, the counts of workers
+// and of samples, each 1 where it is not given, and whether the word
+// `show` ends the arguments; or `None` for no file, a word after the counts
+// other than `show`, or a count that is not a whole number above 0.
+fn commandLine(arguments : List(String)) : Optional(Command) =
+    match arguments {
+        [name] -> counted(name, "1", "1", false)
+      | [name, "show"] -> counted(name, "1", "1", true)
+      | [name, workers] -> counted(name, workers, "1", false)
+      | [name, workers, "show"] -> counted(name, workers, "1", true)
+      | [name, workers, samples] -> counted(name, workers, samples, false)
+      | [name, workers, samples, "show"] -> counted(name, workers, samples, true)
+      | _ -> None
+    }
+
+// The command with its two counts read, or `None` where one is not a
+// whole number above 0.
+fn counted(name : String, workers : String, samples : String, shown : Bool) : Optional(Command) =
+    match #(parsedCount(workers), parsedCount(samples)) {
+        #(Some(workerCount), Some(sampleCount)) ->
+            Some(Command(name = name, workers = workerCount, samples = sampleCount, shown = shown))
+      | _ ->
+            None
+    }
+
+// The whole number the text writes where it is above 0.
+fn parsedCount(text : String) : Optional(Int) =
+    match String.toInt(text) {
+        Some(number) when number > 0 -> Some(number)
+      | _ -> None
+    }
+
+// The picture traced by the command's workers with its samples, shown in
+// the window as it is traced where there is one, and written to the file,
+// or why it could not be, on standard error.
+fn write(command : Command, window : Optional(Epx.Screen.Window)) : Unit receiving Down = {
+    let pixmap = Epx.create(width, height, Epx.Rgb);
+    let count = command.workers;
+    showRows(window, pixmap, 0, height);
+    List.forEach(List.range(0, count - 1),
+                 fn(index) = start(pixmap, window, command.samples, index, count));
+    awaitWorkers(count);
+    match Fs.write(Path(command.name), Epx.toPpm(pixmap), 5000) {
+        Right(_) ->
+            Unit
+      | Left(error) -> {
+            Io.printlnError("whitted: " <> command.name <> ": " <> Io.show(error));
+            Os.exit(1)
+        }
+    }
+}
+
+// Worker `index` of `count`, which renders the rows `y` with
+// `y % count == index` into the pixmap, started and watched from its start.
+fn start(pixmap : Epx.Pixmap,
+         window : Optional(Epx.Screen.Window),
+         samples : Int,
+         index : Int,
+         count : Int) : Unit receiving Down = {
+    let rows = List.filter(List.range(0, height - 1), fn(y) = y % count == index);
+    let _ =
+        spawnMonitored(fn() = List.forEach(rows, fn(y) = renderRow(pixmap, window, samples, y)),
+                       fn(down) = down);
+    Unit
+}
+
+// Waits for the `Down` of each of `count` workers; one whose reason is not
+// `Returned` ends the program with that reason on standard error.
+fn awaitWorkers(count : Int) : Unit receiving Down =
+    if count == 0 then
+        Unit
+    else receive {
+        Down(reason = Returned) ->
+            awaitWorkers(count - 1)
+      | Down(reason = reason) -> {
+            Io.printlnError("whitted: a worker ended: " <> Io.show(reason));
+            Os.exit(1)
+        }
+    }
+
+// The row `y` traced a pixel at a time, written into the pixmap with one
+// `Epx.putPixels`, and shown in the window where there is one. The row's
+// seed is `y`, and each pixel is traced from the seed the pixel before it
+// left, so that the row is the same whatever worker traces it.
+fn renderRow(pixmap : Epx.Pixmap,
+             window : Optional(Epx.Screen.Window),
+             samples : Int,
+             y : Int) : Unit = {
+    let #(pixels, _) =
+        List.foldLeft(List.range(0, width - 1), #([], Random.seed(y)), fn(#(traced, seed), x) = {
+            let #(color, next) = pixel(x, y, samples, seed);
+            #(rgb(color) :: traced, next)
+        });
+    Epx.putPixels(pixmap, 0, y, width, 1, Epx.Rgb, Bytes.join(List.reverse(pixels), <<>>));
+    showRows(window, pixmap, y, 1)
+}
+
+// The `count` rows from `y` of the pixmap shown in the window, where there
+// is one.
+fn showRows(window : Optional(Epx.Screen.Window),
+            pixmap : Epx.Pixmap,
+            y : Int,
+            count : Int) : Unit =
+    match window {
+        Some(shown) -> Epx.Screen.showArea(shown, pixmap, 0, y, width, count)
+      | None -> Unit
+    }
+
+// The window left on the screen until a line, or the end of standard
+// input, is read, and then closed.
+fn closeOnEnter(window : Epx.Screen.Window) : Unit = {
+    Io.println("press Enter to close");
+    let _ = Io.readLine();
+    Epx.Screen.close(window)
+}
+
+// The color as the pixel's three bytes in the format `Rgb`. A channel above
+// 1, where the highlight adds to the light, is written as 1.
+fn rgb(color : Color) : Bytes =
+    <<channel(color.red), channel(color.green), channel(color.blue)>>
+
+fn channel(level : Float) : Int =
+    Float.round(Float.min(level, 1.0) * 255.0)
+
+// The color of the pixel at `x`, `y`, and the seed after it: the average
+// of the colors seen along samples by samples rays, one through each of
+// the cells the pixel is cut into.
+fn pixel(x : Int, y : Int, samples : Int, seed : Random.Seed) : #(Color, Random.Seed) = {
+    let cells = samples * samples;
+    let #(sum, next) =
+        List.foldLeft(List.range(0, cells - 1), #(black, seed), fn(#(acc, current), cell) = {
+            let #(ray, seed1) = cellRay(x, y, samples, cell, current);
+            let #(color, seed2) = trace(ray, maximumDepth, samples, seed1);
+            #(acc + color, seed2)
+        });
+    #(sum * gray(1.0 / Int.toFloat(cells)), next)
+}
+
+// The ray through the cell of that index, of the samples by samples equal
+// cells the pixel at `x`, `y` is cut into, counted across and then down,
+// at a point jittered within the cell, and the seed after it.
+fn cellRay(x : Int,
+           y : Int,
+           samples : Int,
+           cell : Int,
+           seed : Random.Seed) : #(Ray, Random.Seed) = {
+    let side = Int.toFloat(samples);
+    let #(across, seed1) = jitter(samples, seed);
+    let #(down, seed2) = jitter(samples, seed1);
+    let column = Int.toFloat(x) + (Int.toFloat(cell % samples) + across) / side;
+    let row = Int.toFloat(y) + (Int.toFloat(cell / samples) + down) / side;
+    #(pixelRay(column, row), seed2)
+}
+
+// The place within a cell of a pixel, across or down, from 0 to 1, and the
+// seed after it: drawn uniformly, or the cell's middle where samples is 1.
+fn jitter(samples : Int, seed : Random.Seed) : #(Float, Random.Seed) =
+    if samples == 1 then #(0.5, seed) else Random.nextFloat(seed)
+
+// The ray from the eye through the point at `column`, `row` of the picture,
+// in pixels from its top left corner, `row` growing downward as in the
+// pixmap.
+fn pixelRay(column : Float, row : Float) : Ray = {
+    let across = (column - Int.toFloat(width) / 2.0) * spacing;
+    let up = (Int.toFloat(height) / 2.0 - row) * spacing;
+    Ray(origin = eye,
+        direction = normalized(ahead + scaled(rightward, across) + scaled(upward, up)))
+}
+
+// The color the ray sees, following at most `depth` rays along each path,
+// itself among them, and the seed after the rays it followed: the glass
+// sphere's, the mirror sphere's or the floor's where it meets one, the sky
+// where it meets none, and black where no ray is left to follow.
+fn trace(ray : Ray, depth : Int, samples : Int, seed : Random.Seed) : #(Color, Random.Seed) =
+    if depth == 0 then
+        #(black, seed)
+    else match nearest(ray) {
+        Some(Glass(distance = distance)) ->
+            glassColor(ray, along(ray, distance), depth, samples, seed)
+      | Some(Mirror(distance = distance)) ->
+            mirrorColor(ray, along(ray, distance), depth, samples, seed)
+      | Some(Floor(distance = distance)) ->
+            floorColor(ray, along(ray, distance), depth, samples, seed)
+      | None ->
+            #(sky, seed)
+    }
+
+// The glass sphere's color where the ray meets it at the point: its white
+// highlight, and the rays it mirrors and bends there.
+fn glassColor(ray : Ray,
+              point : Vector,
+              depth : Int,
+              samples : Int,
+              seed : Random.Seed) : #(Color, Random.Seed) = {
+    let outward = scaled(point - glassCenter, 1.0 / radius);
+    let entering = dot(ray.direction, outward) < 0.0;
+    let normal = if entering then outward else scaled(outward, -1.0);
+    let ratio = if entering then 1.0 / glassIndex else glassIndex;
+    let #(fraction, seed1) = lit(point, normal, samples, seed);
+    let own = shade(point, normal, ray.direction, black, fraction);
+    let #(passed, seed2) = throughGlass(ray.direction, point, normal, ratio, depth, samples, seed1);
+    #(own + passed, seed2)
+}
+
+// The color of the rays the glass passes on at the point, of that normal
+// facing the direction: the mirrored ray and the bent one mixed by
+// Fresnel's law, or the mirrored ray alone where none is bent.
+fn throughGlass(direction : Vector,
+                point : Vector,
+                normal : Vector,
+                ratio : Float,
+                depth : Int,
+                samples : Int,
+                seed : Random.Seed) : #(Color, Random.Seed) = {
+    let mirrored = Ray(origin = point, direction = reflected(direction, normal));
+    match refracted(direction, normal, ratio) {
+        Some(bent) -> {
+            let share = fresnel(Float.min(-dot(direction, normal), -dot(bent, normal)));
+            let #(seen, seed1) = trace(mirrored, depth - 1, samples, seed);
+            let #(through, seed2) =
+                trace(Ray(origin = point, direction = bent), depth - 1, samples, seed1);
+            #(seen * gray(share) + through * gray(1.0 - share), seed2)
+        }
+      | None ->
+            trace(mirrored, depth - 1, samples, seed)
+    }
+}
+
+// The share of the light the glass mirrors, by Fresnel's law in Schlick's
+// form, where a ray in the air meets its surface, or leaves it, at the
+// angle of that cosine to the normal: the share it mirrors head on, the
+// square of Fresnel's amplitude there, rising to the whole of it at a
+// graze.
+fn fresnel(cosine : Float) : Float = {
+    let amplitude = (glassIndex - 1.0) / (glassIndex + 1.0);
+    let headOn = amplitude * amplitude;
+    headOn + (1.0 - headOn) * power(1.0 - cosine, 5.0)
+}
+
+// The mirror sphere's color where the ray meets it at the point: its own
+// gray, shaded, and the ray it mirrors.
+fn mirrorColor(ray : Ray,
+               point : Vector,
+               depth : Int,
+               samples : Int,
+               seed : Random.Seed) : #(Color, Random.Seed) = {
+    let normal = scaled(point - mirrorCenter, 1.0 / radius);
+    let #(fraction, seed1) = lit(point, normal, samples, seed);
+    let own = shade(point, normal, ray.direction, mirrorGray * gray(1.0 - sphereMirror), fraction);
+    let mirrored = Ray(origin = point, direction = reflected(ray.direction, normal));
+    let #(seen, seed2) = trace(mirrored, depth - 1, samples, seed1);
+    #(own + seen * gray(sphereMirror), seed2)
+}
+
+// The floor's color where the ray meets it at the point: its check, shaded,
+// and its glossy reflection.
+fn floorColor(ray : Ray,
+              point : Vector,
+              depth : Int,
+              samples : Int,
+              seed : Random.Seed) : #(Color, Random.Seed) = {
+    let #(fraction, seed1) = lit(point, floorNormal, samples, seed);
+    let own =
+        shade(point, floorNormal, ray.direction, check(point) * gray(1.0 - floorMirror), fraction);
+    let #(seen, seed2) = glossy(ray.direction, point, depth, samples, seed1);
+    #(own + seen * gray(floorMirror), seed2)
+}
+
+// The floor's reflection at the point of the direction seen along, and the
+// seed after it: the color seen along one ray, mirrored by the floor's
+// normal tilted by a point drawn on a disc of the gloss's radius, which
+// over the rays of a pixel blurs the reflection; the mirrored ray itself
+// where samples is 1. A ray scattered below the floor, as a ray seen at a
+// graze may be, is mirrored up by the floor in turn.
+fn glossy(direction : Vector,
+          point : Vector,
+          depth : Int,
+          samples : Int,
+          seed : Random.Seed) : #(Color, Random.Seed) = {
+    let #(tilt, next) = pointOnDisc(gloss, samples, seed);
+    let scattered = reflected(direction, normalized(floorNormal + tilt));
+    let rising = Vector(x = scattered.x, y = Float.abs(scattered.y), z = scattered.z);
+    trace(Ray(origin = point, direction = rising), depth - 1, samples, next)
+}
+
+// The nearest of the glass sphere, the mirror sphere and the floor along
+// the ray, or `None` where it meets none.
+fn nearest(ray : Ray) : Optional(Hit) = {
+    let glass =
+        Optional.map(hitSphere(ray, glassCenter), fn(distance) = Glass(distance = distance));
+    let mirror =
+        Optional.map(hitSphere(ray, mirrorCenter), fn(distance) = Mirror(distance = distance));
+    let floor = Optional.map(hitFloor(ray), fn(distance) = Floor(distance = distance));
+    nearer(nearer(glass, mirror), floor)
+}
+
+// The nearer of two hits, where there is one.
+fn nearer(first : Optional(Hit), second : Optional(Hit)) : Optional(Hit) =
+    match #(first, second) {
+        #(Some(one), Some(other)) when other.distance < one.distance -> second
+      | #(Some(_), _) -> first
+      | #(None, _) -> second
+    }
+
+// The distance along the ray to where it first meets the sphere of that
+// center, or `None` where it misses it or the sphere is behind it. A ray
+// that begins on the sphere's surface, leaving it or passing into it, is
+// not counted as meeting it there, and one inside meets it where it
+// leaves.
+fn hitSphere(ray : Ray, center : Vector) : Optional(Float) = {
+    let offset = ray.origin - center;
+    let half = dot(offset, ray.direction);
+    match Float.sqrt(half * half - dot(offset, offset) + radius * radius) {
+        Some(root) when -half - root > epsilon -> Some(-half - root)
+      | Some(root) when -half + root > epsilon -> Some(-half + root)
+      | _ -> None
+    }
+}
+
+// The distance along the ray to the floor, or `None` where the ray does
+// not go down. Every ray traced begins on the floor or above it.
+fn hitFloor(ray : Ray) : Optional(Float) =
+    if ray.direction.y < 0.0 then Some(-ray.origin.y / ray.direction.y) else None
+
+// The share of the light that reaches the point, of a surface of that
+// normal, and the seed after it: the share that reaches it from one point
+// drawn on the light's disc, which over the rays of a pixel makes the
+// shadow soft, or from the disc's center where samples is 1.
+fn lit(point : Vector,
+       normal : Vector,
+       samples : Int,
+       seed : Random.Seed) : #(Float, Random.Seed) = {
+    let #(offset, next) = pointOnDisc(lightRadius, samples, seed);
+    #(reaching(point, normal, light + offset), next)
+}
+
+// The share of the light from the target, a point of the light's disc,
+// that reaches the point of a surface of that normal: none where the point
+// faces away from it or the mirror sphere stands between them,
+// `glassShadow` where the glass sphere does, and the whole of it
+// otherwise.
+fn reaching(point : Vector, normal : Vector, target : Vector) : Float = {
+    let toTarget = target - point;
+    let distance = length(toTarget);
+    let ray = Ray(origin = point, direction = scaled(toTarget, 1.0 / distance));
+    if dot(normal, toTarget) <= 0.0 || isBefore(hitSphere(ray, mirrorCenter), distance) then
+        0.0
+    else if isBefore(hitSphere(ray, glassCenter), distance) then
+        glassShadow
+    else
+        1.0
+}
+
+// Whether a hit, at its distance along a ray, comes before that distance.
+fn isBefore(hit : Optional(Float), distance : Float) : Bool =
+    match hit {
+        Some(toHit) -> toHit < distance
+      | None -> false
+    }
+
+// A point of the level disc of that radius about the origin, drawn
+// uniformly over its area, and the seed after it; the origin itself where
+// samples is 1.
+fn pointOnDisc(discRadius : Float, samples : Int, seed : Random.Seed) : #(Vector, Random.Seed) =
+    if samples == 1 then
+        #(origin, seed)
+    else {
+        let #(area, seed1) = Random.nextFloat(seed);
+        let #(turn, seed2) = Random.nextFloat(seed1);
+        let distance = discRadius * squareRoot(area);
+        let angle = 2.0 * Float.pi * turn;
+        #(Vector(x = distance * Float.cos(angle), y = 0.0, z = distance * Float.sin(angle)), seed2)
+    }
+
+// The color of a point of a surface of that color and normal, seen along
+// the direction, which the share `fraction` of the light reaches: the
+// ambient part, and Lambert's part and the white highlight toward the
+// light's center, each scaled by the share.
+fn shade(point : Vector,
+         normal : Vector,
+         direction : Vector,
+         surface : Color,
+         fraction : Float) : Color = {
+    let toLight = normalized(light - point);
+    let facing = Float.max(0.0, dot(normal, toLight));
+    let shine = Float.max(0.0, dot(reflected(direction, normal), toLight));
+    surface * gray(ambient + diffuse * facing * fraction) + gray(glint(shine) * fraction)
+}
+
+// The highlight's level where the reflection of the direction seen along
+// points `shine` toward the light, from 0 to 1.
+fn glint(shine : Float) : Float =
+    highlight * power(shine, shininess)
+
+// The floor's color at the point: red where the point's squares of side
+// `checkSide` across and along are both even or both odd, and yellow where
+// one is even and the other odd.
+fn check(point : Vector) : Color = {
+    let squares = Float.floor(point.x / checkSide) + Float.floor(point.z / checkSide);
+    if squares % 2 == 0 then floorRed else floorYellow
+}
+
+// The square root of a number not below zero, which `Float.sqrt` answers
+// as `Some`.
+fn squareRoot(number : Float) : Float =
+    match Float.sqrt(number) {
+        Some(value) -> value
+      | None -> fault("a square root below zero")
+    }
+
+// The base to a power that is a whole number above 0, which `Float.pow`
+// answers as `Some`.
+fn power(base : Float, exponent : Float) : Float =
+    match Float.pow(base, exponent) {
+        Some(value) -> value
+      | None -> fault("a power that is no whole number above 0")
+    }
