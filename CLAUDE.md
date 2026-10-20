@@ -21,7 +21,7 @@ Each fact has one owner. Every other document points at the owner and does not r
 | [`docs/release.md`](docs/release.md) | what a release runs to be ready |
 | [`docs/style.md`](docs/style.md) | the rules an Ernest program is written by, Ernest's own, copied and not edited here |
 | the code and its tests | what is built |
-| `language_feedback.md`, under `docs/` from its first line | what writing Ernest felt against the principles, a line each, in the shape of Ernest's file of that name, so that a line is carried there by copy |
+| `language_feedback.md`, under `docs/` from its first line | what writing Ernest felt against the principles, a line each, in the shape of Ernest's file of that name, a queue: a line is carried there by copy, the log here cites Ernest's number, and the line then goes; the file goes when it is empty |
 | `findings.md`, under `docs/` while a review's findings are open | the findings, each line until a plan item decides it; it goes when every line is done, dropped or planned |
 
 **Proposals.** [`docs/proposals/`](docs/proposals/) holds what is designed, a directory for each: the proposal, its reasons, what other systems do, and its experiments or programs. Each directory's `README.md` says what its files are and which is current. Until a proposal is decided all of it is tentative, and nothing flows from it into the design, the plan or the log. A built proposal is kept as the record of its design, its status line saying so. A `scratch/` directory inside a proposal's own directory, untracked, is the user's own thinking: no session edits it, commits it or builds on it.
@@ -30,7 +30,7 @@ Each fact has one owner. Every other document points at the owner and does not r
 
 ## The repository
 
-- The program is Ernest, written for one floor of `ern`, which the Makefile names. `make` builds; `make test` tests; `make run` runs; [`README.md`](README.md)'s *Building* names the rest. Everything beyond the standard library that the program loads stands under `lib/`, which `make lib` fills: Ernest's own libraries, and each dependency as its release archive unpacks.
+- The program is Ernest, written for one floor of `ern`, which the Makefile names. `make` builds; `make test` tests; `make run` runs; [`README.md`](README.md)'s *Building* names the rest. Everything beyond the standard library that the program loads stands under `lib/`, which `make lib` fills: Ernest's own libraries, each dependency as its release archive unpacks, and each Erlang application the program stands on, a read-only git submodule under `erl/`, pinned and never copied, built by its own `make`.
 - Work in the main checkout, on `main`. No worktree and no branch of a session's own: the user reads and edits this checkout.
 - A coding job of many steps goes to an agent, so that the discussion with the user goes on while it runs. The agent follows this file, and its report comes back to the user. Where the work changes kind, between design or prose on one side and a build from a settled brief on the other, say in one line which model the next piece wants before starting it.
 - A commit names its paths, `git commit -F message -- path...`, never a bare `git commit` after `git add`. Read `git status --short` first for entries that are not yours, and leave the index as the user left it. The message says what changed in one or two sentences and points to the log or the plan for why.
@@ -63,7 +63,7 @@ Each fact has one owner. Every other document points at the owner and does not r
 
 ## Tests
 
-- **A test lives in the module it tests**, a `let` of type `Test.Case(m)` (Appendix E.24); `test/` holds only a program run end to end, as Ernest modules `ern test` runs. Every section of `docs/design.md` has a test whose doc block names it, and every exported function has one.
+- **A test lives in the module it tests**, a `let` of type `Test.Case(m)` (Appendix E.24); `test/` holds only a program run end to end, as Ernest modules `ern test` runs. Every section of `docs/design.md` has a test whose comment names it, `// design §2: ...`, a comment and not a doc block, which would put the test on the module's page; and every exported function has one.
 - **A test written after the code is a regression test.** Say so, and name what it does not cover.
 - **`make test` runs before every commit**, and before the commit that closes a plan item the same from a fresh clone where the item touched the build. Edits to a proposal under discussion are committed at a pause, by their paths.
 - **Readers run before a release**, as [`docs/release.md`](docs/release.md) says; a finding is fixed, planned or dropped, and the commit messages say which.

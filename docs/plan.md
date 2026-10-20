@@ -6,17 +6,19 @@ Read *Where we are* first, then the table of milestones; the milestones to come 
 
 ## Where we are
 
-The first cut is built, 2026-10-20: `Epx` with twenty operations over epx's pixmaps, its design in `design.md`, and two examples. `sub` and `scroll` of the proposal wait on epx, milestone 2, and the area operations are epx's exactly, a source rectangle that begins outside the clip landing as epx lands it. Next is milestone 3, the release 0.1.0; milestone 2 waits on epx and on Ernest.
+The first cut is built and released as 0.1.0, 2026-10-20: `Epx` with twenty functions over epx's pixmaps, its design in `design.md`, two examples, and the manual page under `docs/man/`. `sub` and `scroll` of the proposal wait on epx, milestone 2, and the area operations are epx's exactly, a source rectangle that begins outside the clip landing as epx lands it. Next is milestone 4, the ray tracer; milestone 2 waits on epx, on Ernest and on the template.
 
 ## Milestones
 
 | | What | Done | Where its reasons are |
 |---|---|---|---|
+| Milestone 1 | the design and the first cut | 2026-10-20 | the log's *epx and tree_db as submodules*, *The first cut*, *The first cut built*, *The clip correction dropped* |
+| Milestone 3 | the release 0.1.0 | 2026-10-20 | the log's *The release review* |
 
 ## Milestone 1: the design
 
 1. **What the library offers**: decided 2026-10-20, [`proposals/pixmap/proposal.md`](proposals/pixmap/proposal.md), its eight decisions as recommended (the log's *The first cut*): twenty pixmap operations, `Color` one record, `Int` coordinates, no flags, a channel outside its range faulting, the PPM writer the library's, one module `Epx`, and the build an agent's.
-2. **How epx is found**: decided 2026-10-20 (the log's *epx and tree_db as submodules*). epx and tree_db are read-only git submodules under `erl/`, which `make lib` builds by their own `make` and links as `lib/<app>/ebin` and `priv`, on the load path; a pixmap was made, filled and read through the NIF from a scratch Ernest program. Built into `ernest-template` as its `v0.2.0`.
+2. **How epx is found**: decided 2026-10-20 (the log's *epx and tree_db as submodules*). epx is a read-only git submodule under `erl/`, which `make lib` builds by its own `make` and links as `lib/epx/ebin` and `priv`, on the load path; tree_db went at the release review, unneeded (the log's *The release review*). Built into `ernest-template` as its `v0.2.0`.
 3. **The first cut built**, 2026-10-20 (the log's *The first cut built*): `src/epx.ern`, `design.md` cited by its tests, the edges tried first and recorded in `epx_bugs.md`, `examples/mandelbrot.ern` and `examples/sierpinski.ern` with their README, built and run by `make test`; the doc blocks read back against shape rule 6. `sub` and `scroll` left out, milestone 2.
 
 ## Milestone 2: what epx must fix first, and the next cut
@@ -25,12 +27,11 @@ The first cut is built, 2026-10-20: `Epx` with twenty operations over epx's pixm
 2. **The reports of `epx_bugs.md` filed with epx**, by the user, and the submodule moved to a release that has the fixes.
 3. **`sub` and `scroll`**, once epx's fixes 1 to 3 are in the submodule, as the proposal's section 2 has them, `scroll`'s `rotate` a type of two named constructors (shape rule 9).
 4. **The next cut**: the drawing functions with the graphics context, `Epx.Gc`, as the proposal's section 2 leaves them, designed in a proposal of their own.
-5. **What waits on Ernest**: the lines the library carried to Ernest's `language_feedback.md`, 123, a foreign function answering `ok` declared `Unit`, and 124, a `Test` function for a fault, each decided in Ernest's plan; when Ernest has them, the thirteen dropped answers and the tests' own helper go.
-
-## Milestone 3: the release 0.1.0
-
-The first cut released as [`release.md`](release.md) says: a fresh clone that builds and passes, the two readers and their findings, `make man` with `docs/man/` committed, the tag `v0.1.0` and the archive published beside it, with notes that say what the release is. The first run of the template's release, whose lessons go to `ernest-template`.
+5. **What waits on Ernest**: the lines the library carried to Ernest's `language_feedback.md`, 123 to 132, decided in Ernest's plan; when Ernest has 123, a foreign function answering `ok` declared `Unit`, the fourteen dropped answers go, and with 124, a `Test` function for a fault, the tests' own helper.
+6. **What waits on the template**: a tool that runs a doc block's `// =>` examples and holds the page to them, which every library wants and which the release review found nothing does here (Ernest's feedback 127).
 
 ## Milestone 4: the ray tracer
 
-`examples/raytracer.ern`: the Boing ball, a sphere in red and white checks, above a mirror floor, traced with one light, Lambert shading, a highlight and a reflection to a depth of two, over a `Vector` record with its own operators; the rows shared out in turn among a count of processes the command line gives, each monitored, each writing its rows into the one pixmap with `putPixels`, `main` receiving a `Down` for each and then writing the PPM. The third row of `examples/README.md`, run by `make test` with a small count. Decided 2026-10-20 with the user; what writing floats and processes together feels against the principles goes to `language_feedback.md`.
+`examples/raytracer.ern`: the Boing ball, a sphere in red and white checks, above a mirror floor, traced with one light, Lambert shading, a highlight and a reflection to a depth of two, over a `Vector` record with its own operators; the rows shared out in turn among a count of processes the command line gives, each monitored, each writing its rows into the one pixmap with `putPixels`, `main` receiving a `Down` for each and then writing the PPM.
+
+The third row of `examples/README.md`, run by `make test` with a small count. Decided 2026-10-20 with the user; what writing floats and processes together feels against the principles goes to `language_feedback.md`.

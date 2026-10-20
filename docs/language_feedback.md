@@ -1,7 +1,0 @@
-# Language feedback
-
-What writing Ernest has felt against the principles, in the shape of Ernest's file of that name, so that a line is carried there by copy (CLAUDE.md, *Who owns each fact*). An entry stays until it is carried to Ernest, lines 1 and 2 carried on 2026-10-20 as Ernest's 123 and 124; an entry keeps its number; the next is 3.
-
-1. **An Erlang function that answers `ok` cannot be declared to answer `Unit`** (2026-10-20, `src/epx.ern`, the shims over epx). `Unit` crosses as the atom `'Unit'`, so `foreign fn flip(pixmap : Pixmap) : Unit = "epx:pixmap_flip/1"` faults at its return with `foreign return does not match Unit`. A shim of such a function is declared at `Foreign.Term` and its answer dropped, `let _ = rawFlip(pixmap); Unit`, a second declaration and four lines for each of thirteen operations of `Epx`, for the answer most of Erlang's functions of effect give. A reader who knows Erlang predicts `: Unit`. Principle 1.
-
-2. **A test that a function faults is a process, a monitor and a receive** (2026-10-20, the tests of `src/epx.ern`). `Test` has `equal` and nothing for a fault, so each library writes its own helper that spawns the call under a monitor and reads the cause from the `Down`, and `ern test` then reports each expected fault on standard error with its trace, as it reports one no test expected (report §11.2), so that a green run prints nine fault reports among its `passed` lines. Principle 1.

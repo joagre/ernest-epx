@@ -33,7 +33,7 @@ Clone with `--recursive`: epx is a git submodule under `erl/`, which `make lib` 
 - [`docs/release.md`](docs/release.md): what a release runs to be ready.
 - [`docs/style.md`](docs/style.md): the rules an Ernest program is written by, Ernest's own, copied and not edited here.
 - `docs/proposals/`: what is designed, a directory for each proposal, from the first one on.
-- [`docs/language_feedback.md`](docs/language_feedback.md): what writing Ernest felt against the principles, carried to Ernest by copy.
+- `language_feedback.md`, under `docs/` from its first line: what writing Ernest felt against the principles, a queue carried to Ernest by copy.
 - [`CLAUDE.md`](CLAUDE.md): the working rules.
 - [`docs/epx_bugs.md`](docs/epx_bugs.md): the defects found in epx, each a report for its tracker.
 - [`ACKNOWLEDGMENTS.md`](ACKNOWLEDGMENTS.md): the people this library stands on, by name alone.
