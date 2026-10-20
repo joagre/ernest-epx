@@ -45,7 +45,7 @@ After the clock face, the window that shows and Whitted's spheres, milestones 8 
 
 It is also the slow tracer, for the window of milestone 8: anti-aliasing by `n` by `n` samples a pixel, soft shadows from an area light with `m` shadow rays a hit, and a glossy floor with several scattered reflected rays, the rays a pixel the product of the counts, so that sixteen samples with sixteen shadow rays take minutes on one worker and under a minute on eight.
 
-The counts are the program's third argument after the file and the workers, as the worker count is, so that `make test` runs it with one sample in a second; the sample points come from `Random` seeded by the worker's index, as `snake.ern` seeds it, so that a seed draws one picture whatever the worker count. Decided 2026-10-20 with the user, for the proposal to start from.
+The counts are the program's third argument after the file and the workers, as the worker count is, so that `make test` runs it with one sample in a second; the sample points come from `Random` seeded by the row, as `snake.ern` seeds its steps, so that a seed draws one picture whatever the worker count. Designed in [`proposals/whitted/proposal.md`](proposals/whitted/proposal.md), its seven decisions taken as recommended on 2026-10-21 (the log's *Whitted's spheres decided*), built by an agent from it and read back here.
 
 Decided 2026-10-20 with the user, who also decided where the library stops: a 2-D library of pixmaps and pixels, no mesh and no image reading; a mesh is a library's work (the log's *Where the Library Stops*). A window that shows came in later the same day, milestone 8.
 
