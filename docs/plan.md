@@ -8,7 +8,7 @@ Read *Where we are* first, then the table of milestones; the milestones to come 
 
 The first cut is built and released as 0.1.0, 2026-10-20: `Epx` with twenty functions over epx's pixmaps, its design in `design.md`, the manual page under `docs/man/`, and three examples, the ray tracer among them, milestone 4. `sub` and `scroll` wait on epx, milestone 2, and the area functions are epx's exactly.
 
-What is left, in order: the second cut, `Epx.Gc` and the drawing functions with the clock face, milestone 2's item 4, being built; the window that shows, milestone 8; Whitted's spheres, the slow tracer, milestone 5; the collage of the pictures; the release 0.2.0, milestone 3b; what waits on Ernest's MVP 3.28, milestone 6; and the last release, milestone 7.
+What is left, in order: the second cut, `Epx.Gc` and the drawing functions with the clock face, milestone 2's item 4, being built; the window that shows, milestone 8; Whitted's spheres, the slow tracer, milestone 5; the collage of the pictures; what waits on Ernest's MVP 3.28, milestone 6, once the user says it is out; the release 0.2.0, milestone 3b, not before that word; and the last release, milestone 7, with `sub` and `scroll` once epx has its fixes.
 
 ## Milestones
 
@@ -35,7 +35,7 @@ What is left, in order: the second cut, `Epx.Gc` and the drawing functions with 
 
 ## Milestone 3b: the release 0.2.0
 
-After the clock face, the window that shows and Whitted's spheres, milestones 8 and 5, and the collage: the release as [`release.md`](release.md) says, the two readers over the new pages, `Epx.Gc` and `Epx.Window`, the drawing functions and the examples' windows among them, `make man` with the second page, the tag `v0.2.0` and the archive with `THIRD_PARTY_LICENSES`, its notes naming epx's commit and the platform the NIF was built on. Decided 2026-10-20 with the user.
+After the clock face, the window that shows and Whitted's spheres, milestones 8 and 5, the collage, and milestone 6, since the release waits for the user's word that Ernest's MVP 3.28 is out and takes what it brings: the release as [`release.md`](release.md) says, the two readers over the new pages, `Epx.Gc` and `Epx.Window`, the drawing functions and the examples' windows among them, `make man` with the second page, the tag `v0.2.0` and the archive with `THIRD_PARTY_LICENSES`, its notes naming epx's commit and the platform the NIF was built on. Decided 2026-10-20 with the user.
 
 ## Milestone 8: a window that shows
 
@@ -65,4 +65,4 @@ With that, and `sub` and `scroll` once epx has its fixes, the library is done: a
 
 ## Milestone 7: the release 0.3.0, the last
 
-After milestones 5 and 6: the release as `release.md` says, the readers again, the tag `v0.3.0` and the archive. Decided 2026-10-20 with the user.
+After `sub` and `scroll`, once epx has its fixes: the release as `release.md` says, the readers again, the tag `v0.3.0` and the archive. Decided 2026-10-20 with the user.
