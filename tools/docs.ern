@@ -1,0 +1,309 @@
+//
+// Docs: the documents held to what they name
+//
+// Every backticked path in a tracked document that begins with a directory
+// of the repository names something that is there, or the program says
+// which does not, on standard error, and ends with status 1. Every prose
+// paragraph past about a hundred words is listed on standard output for its
+// writer to read again, a list and not a limit (CLAUDE.md, *Writing*); the
+// log, the proposals and the manual pages are left out. Fenced code is read
+// as neither.
+//
+//     make test    runs it, as ern run tools/build/docs.erc
+//
+
+// A paragraph past the measure: where it begins, its words, and its first
+// characters.
+type Paragraph = Paragraph(file : String, line : Int, words : Int, first : String)
+
+// Where the reading stands as a document's lines go by: the line's number,
+// whether it is inside a fence, the paragraph begun and not yet ended, and
+// the paragraphs found.
+type Reading =
+    Reading(line : Int,
+            fence : Bool,
+            start : Int,
+            first : String,
+            words : Int,
+            skip : Bool,
+            item : Bool,
+            indent : Int,
+            found : List(Paragraph))
+
+let measure : Int = 100
+
+export fn main() : Unit = {
+    let files = tracked();
+    let tops = directories();
+    List.forEach(List.flatMap(List.filter(files, isMeasured), paragraphsIn),
+                 fn(paragraph) = Io.println(shown(paragraph)));
+    let missing = List.unique(List.flatMap(files, fn(file) = missingIn(file, tops)));
+    List.forEach(missing, Io.printlnError);
+    if List.isEmpty(missing) then Unit else Os.exit(1)
+}
+
+//
+// The repository
+//
+
+// The documents git tracks.
+fn tracked() : List(String) =
+    match Os.run(Os.Command(program = "git", arguments = ["ls-files", "*.md"], input = <<>>),
+                 5000) {
+        Right(finished) when finished.status == 0 ->
+            textLines(finished.stdout)
+      | _ -> {
+            Io.printlnError("docs: git ls-files failed");
+            Os.exit(1)
+        }
+    }
+
+// The directories at the top of the repository, each with its "/", under
+// which a backticked path is checked.
+fn directories() : List(String) =
+    match Fs.list(Path("."), 5000) {
+        Right(entries) ->
+            List.filterMap(entries, fn(entry) = match #(entry.kind, Path.name(entry.path)) {
+                #(Fs.Directory, Some(name)) when String.startsWith(name, ".") == false ->
+                    Some(name <> "/")
+              | _ ->
+                    None
+            })
+      | Left(error) -> {
+            Io.printlnError("docs: cannot list the repository: " <> Io.show(error));
+            Os.exit(1)
+        }
+    }
+
+fn contents(file : String) : String =
+    match Fs.read(Path(file), 5000) {
+        Right(bytes) ->
+            text(bytes)
+      | Left(error) -> {
+            Io.printlnError("docs: cannot read " <> file <> ": " <> Io.show(error));
+            Os.exit(1)
+        }
+    }
+
+fn text(bytes : Bytes) : String =
+    match String.fromUtf8(bytes) {
+        Some(text) ->
+            text
+      | None -> {
+            Io.printlnError("docs: not UTF-8");
+            Os.exit(1)
+        }
+    }
+
+fn textLines(bytes : Bytes) : List(String) =
+    String.lines(text(bytes))
+
+//
+// The paths
+//
+
+// Each backticked path of the file that names nothing, as a line for
+// standard error.
+fn missingIn(file : String, tops : List(String)) : List(String) =
+    List.filterMap(pathsIn(contents(file), tops), fn(path) = match Fs.stat(Path(path), 5000) {
+        Right(_) -> None
+      | Left(_) -> Some(file <> ": `" <> path <> "` names nothing")
+    })
+
+// The backticked pieces of the text outside fenced code that begin with one
+// of the tops; a wildcard or a metavariable, `<name>`, names no one file, and
+// a piece that ends with "/" names a directory the writer did not mean to pin.
+fn pathsIn(text : String, tops : List(String)) : List(String) = {
+    let pieces = String.split(unfenced(text), "`");
+    List.filterMap(List.indexed(pieces), fn(indexed) = match indexed {
+        #(index, piece) when index % 2 == 1 && isPath(piece, tops) -> Some(piece)
+      | _ -> None
+    })
+}
+
+fn isPath(piece : String, tops : List(String)) : Bool =
+    List.any(tops, fn(top) = String.startsWith(piece, top))
+        && String.contains(piece, "*") == false
+        && String.contains(piece, "<") == false
+        && String.endsWith(piece, "/") == false
+
+// The text without its fenced blocks and their fences.
+fn unfenced(text : String) : String = {
+    let kept = List.foldLeft(String.lines(text), #(false, []), fn(acc, line) = match acc {
+        #(fence, lines) ->
+            if isFence(line) then
+                #(fence == false, lines)
+            else if fence then
+                acc
+            else
+                #(fence, line :: lines)
+    });
+    match kept {
+        #(_, lines) -> String.join(List.reverse(lines), "\n")
+    }
+}
+
+fn isFence(line : String) : Bool = {
+    let trimmed = String.trimStart(line);
+    String.startsWith(trimmed, "```") || String.startsWith(trimmed, "~~~")
+}
+
+//
+// The paragraphs
+//
+
+// Whether a file's paragraphs are measured: the log is history, a proposal
+// is thinking, and a manual page is written by ern doc.
+fn isMeasured(file : String) : Bool =
+    file != "docs/log.md"
+        && String.startsWith(file, "docs/proposals/") == false
+        && String.startsWith(file, "docs/man/") == false
+
+fn paragraphsIn(file : String) : List(Paragraph) =
+    paragraphsOf(file, contents(file))
+
+// The paragraphs of the text past the measure. A paragraph ends at a blank
+// line, at a fence, at a list item, and where a list item's lines stop being
+// indented past the item; a heading, a table row and a tag begin no
+// paragraph that is measured.
+fn paragraphsOf(file : String, text : String) : List(Paragraph) = {
+    let begun =
+        Reading(line = 0,
+                fence = false,
+                start = 0,
+                first = "",
+                words = 0,
+                skip = false,
+                item = false,
+                indent = 0,
+                found = []);
+    let last =
+        List.foldLeft(String.lines(text),
+                      begun,
+                      fn(reading, line) =
+                          read(file, Reading(..reading, line = reading.line + 1), line));
+    List.reverse(ended(file, last).found)
+}
+
+fn read(file : String, reading : Reading, line : String) : Reading =
+    if isFence(line) then
+        Reading(..ended(file, reading), fence = reading.fence == false)
+    else if reading.fence then
+        reading
+    else if String.isEmpty(String.trim(line)) then
+        ended(file, reading)
+    else if isItem(line) then
+        counted(Reading(..ended(file, reading), item = true), line)
+    else
+        counted(reading, line)
+
+// The line's words added to the paragraph, which it begins where none is
+// begun, or where it stands at or before a list item's indentation.
+fn counted(reading : Reading, line : String) : Reading = {
+    let indent = indentation(line);
+    let begun = if reading.words == 0 then
+        Reading(..reading,
+                start = reading.line,
+                first = line,
+                indent = indent,
+                skip = isUnmeasured(line))
+    else if reading.item && indent <= reading.indent then
+        Reading(..ended("", reading),
+                start = reading.line,
+                first = line,
+                indent = indent,
+                skip = false)
+    else
+        reading;
+    Reading(..begun, words = begun.words + List.size(String.words(line)))
+}
+
+// The paragraph ended: kept where it is measured and past the measure.
+fn ended(file : String, reading : Reading) : Reading = {
+    let found = if reading.skip == false && reading.words > measure then
+        Paragraph(file = file,
+                  line = reading.start,
+                  words = reading.words,
+                  first = String.slice(reading.first, 0, 60))
+            :: reading.found
+    else
+        reading.found;
+    Reading(..reading, words = 0, item = false, found = found)
+}
+
+fn isUnmeasured(line : String) : Bool =
+    String.startsWith(line, "#") || String.startsWith(line, "|") || String.startsWith(line, "<")
+
+// A list item: "- ", "* ", or a number and a dot.
+fn isItem(line : String) : Bool = {
+    let trimmed = String.trimStart(line);
+    String.startsWith(trimmed, "- ") || String.startsWith(trimmed, "* ") || isNumbered(trimmed)
+}
+
+fn isNumbered(trimmed : String) : Bool =
+    match String.words(trimmed) {
+        word :: _ :: _ ->
+            String.endsWith(word, ".")
+                && Optional.isSome(String.toInt(String.slice(word, 0, String.size(word) - 1)))
+      | _ ->
+            false
+    }
+
+fn indentation(line : String) : Int =
+    String.size(line) - String.size(String.trimStart(line))
+
+fn shown(paragraph : Paragraph) : String =
+    paragraph.file
+        <> ":"
+        <> Int.toString(paragraph.line)
+        <> ": "
+        <> Int.toString(paragraph.words)
+        <> " words  "
+        <> paragraph.first
+
+//
+// Tests
+//
+
+let hundredAndOne : String = String.trim(String.repeat("word ", 101))
+
+/// A paragraph past the measure is listed at its line; one at the measure is not.
+let listsThePastMeasure = Test.Case(name = "lists a paragraph past the measure", run = fn() = {
+    let text =
+        "# Title\n\nshort\n\n" <> hundredAndOne <> "\n\n" <> String.trim(String.repeat("w ", 100));
+    Test.equal(List.map(paragraphsOf("f.md", text),
+                        fn(paragraph) = #(paragraph.line, paragraph.words)),
+               [#(5, 101)])
+})
+
+/// A heading, a table row, a tag and fenced code are not measured.
+let leavesUnmeasured =
+    Test.Case(name = "leaves a heading, a table, a tag and a fence unmeasured", run = fn() = {
+        let text =
+            "# "
+                <> hundredAndOne
+                <> "\n\n| "
+                <> hundredAndOne
+                <> "\n\n<"
+                <> hundredAndOne
+                <> "\n\n```\n"
+                <> hundredAndOne
+                <> "\n```\n";
+        Test.equal(paragraphsOf("f.md", text), [])
+    })
+
+/// A list item is a paragraph of its own, which ends at the next item and
+/// where its lines stop being indented past it.
+let readsItems = Test.Case(name = "reads a list item as a paragraph", run = fn() = {
+    let text = "- " <> hundredAndOne <> "\n- short\n  " <> hundredAndOne <> "\nplain after\n";
+    Test.equal(List.map(paragraphsOf("f.md", text), fn(paragraph) = paragraph.line), [1, 2])
+})
+
+/// A backticked path under a top is found outside fenced code; one with a
+/// wildcard, a metavariable or a trailing "/" is not, nor one under no top.
+let findsPaths = Test.Case(name = "finds the backticked paths", run = fn() = {
+    let text =
+        "see `src/a.ern` and `lib/*/build`, `bin/<name>`, `src/`, `other/x`\n"
+            <> "```\n`src/fenced.ern`\n```\n`docs/b.md`";
+    Test.equal(pathsIn(text, ["src/", "docs/"]), ["src/a.ern", "docs/b.md"])
+})

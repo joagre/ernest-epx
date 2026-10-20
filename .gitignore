@@ -1,0 +1,18 @@
+# What ern build writes, for each source root
+build/
+test/build/
+tools/build/
+*.erc
+
+# What make lib fills: Ernest's libraries linked, each dependency unpacked
+lib/
+
+# A node's configuration directory holds a private key
+.ernest/
+
+# Editors
+*~
+\#*\#
+.\#*
+.swp
+.DS_Store
