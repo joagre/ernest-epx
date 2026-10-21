@@ -4,9 +4,9 @@ An Ernest library over [epx](https://github.com/tonyrog/epx), the pixel library 
 
 Its modules are `Epx`, over pixmaps and the drawing functions, and `Epx.Gc`, over the graphics context they draw with, whose pages are [`docs/man/epx.md`](docs/man/epx.md) and `docs/man/epx/gc.md`, which `make man` writes and a release commits. Its first and second cuts are written; [`docs/plan.md`](docs/plan.md) says where it stands.
 
-![Three pictures the examples draw: the Sierpinski gasket, the Boing ball above a mirror floor, and the Mandelbrot set](assets/collage.png)
+![Five pictures the examples draw: Whitted's glass and mirror spheres, the Boing ball above a mirror floor, a clock face, the Mandelbrot set, and the Sierpinski gasket](assets/collage.png)
 
-The three pictures are what [`examples/`](examples/README.md) draws, each a program of a page or two; [`assets/README.md`](assets/README.md) says how a picture is made from a program's output.
+The five pictures are what [`examples/`](examples/README.md) draws, each a program of a page or two; [`assets/README.md`](assets/README.md) says how a picture is made from a program's output.
 
 ## Using it
 
