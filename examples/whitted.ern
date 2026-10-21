@@ -77,8 +77,8 @@
 // shell gives and the two pictures, and watch the eight workers fill the
 // window on a machine with a screen:
 //
-//     LOAD="--load-path build --load-path lib/epx/ebin --load-path lib/tree_db/ebin"
-//     ern build $LOAD examples/whitted.ern
+//     LOAD="--load-path build --libs-dir lib"
+//     ern build --load-path build examples/whitted.ern
 //     time ern run $LOAD examples/whitted.erc build/whitted1.ppm 1 16
 //     time ern run $LOAD examples/whitted.erc build/whitted8.ppm 8 16
 //     cmp build/whitted1.ppm build/whitted8.ppm

@@ -16,7 +16,7 @@ Each program also takes the word `show` after its other arguments, on a machine 
 | [`clock_face.ern`](clock_face.ern) | a clock's dial at the time the program runs, in UTC, written to the file named as a PPM image | one context set before each part it draws and read by the drawing functions, a hand drawn as a triangle where a wide line would lie beside its ends, a thin line smoothed by `Antialiased` | `Epx.Gc`'s *The keys* and *In place and shared*, `drawEllipse`, `drawLine`, `drawTriangle`, `toPpm`, `Epx.Window.show` |
 | [`whitted.ern`](whitted.ern) | a glass sphere and a mirror sphere over a checkered floor, ray traced by the count of workers named after the file with the count of samples named after that, each 1 where none is, and written to the file named as a PPM image | Cook's distributed ray tracing over a seed from `Random`, each ray of a pixel drawing its own point of the light and its own scattered reflection; each row traced from its own seed, so that the picture is the same whatever the count of workers; refraction and Fresnel beside reflection; the acting half of `raytracer.ern` unchanged | *In place and shared*, *Rectangles*, `putPixels`, `toPpm`, `Epx.Window.showArea` |
 
-Each is built and run with the library, epx and tree_db on the load path, `--load-path build --load-path lib/epx/ebin --load-path lib/tree_db/ebin`, as its first comment shows.
+Each is built with the library on the load path, `--load-path build`, and run with epx and tree_db beside it, `--libs-dir lib`, as its first comment shows.
 
 ## The pictures
 

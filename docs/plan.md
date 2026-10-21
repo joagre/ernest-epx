@@ -10,7 +10,7 @@ The first cut is built and released as 0.1.0, 2026-10-20: `Epx` with twenty func
 
 The second cut is built, 2026-10-20, and the window that shows, 2026-10-21: `Epx.Gc`, five drawing functions, the clock face, `Epx.Window`, and the word `show` on every example. Whitted's spheres, the slow tracer, is built, 2026-10-21, the fifth example, and the collage of the five pictures heads the README, 2026-10-21.
 
-What waited on Ernest's MVP 3.28 is taken, 2026-10-22, milestone 6, but the Makefile's part, which waits on the template. What is left, in order: the release 0.2.0, milestone 3b, once Ernest 0.5.0 is out; and the last release, milestone 7, with `sub` and `scroll` once epx has its fixes. With that the library is done: a 2-D library of pixmaps, pixels and the drawing functions, with its five examples, and nothing more is planned.
+What waited on Ernest's MVP 3.28 is taken, 2026-10-22, milestone 6. What is left, in order: the release 0.2.0, milestone 3b, once Ernest 0.5.0 is out; and the last release, milestone 7, with `sub` and `scroll` once epx has its fixes. With that the library is done: a 2-D library of pixmaps, pixels and the drawing functions, with its five examples, and nothing more is planned.
 
 ## Milestones
 
@@ -20,7 +20,7 @@ What waited on Ernest's MVP 3.28 is taken, 2026-10-22, milestone 6, but the Make
 | Milestone 3 | the release 0.1.0 | 2026-10-20 | the log's *The release review* |
 | Milestone 4 | the ray tracer | 2026-10-20 | [`proposals/raytracer/`](proposals/raytracer/); the log's *The ray tracer*, *The ray tracer built* |
 | Milestone 5 | Whitted's spheres, the slow tracer | 2026-10-21 | [`proposals/whitted/`](proposals/whitted/); the log's *Whitted's spheres decided*, *Cook's Sampling*, *Whitted's spheres built* |
-| Milestone 6 | what Ernest's MVP 3.28 brought: the foreign answers declared `Unit`, `Test.faults`, the doc examples under `ern test`, the rules read from Ernest's installation, `Epx.Window` named for itself, and `List.mapFold` in Whitted's row | 2026-10-22 | the log's *The window named for itself*, *What MVP 3.28 brought* |
+| Milestone 6 | what Ernest's MVP 3.28 brought: the foreign answers declared `Unit`, `Test.faults`, the doc examples under `ern test`, the rules read from Ernest's installation, `Epx.Window` named for itself, `List.mapFold` in Whitted's row, and the Makefile's `--libs-dir lib` with Ernest's libraries off `make lib` | 2026-10-22 | the log's *The window named for itself*, *What MVP 3.28 brought* |
 | Milestone 8 | a window that shows, `Epx.Window` | 2026-10-21 | [`proposals/window/`](proposals/window/); the log's *A Window That Shows*, *The window decided*, *The window built*, *The window named for itself* |
 
 ## Milestone 1: the design
@@ -40,7 +40,7 @@ What waited on Ernest's MVP 3.28 is taken, 2026-10-22, milestone 6, but the Make
 
 ## Milestone 3b: the release 0.2.0
 
-After milestone 6, once Ernest 0.5.0 is released, since `make release` refuses a development build of `ern`. The release raises the floor to 0.5, `ERN_VERSION` in the Makefile, and takes the Makefile as the template then has it: Ernest's own libraries off `make lib`, on every job's load path since MVP 3.28, and `--libs-dir lib` in place of the `--load-path` of each Erlang application's `ebin`, in the Makefile and the examples' headers. Decided 2026-10-22 (the log's *What MVP 3.28 brought*).
+After milestone 6, once Ernest 0.5.0 is released, since `make release` refuses a development build of `ern`; the release raises the floor to 0.5, `ERN_VERSION` in the Makefile, as the template then does. Decided 2026-10-22 (the log's *What MVP 3.28 brought*).
 
 The release as [`release.md`](release.md) says, the two readers over the new pages, `Epx.Gc` and `Epx.Window`, the drawing functions and the examples' windows among them, `make man` with the second page, the tag `v0.2.0` and the archive with `THIRD_PARTY_LICENSES`, its notes naming epx's commit and the platform the NIF was built on. Decided 2026-10-20 with the user.
 

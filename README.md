@@ -14,14 +14,14 @@ A program outside this repository puts the library's build on its load path when
 
 ```
 ern build --load-path <repo>/build main.ern
-ern run --load-path <repo>/build --load-path <repo>/lib/epx/ebin --load-path <repo>/lib/tree_db/ebin main.erc
+ern run --load-path <repo>/build --libs-dir <repo>/lib main.erc
 ```
 
 The archive `make release` writes, built on Linux x86-64 with the NIF compiled there, unpacks to the same layout, `build/` beside `lib/epx/`, so that an operator names its directory in place of `<repo>`. A program begun from [`ernest-template`](https://github.com/joagre/ernest-template) that names the archive among its `DEPS` lists epx among its own `ERL_DEPS` too, a submodule under its `erl/`, since its load path reaches no `lib/` inside a dependency.
 
 ## Building
 
-It needs [Ernest](https://github.com/joagre/ernest) on your `PATH`, the floor the Makefile names, `ern 0.4`; `make` says so where another is found, and where none is. `ERN=path/to/ern make` names another `ern`.
+It needs [Ernest](https://github.com/joagre/ernest) on your `PATH`, the floor the Makefile names, `ern 0.4`, and until Ernest 0.5.0 is released its `main`, whose development build passes the floor's check; `make` says so where another is found, and where none is. `ERN=path/to/ern make` names another `ern`.
 
 ```
 make            builds: lib/ filled, epx and then the library compiled

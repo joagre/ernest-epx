@@ -8,9 +8,9 @@
 #                 test/ where it exists, and each program of examples/ where
 #                 it exists, built and run
 #   make run      runs the program through its launcher
-#   make lib      fills lib/: Ernest's own libraries linked, each dependency
-#                 fetched and unpacked where it is not there, and each Erlang
-#                 application under erl/ built by its own make and linked
+#   make lib      fills lib/: each dependency fetched and unpacked where it is
+#                 not there, and each Erlang application under erl/ built by
+#                 its own make and linked
 #   make doc      the documentation of every module, as CommonMark under build/
 #   make man      the pages copied into docs/man/, which a library's release
 #                 commits, its index the directory's README
@@ -20,27 +20,25 @@
 
 NAME        = epx
 ERN_VERSION = 0.4
-LIBS        =
 DEPS        =
 ERL_DEPS    = tree_db epx
 # What each program of examples/ writes, named by make test: the suffix of
 # the one path it is given.
 EXAMPLE_SUFFIX = .ppm
 
-# The ern on PATH, or ERN=path/to/ern; where its libraries are, beside it as
-# an installation and a checkout each lay them out.
+# The ern on PATH, or ERN=path/to/ern.
 ERN        ?= ern
-ERN_DIR     = $(dir $(realpath $(shell command -v $(ERN))))
-ERNEST_LIBS = $(firstword $(wildcard $(ERN_DIR)../lib/ernest/build/libs \
-                                    $(ERN_DIR)../build/libs))
 
-# Everything beyond the standard library stands under lib/: an Ernest
-# library's or a dependency's build, and an Erlang application's ebin, whose
-# priv/ the host finds beside it. The load path is one glob, here and in the
-# launcher.
-LOAD_PATH   = $(addprefix --load-path ,$(shell ls -d lib/*/build lib/*/ebin 2>/dev/null))
-DEP_DIRS    = $(addprefix lib/,$(notdir $(basename $(basename $(DEPS)))))
-VERSION     = $(shell cat VERSION)
+# Ernest's own libraries stand on every job's load path; everything else
+# beyond the standard library stands under lib/: a dependency's build, and an
+# Erlang application's ebin, whose priv/ the host finds beside it. The load
+# path is lib/*/build for the modules and --libs-dir lib for the applications,
+# here and in the launcher. ern build and ern doc read no application and take
+# LOAD_PATH; ern test and ern run take RUN_LOAD_PATH.
+LOAD_PATH     = $(addprefix --load-path ,$(shell ls -d lib/*/build 2>/dev/null))
+RUN_LOAD_PATH = $(LOAD_PATH) --libs-dir lib
+DEP_DIRS      = $(addprefix lib/,$(notdir $(basename $(basename $(DEPS)))))
+VERSION       = $(shell cat VERSION)
 
 .PHONY: all version lib build test run doc man format release clean
 
@@ -57,15 +55,6 @@ version:
 
 lib:
 	@mkdir -p lib
-	@for name in $(LIBS); do \
-	    test -e lib/$$name/build && continue; \
-	    test -n "$(ERNEST_LIBS)" || \
-	        { echo "no libraries beside $(ERN):" \
-	               "neither lib/ernest/build/libs nor build/libs"; exit 1; }; \
-	    test -d "$(ERNEST_LIBS)/$$name" || \
-	        { echo "Ernest has no library $$name under $(ERNEST_LIBS)"; exit 1; }; \
-	    mkdir -p lib/$$name && ln -s "$(ERNEST_LIBS)/$$name" lib/$$name/build; \
-	done
 	@for url in $(DEPS); do \
 	    dir=lib/$$(basename $$url .tar.gz); \
 	    test -d $$dir && continue; \
@@ -93,14 +82,14 @@ build:
 
 test: all
 	$(ERN) format --check src tools $(wildcard test) $(wildcard examples)
-	$(ERN) test $(LOAD_PATH) build
+	$(ERN) test $(RUN_LOAD_PATH) build
 	$(ERN) build --source-root tools --build-root tools/build tools
 	$(ERN) test tools/build
 	$(ERN) run tools/build/docs.erc
 	@if test -d test; then \
 	    $(ERN) build --source-root test --build-root test/build --load-path build \
 	        $(LOAD_PATH) test && \
-	    $(ERN) test --load-path build $(LOAD_PATH) test/build; \
+	    $(ERN) test --load-path build $(RUN_LOAD_PATH) test/build; \
 	fi
 	@if test -d examples; then \
 	    $(ERN) build --source-root examples --build-root examples/build --load-path build \
@@ -108,7 +97,7 @@ test: all
 	    mkdir -p build/examples && \
 	    for program in examples/build/*.erc; do \
 	        name=$$(basename $$program .erc); \
-	        $(ERN) run --load-path build $(LOAD_PATH) $$program \
+	        $(ERN) run --load-path build $(RUN_LOAD_PATH) $$program \
 	            build/examples/$$name$(EXAMPLE_SUFFIX) || exit 1; \
 	        echo "examples/$$name.ern wrote build/examples/$$name$(EXAMPLE_SUFFIX)"; \
 	    done; \
@@ -135,7 +124,8 @@ format:
 
 # The archive unpacks to NAME-VERSION/: the launcher where there is one, the
 # source and the compiled modules, lib/ with each link copied through, the
-# README and the license. One shape for an application and a library, so
+# README and the licenses, the third parties' where there are any. One shape
+# for an application and a library, so
 # that any archive can be a dependency.
 release: test
 	@case "$$($(ERN) --version)" in \

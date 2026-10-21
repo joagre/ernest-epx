@@ -44,8 +44,8 @@
 // Run it from the repository's root once `make` has built the library,
 // and with the word `show` on a machine with a screen:
 //
-//     LOAD="--load-path build --load-path lib/epx/ebin --load-path lib/tree_db/ebin"
-//     ern build $LOAD examples/clock_face.ern
+//     LOAD="--load-path build --libs-dir lib"
+//     ern build --load-path build examples/clock_face.ern
 //     ern run $LOAD examples/clock_face.erc build/clock_face.ppm
 //     ern run $LOAD examples/clock_face.erc build/clock_face.ppm show
 //

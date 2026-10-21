@@ -58,8 +58,8 @@
 // with one worker and with eight, and compare the times the shell gives;
 // and with the word `show` on a machine with a screen:
 //
-//     LOAD="--load-path build --load-path lib/epx/ebin --load-path lib/tree_db/ebin"
-//     ern build $LOAD examples/raytracer.ern
+//     LOAD="--load-path build --libs-dir lib"
+//     ern build --load-path build examples/raytracer.ern
 //     time ern run $LOAD examples/raytracer.erc build/raytracer.ppm 1
 //     time ern run $LOAD examples/raytracer.erc build/raytracer.ppm 8
 //     ern run $LOAD examples/raytracer.erc build/raytracer.ppm 8 show
