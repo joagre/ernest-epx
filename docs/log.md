@@ -34,6 +34,8 @@ What the fixes decided. A coordinate is bounded to plus or minus 16,777,216 and 
 
 What the review taught the template is `TEMPLATE.md`'s, its `v0.5.0`; a tool that holds a page to its `// =>` examples is wanted and waits there.
 
+*Answered 2026-10-22: the tool is Ernest's `ern test`, which runs a page's examples since 2026-10-21 (*What MVP 3.28 brought*).*
+
 ## The ray tracer
 
 *2026-10-20.* The proposal `proposals/raytracer/proposal.md` decided as recommended. The example exists to show a pixmap shared by capture and written by every worker, so the workers write into it and send nothing back: principle 3, the sharing visible in the program's shape. Rows in turn rather than blocks, so that the sphere's slow rows are spread; the worker count on the command line, since Ernest has no function for the host's scheduler count and the count is what shows the speedup; a faulting worker ends the program rather than leaving a half-black picture: principle 1. Depth, size and anti-aliasing fixed in the program, since an example carries no options: principle 5.
@@ -91,3 +93,19 @@ The times: two seconds on one worker and one sample, five minutes on eight worke
 ## The window named for itself
 
 *2026-10-22.* Ernest's §4.2 lets the module of a type's name share the type's namespace since 2026-10-21 (Ernest's log, *The Window's Three Asks*), so the departure of *The window built* is undone: the module is `Epx.Window` and the type `Epx.Window`, declared in `Epx` beside `Pixmap` and `Context`, as the proposal asked. Shape rule 7 is kept, since the type is `Epx`'s, named for what it is, and not `Epx.Window.Window`. Inside `epx/window.ern` the type is written `Epx.Window`, the qualified name of the module's own namespace, and the checker resolves it to `Epx`'s type; a plain `Window` there is an unknown type. Principle 2: one name for the thing, in the module's name and the type's.
+
+## What MVP 3.28 brought
+
+*2026-10-22.* Milestone 6, taken the day the user said MVP 3.28 was out: four parts built, and one that waits.
+
+**The answers.** Nineteen foreign functions, not the plan's fourteen, since `Epx.Gc` and `Epx.Window` brought five more, are declared `Unit` where they were `Foreign.Term`, and the `let _ =` that dropped each answer goes. epx's NIF answers `ok` from every one of them, read in `epx_nif.c`, and `epx:start/0` ends in a `gen_server` call that answers `ok`. The check Ernest's §8.4 makes of a return declared `Unit` takes `ok` and faults on anything else, so a host function that one day answers otherwise is caught at its line, where the dropped answer hid it: principle 3.
+
+**The fault helper.** `Test.faults` replaces the modules' own `ending`, which spawned, monitored and read the `Down`: twenty-six checks of a cause, in two lists of eleven compared with `List.repeat(Test.Passed, 11)` so that each case stays one, a cause named once where several share it. The two tests that a pixmap and a context are shared across processes read a return, not a fault, which `faults` does not answer, so they keep a `spawnMonitored` and a `receive` of their own and compare the reason with `Returned`. Principle 2: one way to test a fault, the library's.
+
+**The doc examples.** `ern test` runs the pages' fifty-nine `// =>` examples since 2026-10-21, each as a program of its own, and `make test` runs them with the modules' tests. Nothing of this repository's was needed: the tool milestone 2 waited on from the template is Ernest's.
+
+**The row's seed.** Whitted's `renderRow` threads the seed with `List.mapFold`, admitted to E.2 from this library's feedback 138, in place of a fold over a pair and a reverse; the picture is byte for byte the one the fold drew. Principle 1: the reader who knows the type looks for it.
+
+**What waits.** Ernest's own libraries stand on every job's load path and `--libs-dir dir` takes the applications under `lib/` since 2026-10-21, but the template keeps `ERNEST_LIBS` and the `--load-path` of each `ebin` until its floor is 0.5 (`TEMPLATE.md` §7), since the development build that carries MVP 3.28 reports `0.4.0-dev` and the Makefile's check reads the version's first two numbers.
+
+The Makefile is the template's, so the part waits for the template and comes with the release 0.2.0, which raises the floor to 0.5 against Ernest 0.5.0, as the plan's milestone 3b now says. A Makefile of this library's own ahead of the template would be two owners of one fact.

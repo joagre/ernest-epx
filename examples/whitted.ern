@@ -349,12 +349,11 @@ fn awaitWorkers(count : Int) : Unit receiving Down =
 // seed is `y`, and each pixel is traced from the seed the pixel before it
 // left, so that the row is the same whatever worker traces it.
 fn renderRow(pixmap : Epx.Pixmap, window : Optional(Epx.Window), samples : Int, y : Int) : Unit = {
-    let #(pixels, _) =
-        List.foldLeft(List.range(0, width - 1), #([], Random.seed(y)), fn(#(traced, seed), x) = {
-            let #(color, next) = pixel(x, y, samples, seed);
-            #(rgb(color) :: traced, next)
-        });
-    Epx.putPixels(pixmap, 0, y, width, 1, Epx.Rgb, Bytes.join(List.reverse(pixels), <<>>));
+    let #(_, pixels) = List.mapFold(List.range(0, width - 1), Random.seed(y), fn(seed, x) = {
+        let #(color, next) = pixel(x, y, samples, seed);
+        #(next, rgb(color))
+    });
+    Epx.putPixels(pixmap, 0, y, width, 1, Epx.Rgb, Bytes.join(pixels, <<>>));
     showRows(window, pixmap, y, 1)
 }
 

@@ -122,21 +122,21 @@ export fn open(x : Int, y : Int, width : Int, height : Int) : Epx.Window = {
     let top = place(y);
     let columns = size(width);
     let rows = size(height);
-    let _ = rawStart();
+    rawStart();
     // No event flag: epx sends the window's maker no key and no button,
     // its close button alone excepted (design §11, epx_bugs.md 16).
     let window = rawCreate(left, top, columns, rows);
-    let _ = rawAttach(window);
+    rawAttach(window);
     window
 }
 
-foreign fn rawStart() : Foreign.Term =
+foreign fn rawStart() : Unit =
     "epx:start/0"
 
 foreign fn rawCreate(x : Int, y : Int, width : Int, height : Int) : Epx.Window =
     "epx:window_create/4"
 
-foreign fn rawAttach(window : Epx.Window) : Foreign.Term =
+foreign fn rawAttach(window : Epx.Window) : Unit =
     "epx:window_attach/1"
 
 /// Takes the window off the screen. Nothing brings it back: a pixmap shown
@@ -147,14 +147,12 @@ foreign fn rawAttach(window : Epx.Window) : Foreign.Term =
 /// ```ernest
 /// Epx.Window.close(Epx.Window.open(100, 100, 400, 300))
 /// ```
-export fn close(window : Epx.Window) : Unit = {
+export fn close(window : Epx.Window) : Unit =
     // Unmapped and not detached: a draw epx takes after a detach crashes
     // the node (design §11, epx_bugs.md 17).
-    let _ = rawAdjust(window, [#(Foreign.atom("show"), false)]);
-    Unit
-}
+    rawAdjust(window, [#(Foreign.atom("show"), false)])
 
-foreign fn rawAdjust(window : Epx.Window, parameters : List(#(Foreign.Term, Bool))) : Foreign.Term =
+foreign fn rawAdjust(window : Epx.Window, parameters : List(#(Foreign.Term, Bool))) : Unit =
     "epx:window_adjust/2"
 
 //
@@ -247,17 +245,16 @@ fn attach(pixmap : Epx.Pixmap) : Unit =
       | Epx.Abgr ->
             fault("a window shows no pixmap in Rgba or Abgr")
       | _ ->
-            if rawBackend(pixmap, Foreign.atom("backend")) == Foreign.atom("undefined") then {
-                let _ = rawAttachPixmap(pixmap);
-                Unit
-            } else
+            if rawBackend(pixmap, Foreign.atom("backend")) == Foreign.atom("undefined") then
+                rawAttachPixmap(pixmap)
+            else
                 Unit
     }
 
 foreign fn rawBackend(pixmap : Epx.Pixmap, key : Foreign.Term) : Foreign.Term =
     "epx:pixmap_info_/2"
 
-foreign fn rawAttachPixmap(pixmap : Epx.Pixmap) : Foreign.Term =
+foreign fn rawAttachPixmap(pixmap : Epx.Pixmap) : Unit =
     "epx:pixmap_attach/1"
 
 foreign fn rawDraw(pixmap : Epx.Pixmap,

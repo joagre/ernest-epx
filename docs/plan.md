@@ -8,7 +8,9 @@ Read *Where we are* first, then the table of milestones; the milestones to come 
 
 The first cut is built and released as 0.1.0, 2026-10-20: `Epx` with twenty functions over epx's pixmaps, its design in `design.md`, the manual page under `docs/man/`, and three examples, the ray tracer among them, milestone 4. `sub` and `scroll` wait on epx, milestone 2, and the area functions are epx's exactly.
 
-The second cut is built, 2026-10-20, and the window that shows, 2026-10-21: `Epx.Gc`, five drawing functions, the clock face, `Epx.Window`, and the word `show` on every example. Whitted's spheres, the slow tracer, is built, 2026-10-21, the fifth example, and the collage of the five pictures heads the README, 2026-10-21. What is left, in order: what waits on Ernest's MVP 3.28, milestone 6, once the user says it is out; the release 0.2.0, milestone 3b, not before that word; and the last release, milestone 7, with `sub` and `scroll` once epx has its fixes.
+The second cut is built, 2026-10-20, and the window that shows, 2026-10-21: `Epx.Gc`, five drawing functions, the clock face, `Epx.Window`, and the word `show` on every example. Whitted's spheres, the slow tracer, is built, 2026-10-21, the fifth example, and the collage of the five pictures heads the README, 2026-10-21.
+
+What waited on Ernest's MVP 3.28 is taken, 2026-10-22, milestone 6, but the Makefile's part, which waits on the template. What is left, in order: the release 0.2.0, milestone 3b, once Ernest 0.5.0 is out; and the last release, milestone 7, with `sub` and `scroll` once epx has its fixes. With that the library is done: a 2-D library of pixmaps, pixels and the drawing functions, with its five examples, and nothing more is planned.
 
 ## Milestones
 
@@ -18,6 +20,7 @@ The second cut is built, 2026-10-20, and the window that shows, 2026-10-21: `Epx
 | Milestone 3 | the release 0.1.0 | 2026-10-20 | the log's *The release review* |
 | Milestone 4 | the ray tracer | 2026-10-20 | [`proposals/raytracer/`](proposals/raytracer/); the log's *The ray tracer*, *The ray tracer built* |
 | Milestone 5 | Whitted's spheres, the slow tracer | 2026-10-21 | [`proposals/whitted/`](proposals/whitted/); the log's *Whitted's spheres decided*, *Cook's Sampling*, *Whitted's spheres built* |
+| Milestone 6 | what Ernest's MVP 3.28 brought: the foreign answers declared `Unit`, `Test.faults`, the doc examples under `ern test`, the rules read from Ernest's installation, `Epx.Window` named for itself, and `List.mapFold` in Whitted's row | 2026-10-22 | the log's *The window named for itself*, *What MVP 3.28 brought* |
 | Milestone 8 | a window that shows, `Epx.Window` | 2026-10-21 | [`proposals/window/`](proposals/window/); the log's *A Window That Shows*, *The window decided*, *The window built*, *The window named for itself* |
 
 ## Milestone 1: the design
@@ -34,19 +37,12 @@ The second cut is built, 2026-10-20, and the window that shows, 2026-10-21: `Epx
 4. **The next cut**: decided 2026-10-20, [`proposals/gc/proposal.md`](proposals/gc/proposal.md), its seven decisions as recommended (the log's *The second cut*), and built the same day (the log's *The second cut built*): `Epx.Gc` with eight keys and `Style`, the type `Epx.Context` in `Epx`, five drawing functions, the border placed inside, and `examples/clock_face.ern`.
 7. **The rounded rectangle and the polygon**, once epx has the fixes of `epx_bugs.md` 13 and 14, as `sub` and `scroll` wait on 1 to 3; and the fill of a polygon once report 14's colors are gone. The window's `close` becomes `window_detach` once report 17 is fixed, `Rgba` and `Abgr` are shown once 18 is, and a window's close button closes nothing until Ernest decides how a foreign message is checked (its feedback 137) and epx's 16 is fixed.
 8. **A wide line's band**: decided 2026-10-20 with the user, kept. `drawLine` of a width above 1, horizontal or vertical, fills its band through `pixmap_fill_area` in Ernest, since epx's own band writes past the clip and past the pixmap's memory (`epx_bugs.md` 9), at about 2.6 times epx's cost for such a line, 0.17 to 0.45 µs, and no cost for a diagonal or a one-pixel line; a band that writes outside memory is no band, and the cost stands in the log.
-5. **What waits on Ernest**: the lines the library carried to Ernest's `language_feedback.md`, 123 to 132, decided in Ernest's plan; when Ernest has 123, a foreign function answering `ok` declared `Unit`, the fourteen dropped answers go, and with 124, a `Test` function for a fault, the tests' own helper.
-6. **What waits on the template**: a tool that runs a doc block's `// =>` examples and holds the page to them, which every library wants and which the release review found nothing does here (Ernest's feedback 127).
 
 ## Milestone 3b: the release 0.2.0
 
-After the clock face, the window that shows, Whitted's spheres and the collage, milestones 8 and 5, and milestone 6, since the release waits for the user's word that Ernest's MVP 3.28 is out and takes what it brings.
+After milestone 6, once Ernest 0.5.0 is released, since `make release` refuses a development build of `ern`. The release raises the floor to 0.5, `ERN_VERSION` in the Makefile, and takes the Makefile as the template then has it: Ernest's own libraries off `make lib`, on every job's load path since MVP 3.28, and `--libs-dir lib` in place of the `--load-path` of each Erlang application's `ebin`, in the Makefile and the examples' headers. Decided 2026-10-22 (the log's *What MVP 3.28 brought*).
 
 The release as [`release.md`](release.md) says, the two readers over the new pages, `Epx.Gc` and `Epx.Window`, the drawing functions and the examples' windows among them, `make man` with the second page, the tag `v0.2.0` and the archive with `THIRD_PARTY_LICENSES`, its notes naming epx's commit and the platform the NIF was built on. Decided 2026-10-20 with the user.
-## Milestone 6: after Ernest's MVP 3.28, the end
-
-When Ernest's MVP 3.28 is released, the parts of the library that wait on it are taken in one item: the fourteen dropped `Foreign.Term` answers become `Unit` declarations, the tests' own fault helper becomes `Test.faults`, the page's `// =>` lines are held by `ern test`, Ernest's own libraries come off `make lib` once they are on the default load path, and `--libs lib` replaces the `--load-path` of each Erlang application's `ebin` in the Makefile, the launcher and the examples' headers, as the template then has it.
-
-With that, and `sub` and `scroll` once epx has its fixes, the library is done: a 2-D library of pixmaps, pixels and the drawing functions, with its five examples, and nothing more is planned. Decided 2026-10-20 with the user.
 
 ## Milestone 7: the release 0.3.0, the last
 

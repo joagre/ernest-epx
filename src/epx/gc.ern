@@ -439,32 +439,26 @@ export fn foreground(context : Epx.Context) : Epx.Color =
 //
 
 // A key set: epx's `gc_set` answers `ok`.
-fn setStyle(context : Epx.Context, key : String, atoms : List(Foreign.Term)) : Unit = {
-    let _ = rawSetStyle(context, Foreign.atom(key), atoms);
-    Unit
-}
+fn setStyle(context : Epx.Context, key : String, atoms : List(Foreign.Term)) : Unit =
+    rawSetStyle(context, Foreign.atom(key), atoms)
 
-fn setColor(context : Epx.Context, key : String, color : Epx.Color) : Unit = {
-    let _ = rawSetColor(context, Foreign.atom(key), channels(color));
-    Unit
-}
+fn setColor(context : Epx.Context, key : String, color : Epx.Color) : Unit =
+    rawSetColor(context, Foreign.atom(key), channels(color))
 
-fn setWidth(context : Epx.Context, key : String, width : Int) : Unit = {
-    let _ = rawSetWidth(context, Foreign.atom(key), extent(width));
-    Unit
-}
+fn setWidth(context : Epx.Context, key : String, width : Int) : Unit =
+    rawSetWidth(context, Foreign.atom(key), extent(width))
 
 foreign fn rawSetStyle(context : Epx.Context,
                        key : Foreign.Term,
-                       style : List(Foreign.Term)) : Foreign.Term =
+                       style : List(Foreign.Term)) : Unit =
     "epx:gc_set/3"
 
 foreign fn rawSetColor(context : Epx.Context,
                        key : Foreign.Term,
-                       color : #(Int, Int, Int, Int)) : Foreign.Term =
+                       color : #(Int, Int, Int, Int)) : Unit =
     "epx:gc_set/3"
 
-foreign fn rawSetWidth(context : Epx.Context, key : Foreign.Term, width : Int) : Foreign.Term =
+foreign fn rawSetWidth(context : Epx.Context, key : Foreign.Term, width : Int) : Unit =
     "epx:gc_set/3"
 
 foreign fn rawGetStyle(context : Epx.Context, key : Foreign.Term) : List(Foreign.Term) =
@@ -538,19 +532,6 @@ fn isByte(value : Int) : Bool =
 //
 // Tests
 //
-
-// What ends a process that runs `f`: the cause where it faults, and its
-// reason as `Io.show` writes it otherwise.
-fn ending(f : () -> Unit) : String receiving Down = {
-    let _ = spawnMonitored(f, fn(down) = down);
-    receive {
-        down ->
-            match down.reason {
-                Fault(cause) -> cause
-              | reason -> Io.show(reason)
-            }
-    }
-}
 
 let white : Epx.Color = Epx.rgb(255, 255, 255)
 
@@ -661,8 +642,12 @@ let widthBelowZero = Test.Case(name = "a width below 0 is 0", run = fn() = {
 let shared = Test.Case(name = "a context is shared and a copy is not", run = fn() = {
     let context = create();
     let copied = copy(context);
-    let ended = ending(fn() = setForeground(context, white));
-    Test.equal(#(ended, foreground(context), foreground(copied)), #("Returned", white, blue))
+    let _ = spawnMonitored(fn() = setForeground(context, white), fn(down) = down);
+    receive {
+        down ->
+            Test.equal(#(down.reason, foreground(context), foreground(copied)),
+                       #(Returned, white, blue))
+    }
 })
 
 // design §8: each style crosses as its atoms, the border's beside the
@@ -731,12 +716,8 @@ let antialiased = Test.Case(name = "Antialiased smooths a thin line and an ellip
 // faults where it is read.
 let foreignStyle = Test.Case(name = "a style none of Style's faults", run = fn() = {
     let context = create();
-    let _ = rawSetStyle(context, Foreign.atom("line_style"), [Foreign.atom("sum")]);
-    let read = fn() = {
-        let _ = lineStyle(context);
-        Unit
-    };
-    Test.equal(ending(read), "the context's style is none of Style's")
+    rawSetStyle(context, Foreign.atom("line_style"), [Foreign.atom("sum")]);
+    Test.faults(fn() = lineStyle(context), "the context's style is none of Style's")
 })
 
 //
@@ -904,26 +885,22 @@ let refused = Test.Case(name = "the drawing functions' and the context's faults"
     let context = create();
     let tooRed = Epx.Color(alpha = 255, red = 256, green = 0, blue = 0);
     let unseen = Epx.Color(alpha = -1, red = 0, green = 0, blue = 0);
-    Test.equal([ending(fn() = Epx.drawPoint(pixmap, context, 16777217, 0)),
-                ending(fn() = Epx.drawLine(pixmap, context, 0, 0, 0, -16777217)),
-                ending(fn() = Epx.drawTriangle(pixmap, context, 0, 0, 1, 1, -16777217, 0)),
-                ending(fn() = Epx.drawRectangle(pixmap, context, 0, 0, 1, 16777217)),
-                ending(fn() = Epx.drawEllipse(pixmap, context, -16777217, 0, 1, 1)),
-                ending(fn() = Epx.drawEllipse(pixmap, context, 0, 0, 131072, 1)),
-                ending(fn() = setLineWidth(context, 16777217)),
-                ending(fn() = setBorderWidth(context, 16777217)),
-                ending(fn() = setFillColor(context, tooRed)),
-                ending(fn() = setBorderColor(context, unseen)),
-                ending(fn() = setForeground(context, tooRed))],
-               ["a coordinate is beyond 16777216",
-                "a coordinate is beyond 16777216",
-                "a coordinate is beyond 16777216",
-                "a width or height is beyond 16777216",
-                "a coordinate is beyond 16777216",
-                "an ellipse's width or height is beyond 131071",
-                "a width or height is beyond 16777216",
-                "a width or height is beyond 16777216",
-                "a channel of a Color is outside 0 to 255",
-                "a channel of a Color is outside 0 to 255",
-                "a channel of a Color is outside 0 to 255"])
+    let coordinate = "a coordinate is beyond 16777216";
+    let extent = "a width or height is beyond 16777216";
+    let channel = "a channel of a Color is outside 0 to 255";
+    Test.equal([Test.faults(fn() = Epx.drawPoint(pixmap, context, 16777217, 0), coordinate),
+                Test.faults(fn() = Epx.drawLine(pixmap, context, 0, 0, 0, -16777217), coordinate),
+                Test.faults(fn() = Epx.drawTriangle(pixmap, context, 0, 0, 1, 1, -16777217, 0),
+                            coordinate),
+                Test.faults(fn() = Epx.drawRectangle(pixmap, context, 0, 0, 1, 16777217), extent),
+                Test.faults(fn() = Epx.drawEllipse(pixmap, context, -16777217, 0, 1, 1),
+                            coordinate),
+                Test.faults(fn() = Epx.drawEllipse(pixmap, context, 0, 0, 131072, 1),
+                            "an ellipse's width or height is beyond 131071"),
+                Test.faults(fn() = setLineWidth(context, 16777217), extent),
+                Test.faults(fn() = setBorderWidth(context, 16777217), extent),
+                Test.faults(fn() = setFillColor(context, tooRed), channel),
+                Test.faults(fn() = setBorderColor(context, unseen), channel),
+                Test.faults(fn() = setForeground(context, tooRed), channel)],
+               List.repeat(Test.Passed, 11))
 })

@@ -313,7 +313,7 @@ export fn create(width : Int, height : Int, format : Format) : Pixmap = {
     else {
         // epx leaves a new pixmap's memory as the host gave it (design §2).
         let pixmap = rawCreate(columns, rows, formatAtom(format));
-        let _ = rawFill(pixmap, #(0, 0, 0, 0));
+        rawFill(pixmap, #(0, 0, 0, 0));
         pixmap
     }
 }
@@ -389,12 +389,10 @@ foreign fn rawPixelFormat(pixmap : Pixmap, key : Foreign.Term) : Foreign.Term =
 ///
 /// Faults on a color with a channel outside 0 to 255, with the cause `a
 /// channel of a Color is outside 0 to 255`.
-export fn fill(pixmap : Pixmap, color : Color) : Unit = {
-    let _ = rawFill(pixmap, channels(color));
-    Unit
-}
+export fn fill(pixmap : Pixmap, color : Color) : Unit =
+    rawFill(pixmap, channels(color))
 
-foreign fn rawFill(pixmap : Pixmap, color : #(Int, Int, Int, Int)) : Foreign.Term =
+foreign fn rawFill(pixmap : Pixmap, color : #(Int, Int, Int, Int)) : Unit =
     "epx:pixmap_fill/2"
 
 /// Sets every pixel of the rectangle at `x`, `y` to the color, within the
@@ -475,15 +473,10 @@ foreign fn rawGetPixel(pixmap : Pixmap, x : Int, y : Int) : #(Int, Int, Int, Int
 /// channel of a Color is outside 0 to 255`. Faults on a coordinate outside
 /// -16777216 to 16777216, with the cause `a coordinate is beyond
 /// 16777216`.
-export fn putPixel(pixmap : Pixmap, x : Int, y : Int, color : Color) : Unit = {
-    let _ = rawPutPixel(pixmap, coordinate(x), coordinate(y), channels(color));
-    Unit
-}
+export fn putPixel(pixmap : Pixmap, x : Int, y : Int, color : Color) : Unit =
+    rawPutPixel(pixmap, coordinate(x), coordinate(y), channels(color))
 
-foreign fn rawPutPixel(pixmap : Pixmap,
-                       x : Int,
-                       y : Int,
-                       color : #(Int, Int, Int, Int)) : Foreign.Term =
+foreign fn rawPutPixel(pixmap : Pixmap, x : Int, y : Int, color : #(Int, Int, Int, Int)) : Unit =
     "epx:pixmap_put_pixel/4"
 
 /// The pixels of the rectangle at `x`, `y`, row by row from the top, as
@@ -564,10 +557,8 @@ export fn putPixels(pixmap : Pixmap,
     // (design §5).
     if Bytes.size(bytes) != columns * rows * pixelSize(format) then
         fault("the bytes are not width times height pixels in the format")
-    else {
-        let _ = rawPutPixels(pixmap, left, top, columns, rows, formatAtom(format), bytes);
-        Unit
-    }
+    else
+        rawPutPixels(pixmap, left, top, columns, rows, formatAtom(format), bytes)
 }
 
 foreign fn rawPutPixels(pixmap : Pixmap,
@@ -576,7 +567,7 @@ foreign fn rawPutPixels(pixmap : Pixmap,
                         width : Int,
                         height : Int,
                         format : Foreign.Term,
-                        bytes : Bytes) : Foreign.Term =
+                        bytes : Bytes) : Unit =
     "epx:pixmap_put_pixels/7"
 
 //
@@ -599,12 +590,10 @@ foreign fn rawPutPixels(pixmap : Pixmap,
 /// }
 /// // => <<7, 8, 9, 0, 0, 0>>
 /// ```
-export fn copyTo(source : Pixmap, target : Pixmap) : Unit = {
-    let _ = rawCopyTo(source, target);
-    Unit
-}
+export fn copyTo(source : Pixmap, target : Pixmap) : Unit =
+    rawCopyTo(source, target)
 
-foreign fn rawCopyTo(source : Pixmap, target : Pixmap) : Foreign.Term =
+foreign fn rawCopyTo(source : Pixmap, target : Pixmap) : Unit =
     "epx:pixmap_copy_to/2"
 
 /// Copies the source's rectangle at `sourceX`, `sourceY` into the target at
@@ -704,12 +693,10 @@ foreign fn rawCopyArea(source : Pixmap,
 /// }
 /// // => Color(alpha = 255, red = 9, green = 9, blue = 9)
 /// ```
-export fn scale(source : Pixmap, target : Pixmap, width : Int, height : Int) : Unit = {
-    let _ = rawScale(source, target, extent(width), extent(height));
-    Unit
-}
+export fn scale(source : Pixmap, target : Pixmap, width : Int, height : Int) : Unit =
+    rawScale(source, target, extent(width), extent(height))
 
-foreign fn rawScale(source : Pixmap, target : Pixmap, width : Int, height : Int) : Foreign.Term =
+foreign fn rawScale(source : Pixmap, target : Pixmap, width : Int, height : Int) : Unit =
     "epx:pixmap_scale/4"
 
 /// Reverses the order of the pixmap's rows in place, the top row becoming
@@ -726,12 +713,10 @@ foreign fn rawScale(source : Pixmap, target : Pixmap, width : Int, height : Int)
 /// }
 /// // => <<0, 0, 0, 255, 255, 255>>
 /// ```
-export fn flip(pixmap : Pixmap) : Unit = {
-    let _ = rawFlip(pixmap);
-    Unit
-}
+export fn flip(pixmap : Pixmap) : Unit =
+    rawFlip(pixmap)
 
-foreign fn rawFlip(pixmap : Pixmap) : Foreign.Term =
+foreign fn rawFlip(pixmap : Pixmap) : Unit =
     "epx:pixmap_flip/1"
 
 //
@@ -1030,11 +1015,10 @@ foreign fn rawOperationArea(source : Pixmap,
 /// ```
 export fn setClip(pixmap : Pixmap, x : Int, y : Int, width : Int, height : Int) : Unit = {
     let rectangle = #(coordinate(x), coordinate(y), extent(width), extent(height));
-    let _ = rawSetClip(pixmap, rectangle);
-    Unit
+    rawSetClip(pixmap, rectangle)
 }
 
-foreign fn rawSetClip(pixmap : Pixmap, rectangle : #(Int, Int, Int, Int)) : Foreign.Term =
+foreign fn rawSetClip(pixmap : Pixmap, rectangle : #(Int, Int, Int, Int)) : Unit =
     "epx:pixmap_set_clip/2"
 
 //
@@ -1062,12 +1046,10 @@ foreign fn rawSetClip(pixmap : Pixmap, rectangle : #(Int, Int, Int, Int)) : Fore
 /// ```
 ///
 /// since 0.2.0
-export fn drawPoint(pixmap : Pixmap, context : Context, x : Int, y : Int) : Unit = {
-    let _ = rawDrawPoint(pixmap, context, coordinate(x), coordinate(y));
-    Unit
-}
+export fn drawPoint(pixmap : Pixmap, context : Context, x : Int, y : Int) : Unit =
+    rawDrawPoint(pixmap, context, coordinate(x), coordinate(y))
 
-foreign fn rawDrawPoint(pixmap : Pixmap, context : Context, x : Int, y : Int) : Foreign.Term =
+foreign fn rawDrawPoint(pixmap : Pixmap, context : Context, x : Int, y : Int) : Unit =
     "epx:pixmap_draw_point/4"
 
 /// Draws the line from `x1`, `y1` to `x2`, `y2` in the context's
@@ -1140,21 +1122,18 @@ fn axialLine(pixmap : Pixmap,
 fn band(pixmap : Pixmap, context : Context, x : Int, y : Int, width : Int, height : Int) : Unit = {
     let color = rawKey(context, Foreign.atom("foreground_color"));
     let style = rawKey(context, Foreign.atom("line_style"));
-    let _ = rawStyledArea(pixmap, x, y, width, height, color, style);
-    Unit
+    rawStyledArea(pixmap, x, y, width, height, color, style)
 }
 
-fn epxLine(pixmap : Pixmap, context : Context, x1 : Int, y1 : Int, x2 : Int, y2 : Int) : Unit = {
-    let _ = rawDrawLine(pixmap, context, x1, y1, x2, y2);
-    Unit
-}
+fn epxLine(pixmap : Pixmap, context : Context, x1 : Int, y1 : Int, x2 : Int, y2 : Int) : Unit =
+    rawDrawLine(pixmap, context, x1, y1, x2, y2)
 
 foreign fn rawDrawLine(pixmap : Pixmap,
                        context : Context,
                        x1 : Int,
                        y1 : Int,
                        x2 : Int,
-                       y2 : Int) : Foreign.Term =
+                       y2 : Int) : Unit =
     "epx:pixmap_draw_line/6"
 
 foreign fn rawWidth(context : Context, key : Foreign.Term) : Int =
@@ -1169,7 +1148,7 @@ foreign fn rawStyledArea(pixmap : Pixmap,
                          width : Int,
                          height : Int,
                          color : Foreign.Term,
-                         style : Foreign.Term) : Foreign.Term =
+                         style : Foreign.Term) : Unit =
     "epx:pixmap_fill_area/7"
 
 /// Draws the rectangle at `x`, `y` within the clip: its border, the
@@ -1499,19 +1478,6 @@ fn operationAtom(operation : Operation) : Foreign.Term =
 // Tests
 //
 
-// What ends a process that runs `f`: the cause where it faults, and its
-// reason as `Io.show` writes it otherwise.
-fn ending(f : () -> Unit) : String receiving Down = {
-    let _ = spawnMonitored(f, fn(down) = down);
-    receive {
-        down ->
-            match down.reason {
-                Fault(cause) -> cause
-              | reason -> Io.show(reason)
-            }
-    }
-}
-
 let white : Color = rgb(255, 255, 255)
 
 let black : Color = rgb(0, 0, 0)
@@ -1622,9 +1588,12 @@ let newIsZero = Test.Case(name = "a new pixmap is 0 in every channel", run = fn(
 let shared = Test.Case(name = "a pixmap is shared and a copy is not", run = fn() = {
     let pixmap = create(1, 1, Argb);
     let copied = copy(pixmap);
-    let ended = ending(fn() = fill(pixmap, white));
-    Test.equal(#(ended, getPixel(pixmap, 0, 0), getPixel(copied, 0, 0)),
-               #("Returned", white, transparent))
+    let _ = spawnMonitored(fn() = fill(pixmap, white), fn(down) = down);
+    receive {
+        down ->
+            Test.equal(#(down.reason, getPixel(pixmap, 0, 0), getPixel(copied, 0, 0)),
+                       #(Returned, white, transparent))
+    }
 })
 
 // design §3: a pixmap is equal to itself and to no other, its copy among
@@ -1866,43 +1835,31 @@ let refused = Test.Case(name = "the library's own faults", run = fn() = {
     let pixmap = create(2, 1, Argb);
     let tooRed = Color(alpha = 255, red = 256, green = 0, blue = 0);
     let unseen = Color(alpha = -1, red = 0, green = 0, blue = 0);
-    let made = fn(width : Int, height : Int, format : Format) : () -> Unit = fn() = {
-        let _ = create(width, height, format);
-        Unit
-    };
-    Test.equal([ending(fn() = fillArea(pixmap, -16777217, 0, 1, 1, white)),
-                ending(fn() = putPixel(pixmap, 0, 16777217, white)),
-                ending(fn() = setClip(pixmap, 0, 0, 16777217, 1)),
-                ending(made(1, 16777217, Argb)),
-                ending(made(42, 16777216, Rgb)),
-                ending(fn() = fill(pixmap, tooRed)),
-                ending(fn() = fillArea(pixmap, 0, 0, 1, 1, tooRed)),
-                ending(fn() = putPixel(pixmap, 0, 0, unseen)),
-                ending(fn() = blendArea(pixmap, pixmap, 256, 0, 0, 0, 0, 1, 1)),
-                ending(fn() = fadeArea(pixmap, pixmap, -1, 0, 0, 0, 0, 1, 1)),
-                ending(fn() = putPixels(pixmap, 0, 0, 2, 1, Rgb, <<1, 2, 3, 4, 5>>))],
-               ["a coordinate is beyond 16777216",
-                "a coordinate is beyond 16777216",
-                "a width or height is beyond 16777216",
-                "a width or height is beyond 16777216",
-                "the pixmap's bytes reach 2 GiB",
-                "a channel of a Color is outside 0 to 255",
-                "a channel of a Color is outside 0 to 255",
-                "a channel of a Color is outside 0 to 255",
-                "the alpha is outside 0 to 255",
-                "the fade is outside 0 to 255",
-                "the bytes are not width times height pixels in the format"])
+    let coordinate = "a coordinate is beyond 16777216";
+    let extent = "a width or height is beyond 16777216";
+    let channel = "a channel of a Color is outside 0 to 255";
+    Test.equal([Test.faults(fn() = fillArea(pixmap, -16777217, 0, 1, 1, white), coordinate),
+                Test.faults(fn() = putPixel(pixmap, 0, 16777217, white), coordinate),
+                Test.faults(fn() = setClip(pixmap, 0, 0, 16777217, 1), extent),
+                Test.faults(fn() = create(1, 16777217, Argb), extent),
+                Test.faults(fn() = create(42, 16777216, Rgb), "the pixmap's bytes reach 2 GiB"),
+                Test.faults(fn() = fill(pixmap, tooRed), channel),
+                Test.faults(fn() = fillArea(pixmap, 0, 0, 1, 1, tooRed), channel),
+                Test.faults(fn() = putPixel(pixmap, 0, 0, unseen), channel),
+                Test.faults(fn() = blendArea(pixmap, pixmap, 256, 0, 0, 0, 0, 1, 1),
+                            "the alpha is outside 0 to 255"),
+                Test.faults(fn() = fadeArea(pixmap, pixmap, -1, 0, 0, 0, 0, 1, 1),
+                            "the fade is outside 0 to 255"),
+                Test.faults(fn() = putPixels(pixmap, 0, 0, 2, 1, Rgb, <<1, 2, 3, 4, 5>>),
+                            "the bytes are not width times height pixels in the format")],
+               List.repeat(Test.Passed, 11))
 })
 
 // design §5: `format` faults on a pixmap that foreign code made in a
 // format `Format` does not name.
 let foreignFormat = Test.Case(name = "format refuses a format it does not name", run = fn() = {
     let gray = rawCreate(1, 1, Foreign.atom("l8"));
-    let read = fn() = {
-        let _ = format(gray);
-        Unit
-    };
-    Test.equal(ending(read), "the pixmap's format is none of Format's")
+    Test.faults(fn() = format(gray), "the pixmap's format is none of Format's")
 })
 
 // design §6: `toPpm` writes the header and then each pixel's red, green
