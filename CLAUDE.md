@@ -46,6 +46,7 @@ A `scratch/` directory inside a proposal's own directory, untracked, is the user
 - **The design changes first.** An anomaly found while building changes `docs/design.md`, then the log, then the code. Name the design's section a module implements before writing it.
 - **A design is discussed in its proposal until the user says it is ready.** Until then bring nothing of it to the plan, the log or the design. At a pause offer another reading back or a harder question: the principles, a real program written against it, the operator's day.
 - **State a change to the design or the plan and make it; do not ask.** Give the change and its argument, make it, report it under *Design conformance*. Stop and wait only where the answer decides what gets built and a guess would throw the work away: a design question, discussed one at a time, in prose, the argument before the verdict, with a recommendation. Smaller decisions come together, as one numbered list with a recommendation each.
+- **Where a step looks wrong, say so once, hard**: the verdict, the principle that decides, the argument. If the user insists, build it whole, and the log entry records the decision with the argument against it. The code carries no trace of the dissent.
 - **Leave no decision pending.** A question a step raises is decided in the same turn and recorded in the plan and the log. One that needs the user stands in the plan meanwhile as a named decision in a named milestone, never as "open".
 
 ## Design
