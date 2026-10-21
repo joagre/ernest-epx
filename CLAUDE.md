@@ -54,6 +54,7 @@ A `scratch/` directory inside a proposal's own directory, untracked, is the user
 - **Bring options, not defenses.** When a simplification seems to conflict with a principle, first check whether the principle is being applied too dogmatically.
 - **The tools are fast.** A test or a tool that costs more than its work is a defect: measure it, and fix it at its cause or plan it with a date. Every run is timed against its work, and one that costs more is named to the user in the same message.
 - **The program is beautiful, inside and out.** Keep no code only to make it go faster; measure first, and where the plain form is fast enough it stays plain.
+- **A measurement ends when its number stops deciding anything.** A number that confirms the plain form goes to the log once, and its item closes; following it further is an item of its own, planned with the decision it would change.
 - **No fixed sleep, in the code or in a test.** A process waits on what it means: a message, a monitor, a port that answers, a process's end, or a deadline the design states.
 - **The program is Ernest.** `foreign` is only what the host alone can do. A function the library lacks is not written in Erlang meanwhile: it goes to `language_feedback.md`, and the program waits or writes it in Ernest.
 
