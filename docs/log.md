@@ -4,7 +4,7 @@ The dated rationale for the design and the plan, newest last, and what was rejec
 
 ## Begun from the template
 
-*2026-10-20.* The repository was begun from `ernest-template` at its tag `v0.1.0`, whose `CLAUDE.md`, `docs/style.md` and `tools/docs.ern` are refreshed from there and not edited here. The way of working is the template's; a change to it goes to the template first. The library is the first repository begun from the template, so what the copy teaches about the template goes back to it: the first lesson is that a dependency that is Erlang, epx itself, is not what `make lib` fetches, which the entry below decides.
+*2026-10-20.* The repository was begun from `ernest-template` at its tag `v0.1.0`, whose `CLAUDE.md` and `tools/docs.ern` are refreshed from there and not edited here. The way of working is the template's; a change to it goes to the template first. The library is the first repository begun from the template, so what the copy teaches about the template goes back to it: the first lesson is that a dependency that is Erlang, epx itself, is not what `make lib` fetches, which the entry below decides.
 
 ## epx and tree_db as submodules
 

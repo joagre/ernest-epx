@@ -244,7 +244,7 @@ An argument the library refuses faults the calling process before epx is called 
 
 ## Glossary
 
-The names that recur across modules, one for each concept, in every module. A name the report states takes the report's; the Ernest names of [`style.md`](style.md)'s glossary hold here too.
+The names that recur across modules, one for each concept, in every module. A name the report states takes the report's; the names of the glossary of Ernest's `guide/style.md` hold here too.
 
 - **pixmap**: a rectangle of pixels held by epx, of type `Pixmap` (§2); many are `pixmaps`. Not `image`, `bitmap`, `canvas`, `pm`.
 - **color**: a `Color`, four channels (§3). Not `pixel` for the value, nor `c`, `col`.

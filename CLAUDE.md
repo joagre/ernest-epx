@@ -19,7 +19,7 @@ Each fact has one owner. Every other document points at the owner and does not r
 | [`docs/plan.md`](docs/plan.md) | the roadmap and where we are; a finished milestone is a row of its table, naming the log entries that argue it |
 | [`docs/log.md`](docs/log.md) | the rationale: why the design and the plan say what they say. Never normative |
 | [`docs/release.md`](docs/release.md) | what a release runs to be ready |
-| [`docs/style.md`](docs/style.md) | the rules an Ernest program is written by, Ernest's own, copied and not edited here |
+| Ernest's `guide/style.md`, installed as `share/doc/ernest/guide/style.md` beside `ern` | the rules an Ernest program is written by, Ernest's own, read from the installation and not copied here |
 | the code and its tests | what is built |
 | `language_feedback.md`, under `docs/` from its first line | what writing Ernest felt against the principles, a line each, in the shape of Ernest's file of that name, a queue: a line is carried there by copy, the log here cites Ernest's number, and the line then goes; the file goes when it is empty |
 | `findings.md`, under `docs/` while a review's findings are open | the findings, each line until a plan item decides it; it goes when every line is done, dropped or planned |
@@ -102,6 +102,7 @@ A `scratch/` directory inside a proposal's own directory, untracked, is the user
 
 ## Style
 
-[`docs/style.md`](docs/style.md), Ernest's rules for its programs, imported here. The glossary of this program's own names is `docs/design.md`'s and is living: a name that comes to recur across modules goes in it in the commit that writes it, and is used as it stands.
+Ernest's `guide/style.md` holds the rules an Ernest program is written by: what `ern format` writes, what the report asks of a library's names, what the standard library does, and the names every program shares. It is installed as `share/doc/ernest/guide/style.md` beside `ern`, two directories up from the `ern` on `PATH` (Ernest 0.5.0 and later; a checkout has it as `guide/style.md`).
 
-@docs/style.md
+Read it before writing Ernest in a session; it is not copied here. The glossary of this program's own names is `docs/design.md`'s and is living: a name that comes to recur across modules goes in it in the commit that writes it, and is used as it stands.
+

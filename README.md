@@ -37,7 +37,6 @@ Clone with `--recursive`: epx and tree_db, which epx's application depends on, a
 - [`docs/plan.md`](docs/plan.md): where the library stands and what comes next.
 - [`docs/log.md`](docs/log.md): the dated rationale, never normative.
 - [`docs/release.md`](docs/release.md): what a release runs to be ready.
-- [`docs/style.md`](docs/style.md): the rules an Ernest program is written by, Ernest's own, copied and not edited here.
 - `docs/proposals/`: what is designed, a directory for each proposal, from the first one on.
 - `language_feedback.md`, under `docs/` from its first line: what writing Ernest felt against the principles, a queue carried to Ernest by copy.
 - [`CLAUDE.md`](CLAUDE.md): the working rules.
