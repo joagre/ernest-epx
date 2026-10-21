@@ -44,9 +44,9 @@
 // - `spawnMonitored` starts each worker watched from its start, and `main`
 //   receives a `Down` for each (report §6.9); one whose reason is not
 //   `Returned` ends the program.
-// - A window is shown in by any process that holds it (`Epx.Screen`'s
+// - A window is shown in by any process that holds it (`Epx.Window`'s
 //   page): each worker captures the window with the pixmap and shows its
-//   row with `Epx.Screen.showArea`. `write` shows the pixmap first, from
+//   row with `Epx.Window.showArea`. `write` shows the pixmap first, from
 //   one process, before the workers start, since the first show of a
 //   pixmap attaches it, which two processes must not do at once.
 // - `Float.sqrt` answers `None` below zero (report Appendix E.9), which
@@ -200,7 +200,7 @@ export fn main() : Unit receiving Down =
         Some(#(name, count, false)) ->
             write(name, count, None)
       | Some(#(name, count, true)) -> {
-            let window = Epx.Screen.open(0, 0, width, height);
+            let window = Epx.Window.open(0, 0, width, height);
             write(name, count, Some(window));
             closeOnEnter(window)
         }
@@ -234,7 +234,7 @@ fn counted(name : String, count : String, shown : Bool) : Optional(#(String, Int
 // The picture traced by `count` workers, shown in the window as it is
 // traced where there is one, and written to the file, or why it could not
 // be, on standard error.
-fn write(name : String, count : Int, window : Optional(Epx.Screen.Window)) : Unit receiving Down = {
+fn write(name : String, count : Int, window : Optional(Epx.Window)) : Unit receiving Down = {
     let pixmap = Epx.create(width, height, Epx.Rgb);
     showRows(window, pixmap, 0, height);
     List.forEach(List.range(0, count - 1), fn(index) = start(pixmap, window, index, count));
@@ -252,7 +252,7 @@ fn write(name : String, count : Int, window : Optional(Epx.Screen.Window)) : Uni
 // Worker `index` of `count`, which renders the rows `y` with
 // `y % count == index` into the pixmap, started and watched from its start.
 fn start(pixmap : Epx.Pixmap,
-         window : Optional(Epx.Screen.Window),
+         window : Optional(Epx.Window),
          index : Int,
          count : Int) : Unit receiving Down = {
     let rows = List.filter(List.range(0, height - 1), fn(y) = y % count == index);
@@ -278,7 +278,7 @@ fn awaitWorkers(count : Int) : Unit receiving Down =
 
 // The row `y` traced a pixel at a time, written into the pixmap with one
 // `Epx.putPixels`, and shown in the window where there is one.
-fn renderRow(pixmap : Epx.Pixmap, window : Optional(Epx.Screen.Window), y : Int) : Unit = {
+fn renderRow(pixmap : Epx.Pixmap, window : Optional(Epx.Window), y : Int) : Unit = {
     let pixels = List.map(List.range(0, width - 1), fn(x) = pixel(trace(pixelRay(x, y), rays)));
     Epx.putPixels(pixmap, 0, y, width, 1, Epx.Rgb, Bytes.join(pixels, <<>>));
     showRows(window, pixmap, y, 1)
@@ -286,21 +286,18 @@ fn renderRow(pixmap : Epx.Pixmap, window : Optional(Epx.Screen.Window), y : Int)
 
 // The `count` rows from `y` of the pixmap shown in the window, where there
 // is one.
-fn showRows(window : Optional(Epx.Screen.Window),
-            pixmap : Epx.Pixmap,
-            y : Int,
-            count : Int) : Unit =
+fn showRows(window : Optional(Epx.Window), pixmap : Epx.Pixmap, y : Int, count : Int) : Unit =
     match window {
-        Some(shown) -> Epx.Screen.showArea(shown, pixmap, 0, y, width, count)
+        Some(shown) -> Epx.Window.showArea(shown, pixmap, 0, y, width, count)
       | None -> Unit
     }
 
 // The window left on the screen until a line, or the end of standard
 // input, is read, and then closed.
-fn closeOnEnter(window : Epx.Screen.Window) : Unit = {
+fn closeOnEnter(window : Epx.Window) : Unit = {
     Io.println("press Enter to close");
     let _ = Io.readLine();
-    Epx.Screen.close(window)
+    Epx.Window.close(window)
 }
 
 // The color as the pixel's three bytes in the format `Rgb`. A channel above

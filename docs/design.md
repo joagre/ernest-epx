@@ -4,11 +4,11 @@ How the program is arranged, stated as rules: its processes and what each owns, 
 
 ## 1. What the library does
 
-The library is three modules over epx, the pixel library for Erlang. `Epx`, over epx's pixmaps, makes a pixmap, fills, reads and writes it pixel by pixel and in rectangles, copies, scales and blends one into another, draws points, lines, rectangles, ellipses and triangles into it with a graphics context, and writes one as a PPM file. `Epx.Gc`, over epx's graphics context, makes a context and sets and reads its keys (§7). `Epx.Screen`, over epx's windows, opens a window on the screen and shows a pixmap in it (§11).
+The library is three modules over epx, the pixel library for Erlang. `Epx`, over epx's pixmaps, makes a pixmap, fills, reads and writes it pixel by pixel and in rectangles, copies, scales and blends one into another, draws points, lines, rectangles, ellipses and triangles into it with a graphics context, and writes one as a PPM file. `Epx.Gc`, over epx's graphics context, makes a context and sets and reads its keys (§7). `Epx.Window`, over epx's windows, opens a window on the screen and shows a pixmap in it (§11).
 
 The library reads no event. It starts no process of its own, `open` starting epx's application (§11), and holds no Erlang of its own.
 
-`Epx` declares the types of §3, the context's type `Context` among them, and the drawing functions (§9). `Epx.Gc` declares `Style` (§8) and the functions of §7's table, which name `Epx`'s `Context` and `Color`. `Epx.Screen` declares `Window` and the functions of §11's table, which name `Epx`'s `Pixmap`. `Epx` names nothing of `Epx.Gc`'s or `Epx.Screen`'s.
+`Epx` declares the types of §3, the context's type `Context` and the window's type `Window` among them, and the drawing functions (§9). `Epx.Gc` declares `Style` (§8) and the functions of §7's table, which name `Epx`'s `Context` and `Color`. `Epx.Window` declares the functions of §11's table, which name `Epx`'s `Window` and `Pixmap`. `Epx` names nothing of `Epx.Gc`'s or `Epx.Window`'s.
 
 Each function but `toPpm`, `drawLine` and the window's calls the epx functions its table names, each at most once: the table below for the pixmap's functions, §7's for the context's, §9's for the drawing functions. The window's call those §11's table names, as §11 says. Where one epx function does a function's work exactly, the function is a `foreign fn` over it, and where it differs, Ernest closes the difference around the call.
 
@@ -62,9 +62,11 @@ export type Operation = Clear | Src | Dst | SrcOver | DstOver | SrcIn | DstIn | 
                       | SrcAtop | DstAtop | Xor | Copy | Add | Sub | SrcBlend | DstBlend
 
 export foreign type Context
+
+export foreign type Window
 ```
 
-`Pixmap` is epx's pixmap, which the host compares exactly (report §3.10). `Context` is epx's graphics context (§7), compared so too.
+`Pixmap` is epx's pixmap, which the host compares exactly (report §3.10). `Context` is epx's graphics context (§7), and `Window` epx's window (§11), each compared so too.
 
 A `Format` names the order of a pixel's bytes, one byte a channel: `Argb` is alpha, red, green and blue, and each other format the channels its name lists in that order. `Rgb` and `Bgr` hold no alpha and take three bytes a pixel, and the other four take four. A pixel of a format without alpha is read with alpha 255, and the alpha it is written with is dropped. A `Format` crosses to epx as the atom of its name in lower case, `argb`.
 
@@ -198,11 +200,7 @@ A getter of a style faults with `Fault("the context's style is none of Style's")
 
 ## 11. Windows
 
-```
-export foreign type Window
-```
-
-`Epx.Screen` shows pixmaps on the screen, each in a window, through epx's backend, a thread of epx's that draws on the display `DISPLAY` names. A window is epx's window, of type `Window`, which the host compares exactly (report §3.10). It is held by epx outside any process, as a pixmap is (§2). It lives while a process holds it, and the host frees it and takes it off the screen once none does; a window still open when the program ends goes with the program. It is bound to the node that made it (report §3.8, §3.11).
+`Epx.Window` shows pixmaps on the screen, each in a window, through epx's backend, a thread of epx's that draws on the display `DISPLAY` names. A window is epx's window, of type `Window` (§3). It is held by epx outside any process, as a pixmap is (§2). It lives while a process holds it, and the host frees it and takes it off the screen once none does; a window still open when the program ends goes with the program. It is bound to the node that made it (report §3.8, §3.11).
 
 | Function | epx | What it does |
 |---|---|---|
@@ -260,4 +258,4 @@ The names that recur across modules, one for each concept, in every module. A na
 - **fill**: what a rectangle, an ellipse or a triangle holds within its border or its edges, and the two keys it is drawn by, the fill's style and color (§9). Not `interior`, `body`.
 - **border**: the edge of a rectangle or an ellipse, within it, and the three keys it is drawn by, the border's style, color and width (§9). Not `outline`, `stroke`, `frame`.
 - **line**: what `drawLine` draws, and the two keys a line, a point and a triangle's edges are drawn by beside the foreground, the line's style and width (§9). Not `stroke`, `pen`.
-- **window**: a window on the screen, of type `Window` in `Epx.Screen`, in which a pixmap is shown (§11); many are `windows`. Not `win`, `view`, `frame`, `display`; `Screen` is the module's name alone.
+- **window**: a window on the screen, of type `Window` in `Epx`, in which a pixmap is shown, and `Epx.Window`, the module of its functions, one name for the two (§11); many are `windows`. Not `win`, `view`, `frame`, `display`, `screen`.

@@ -68,9 +68,9 @@
 // - The acting half is the Boing ball's: one pixmap captured by every
 //   worker and written a row at a time with one `Epx.putPixels`, worker `k`
 //   of `n` taking the rows `y` with `y % n == k`, `spawnMonitored` and a
-//   `Down` for each worker (report §6.9), and `Epx.Screen.showArea` after
+//   `Down` for each worker (report §6.9), and `Epx.Window.showArea` after
 //   each row (`Epx`'s page, *In place and shared*, *Rectangles*, and
-//   `Epx.Screen`'s page).
+//   `Epx.Window`'s page).
 //
 // Run it from the repository's root once `make` has built the library,
 // with sixteen samples on one worker and on eight, compare the times the
@@ -254,7 +254,7 @@ export fn main() : Unit receiving Down =
         Some(Command(shown = false) as command) ->
             write(command, None)
       | Some(command) -> {
-            let window = Epx.Screen.open(0, 0, width, height);
+            let window = Epx.Window.open(0, 0, width, height);
             write(command, Some(window));
             closeOnEnter(window)
         }
@@ -299,7 +299,7 @@ fn parsedCount(text : String) : Optional(Int) =
 // The picture traced by the command's workers with its samples, shown in
 // the window as it is traced where there is one, and written to the file,
 // or why it could not be, on standard error.
-fn write(command : Command, window : Optional(Epx.Screen.Window)) : Unit receiving Down = {
+fn write(command : Command, window : Optional(Epx.Window)) : Unit receiving Down = {
     let pixmap = Epx.create(width, height, Epx.Rgb);
     let count = command.workers;
     showRows(window, pixmap, 0, height);
@@ -319,7 +319,7 @@ fn write(command : Command, window : Optional(Epx.Screen.Window)) : Unit receivi
 // Worker `index` of `count`, which renders the rows `y` with
 // `y % count == index` into the pixmap, started and watched from its start.
 fn start(pixmap : Epx.Pixmap,
-         window : Optional(Epx.Screen.Window),
+         window : Optional(Epx.Window),
          samples : Int,
          index : Int,
          count : Int) : Unit receiving Down = {
@@ -348,10 +348,7 @@ fn awaitWorkers(count : Int) : Unit receiving Down =
 // `Epx.putPixels`, and shown in the window where there is one. The row's
 // seed is `y`, and each pixel is traced from the seed the pixel before it
 // left, so that the row is the same whatever worker traces it.
-fn renderRow(pixmap : Epx.Pixmap,
-             window : Optional(Epx.Screen.Window),
-             samples : Int,
-             y : Int) : Unit = {
+fn renderRow(pixmap : Epx.Pixmap, window : Optional(Epx.Window), samples : Int, y : Int) : Unit = {
     let #(pixels, _) =
         List.foldLeft(List.range(0, width - 1), #([], Random.seed(y)), fn(#(traced, seed), x) = {
             let #(color, next) = pixel(x, y, samples, seed);
@@ -363,21 +360,18 @@ fn renderRow(pixmap : Epx.Pixmap,
 
 // The `count` rows from `y` of the pixmap shown in the window, where there
 // is one.
-fn showRows(window : Optional(Epx.Screen.Window),
-            pixmap : Epx.Pixmap,
-            y : Int,
-            count : Int) : Unit =
+fn showRows(window : Optional(Epx.Window), pixmap : Epx.Pixmap, y : Int, count : Int) : Unit =
     match window {
-        Some(shown) -> Epx.Screen.showArea(shown, pixmap, 0, y, width, count)
+        Some(shown) -> Epx.Window.showArea(shown, pixmap, 0, y, width, count)
       | None -> Unit
     }
 
 // The window left on the screen until a line, or the end of standard
 // input, is read, and then closed.
-fn closeOnEnter(window : Epx.Screen.Window) : Unit = {
+fn closeOnEnter(window : Epx.Window) : Unit = {
     Io.println("press Enter to close");
     let _ = Io.readLine();
-    Epx.Screen.close(window)
+    Epx.Window.close(window)
 }
 
 // The color as the pixel's three bytes in the format `Rgb`. A channel above

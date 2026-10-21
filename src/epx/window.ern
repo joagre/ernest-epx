@@ -62,11 +62,11 @@
 /// {
 ///     let pixmap = Epx.create(320, 200, Epx.Rgb);
 ///     Epx.fill(pixmap, Epx.rgb(0, 96, 160));
-///     let window = Epx.Screen.open(100, 100, 320, 200);
-///     Epx.Screen.show(window, pixmap);
+///     let window = Epx.Window.open(100, 100, 320, 200);
+///     Epx.Window.show(window, pixmap);
 ///     Io.println("press Enter to close");
 ///     let _ = Io.readLine();
-///     Epx.Screen.close(window)
+///     Epx.Window.close(window)
 /// }
 /// ```
 ///
@@ -75,37 +75,23 @@
 /// ```ernest
 /// {
 ///     let pixmap = Epx.create(256, 256, Epx.Rgb);
-///     let window = Epx.Screen.open(100, 100, 256, 256);
-///     Epx.Screen.show(window, pixmap);
+///     let window = Epx.Window.open(100, 100, 256, 256);
+///     Epx.Window.show(window, pixmap);
 ///     List.forEach(List.range(0, 255), fn(y) = {
 ///         Epx.fillArea(pixmap, 0, y, 256, 1, Epx.rgb(y, 0, 255 - y));
-///         Epx.Screen.showArea(window, pixmap, 0, y, 256, 1)
+///         Epx.Window.showArea(window, pixmap, 0, y, 256, 1)
 ///     });
 ///     let _ = Io.readLine();
-///     Epx.Screen.close(window)
+///     Epx.Window.close(window)
 /// }
 /// ```
 ///
 /// ## See also
 ///
-/// `Epx` for the pixmaps a window shows, and `Epx.toPpm` for a picture
-/// kept as a file.
+/// `Epx` for the type `Window` and the pixmaps a window shows, and
+/// `Epx.toPpm` for a picture kept as a file.
 ///
 /// since 0.2.0
-
-//
-// Types
-//
-
-/// A window on the screen, in which a pixmap is shown, held by epx outside
-/// any process.
-///
-/// ### Examples
-///
-/// ```ernest
-/// Epx.Screen.open(0, 0, 640, 480)
-/// ```
-export foreign type Window
 
 //
 // Opening and closing a window
@@ -129,9 +115,9 @@ export foreign type Window
 /// ### Examples
 ///
 /// ```ernest
-/// Epx.Screen.open(100, 100, 400, 300)
+/// Epx.Window.open(100, 100, 400, 300)
 /// ```
-export fn open(x : Int, y : Int, width : Int, height : Int) : Window = {
+export fn open(x : Int, y : Int, width : Int, height : Int) : Epx.Window = {
     let left = place(x);
     let top = place(y);
     let columns = size(width);
@@ -147,10 +133,10 @@ export fn open(x : Int, y : Int, width : Int, height : Int) : Window = {
 foreign fn rawStart() : Foreign.Term =
     "epx:start/0"
 
-foreign fn rawCreate(x : Int, y : Int, width : Int, height : Int) : Window =
+foreign fn rawCreate(x : Int, y : Int, width : Int, height : Int) : Epx.Window =
     "epx:window_create/4"
 
-foreign fn rawAttach(window : Window) : Foreign.Term =
+foreign fn rawAttach(window : Epx.Window) : Foreign.Term =
     "epx:window_attach/1"
 
 /// Takes the window off the screen. Nothing brings it back: a pixmap shown
@@ -159,16 +145,16 @@ foreign fn rawAttach(window : Window) : Foreign.Term =
 /// ### Examples
 ///
 /// ```ernest
-/// Epx.Screen.close(Epx.Screen.open(100, 100, 400, 300))
+/// Epx.Window.close(Epx.Window.open(100, 100, 400, 300))
 /// ```
-export fn close(window : Window) : Unit = {
+export fn close(window : Epx.Window) : Unit = {
     // Unmapped and not detached: a draw epx takes after a detach crashes
     // the node (design §11, epx_bugs.md 17).
     let _ = rawAdjust(window, [#(Foreign.atom("show"), false)]);
     Unit
 }
 
-foreign fn rawAdjust(window : Window, parameters : List(#(Foreign.Term, Bool))) : Foreign.Term =
+foreign fn rawAdjust(window : Epx.Window, parameters : List(#(Foreign.Term, Bool))) : Foreign.Term =
     "epx:window_adjust/2"
 
 //
@@ -195,10 +181,10 @@ foreign fn rawAdjust(window : Window, parameters : List(#(Foreign.Term, Bool))) 
 /// {
 ///     let pixmap = Epx.create(400, 300, Epx.Rgb);
 ///     Epx.fill(pixmap, Epx.rgb(255, 255, 255));
-///     Epx.Screen.show(Epx.Screen.open(100, 100, 400, 300), pixmap)
+///     Epx.Window.show(Epx.Window.open(100, 100, 400, 300), pixmap)
 /// }
 /// ```
-export fn show(window : Window, pixmap : Epx.Pixmap) : Unit =
+export fn show(window : Epx.Window, pixmap : Epx.Pixmap) : Unit =
     showArea(window, pixmap, 0, 0, Epx.width(pixmap), Epx.height(pixmap))
 
 /// Shows the rectangle of the pixmap at `x`, `y` in the window, at the same
@@ -224,12 +210,12 @@ export fn show(window : Window, pixmap : Epx.Pixmap) : Unit =
 /// ```ernest
 /// {
 ///     let pixmap = Epx.create(400, 300, Epx.Rgb);
-///     let window = Epx.Screen.open(100, 100, 400, 300);
+///     let window = Epx.Window.open(100, 100, 400, 300);
 ///     Epx.fillArea(pixmap, 0, 10, 400, 1, Epx.rgb(255, 255, 255));
-///     Epx.Screen.showArea(window, pixmap, 0, 10, 400, 1)
+///     Epx.Window.showArea(window, pixmap, 0, 10, 400, 1)
 /// }
 /// ```
-export fn showArea(window : Window,
+export fn showArea(window : Epx.Window,
                    pixmap : Epx.Pixmap,
                    x : Int,
                    y : Int,
@@ -275,7 +261,7 @@ foreign fn rawAttachPixmap(pixmap : Epx.Pixmap) : Foreign.Term =
     "epx:pixmap_attach/1"
 
 foreign fn rawDraw(pixmap : Epx.Pixmap,
-                   window : Window,
+                   window : Epx.Window,
                    sourceX : Int,
                    sourceY : Int,
                    targetX : Int,

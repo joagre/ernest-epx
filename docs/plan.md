@@ -8,7 +8,7 @@ Read *Where we are* first, then the table of milestones; the milestones to come 
 
 The first cut is built and released as 0.1.0, 2026-10-20: `Epx` with twenty functions over epx's pixmaps, its design in `design.md`, the manual page under `docs/man/`, and three examples, the ray tracer among them, milestone 4. `sub` and `scroll` wait on epx, milestone 2, and the area functions are epx's exactly.
 
-The second cut is built, 2026-10-20, and the window that shows, 2026-10-21: `Epx.Gc`, five drawing functions, the clock face, `Epx.Screen`, and the word `show` on every example. Whitted's spheres, the slow tracer, is built, 2026-10-21, the fifth example, and the collage of the five pictures heads the README, 2026-10-21. What is left, in order: what waits on Ernest's MVP 3.28, milestone 6, once the user says it is out; the release 0.2.0, milestone 3b, not before that word; and the last release, milestone 7, with `sub` and `scroll` once epx has its fixes.
+The second cut is built, 2026-10-20, and the window that shows, 2026-10-21: `Epx.Gc`, five drawing functions, the clock face, `Epx.Window`, and the word `show` on every example. Whitted's spheres, the slow tracer, is built, 2026-10-21, the fifth example, and the collage of the five pictures heads the README, 2026-10-21. What is left, in order: what waits on Ernest's MVP 3.28, milestone 6, once the user says it is out; the release 0.2.0, milestone 3b, not before that word; and the last release, milestone 7, with `sub` and `scroll` once epx has its fixes.
 
 ## Milestones
 
@@ -18,7 +18,7 @@ The second cut is built, 2026-10-20, and the window that shows, 2026-10-21: `Epx
 | Milestone 3 | the release 0.1.0 | 2026-10-20 | the log's *The release review* |
 | Milestone 4 | the ray tracer | 2026-10-20 | [`proposals/raytracer/`](proposals/raytracer/); the log's *The ray tracer*, *The ray tracer built* |
 | Milestone 5 | Whitted's spheres, the slow tracer | 2026-10-21 | [`proposals/whitted/`](proposals/whitted/); the log's *Whitted's spheres decided*, *Cook's Sampling*, *Whitted's spheres built* |
-| Milestone 8 | a window that shows, `Epx.Screen` | 2026-10-21 | [`proposals/window/`](proposals/window/); the log's *A Window That Shows*, *The window decided*, *The window built* |
+| Milestone 8 | a window that shows, `Epx.Window` | 2026-10-21 | [`proposals/window/`](proposals/window/); the log's *A Window That Shows*, *The window decided*, *The window built*, *The window named for itself* |
 
 ## Milestone 1: the design
 

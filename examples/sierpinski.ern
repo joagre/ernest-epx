@@ -29,8 +29,8 @@
 // - A pixmap is changed in place and is not a value (`Epx`'s page, *In
 //   place and shared*): the three calls write one pixmap, and `subdivide`
 //   answers `Unit`.
-// - `Epx.Screen.showArea` shows one rectangle of the pixmap in the window
-//   (`Epx.Screen`'s page), and answers before it is on the screen: the
+// - `Epx.Window.showArea` shows one rectangle of the pixmap in the window
+//   (`Epx.Window`'s page), and answers before it is on the screen: the
 //   window draws the pixels in the order they were shown, after the
 //   program has drawn them all.
 // - `Epx.toPpm` makes the bytes of the file, and `Fs.write` writes them,
@@ -56,7 +56,7 @@ export fn main() : Unit =
         [name] ->
             write(name, picture(None))
       | [name, "show"] -> {
-            let window = Epx.Screen.open(0, 0, size, size);
+            let window = Epx.Window.open(0, 0, size, size);
             let pixmap = picture(Some(window));
             write(name, pixmap);
             closeOnEnter(window)
@@ -69,11 +69,11 @@ export fn main() : Unit =
 
 // The picture drawn into a new pixmap, and shown as it is drawn in the
 // window where there is one.
-fn picture(window : Optional(Epx.Screen.Window)) : Epx.Pixmap = {
+fn picture(window : Optional(Epx.Window)) : Epx.Pixmap = {
     let pixmap = Epx.create(size, size, Epx.Rgb);
     Epx.fill(pixmap, Epx.rgb(255, 255, 255));
     match window {
-        Some(shown) -> Epx.Screen.show(shown, pixmap)
+        Some(shown) -> Epx.Window.show(shown, pixmap)
       | None -> Unit
     };
     subdivide(pixmap, window, 0, 0, size);
@@ -98,14 +98,14 @@ fn write(name : String, pixmap : Epx.Pixmap) : Unit =
 // triangle of one pixel its pixel, colored by where it stands, and shown
 // in the window where there is one.
 fn subdivide(pixmap : Epx.Pixmap,
-             window : Optional(Epx.Screen.Window),
+             window : Optional(Epx.Window),
              x : Int,
              y : Int,
              side : Int) : Unit =
     if side == 1 then {
         Epx.putPixel(pixmap, x, y, Epx.rgb(shade(x), shade(y), 255 - shade(x)));
         match window {
-            Some(shown) -> Epx.Screen.showArea(shown, pixmap, x, y, 1, 1)
+            Some(shown) -> Epx.Window.showArea(shown, pixmap, x, y, 1, 1)
           | None -> Unit
         }
     } else {
@@ -117,10 +117,10 @@ fn subdivide(pixmap : Epx.Pixmap,
 
 // The window left on the screen until a line, or the end of standard
 // input, is read, and then closed.
-fn closeOnEnter(window : Epx.Screen.Window) : Unit = {
+fn closeOnEnter(window : Epx.Window) : Unit = {
     Io.println("press Enter to close");
     let _ = Io.readLine();
-    Epx.Screen.close(window)
+    Epx.Window.close(window)
 }
 
 // A channel from 0 to 255 for an offset from 0 to below `size`.

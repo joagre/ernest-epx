@@ -37,7 +37,7 @@
 //   `drawSecondHand` and `closeOnEnter`.
 // - `Epx.toPpm` makes the bytes of the file, and `Fs.write` writes them,
 //   its failure a value (report Appendix E.17).
-// - `Epx.Screen.show` shows the pixmap in a window (`Epx.Screen`'s page),
+// - `Epx.Window.show` shows the pixmap in a window (`Epx.Window`'s page),
 //   and `closeOnEnter` waits for a line on standard input before it closes
 //   the window, a wait on what the program means.
 //
@@ -72,9 +72,9 @@ export fn main() : Unit =
         [name] ->
             write(name, picture(Clock.now()))
       | [name, "show"] -> {
-            let window = Epx.Screen.open(0, 0, size, size);
+            let window = Epx.Window.open(0, 0, size, size);
             let pixmap = picture(Clock.now());
-            Epx.Screen.show(window, pixmap);
+            Epx.Window.show(window, pixmap);
             write(name, pixmap);
             closeOnEnter(window)
         }
@@ -105,10 +105,10 @@ fn write(name : String, pixmap : Epx.Pixmap) : Unit =
 
 // The window left on the screen until a line, or the end of standard
 // input, is read, and then closed.
-fn closeOnEnter(window : Epx.Screen.Window) : Unit = {
+fn closeOnEnter(window : Epx.Window) : Unit = {
     Io.println("press Enter to close");
     let _ = Io.readLine();
-    Epx.Screen.close(window)
+    Epx.Window.close(window)
 }
 
 // The dial, its ticks and its hands at the time, drawn with one context.

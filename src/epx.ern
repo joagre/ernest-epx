@@ -264,6 +264,19 @@ export type Operation =
 /// since 0.2.0
 export foreign type Context
 
+/// A window on the screen, in which a pixmap is shown, held by epx outside
+/// any process. The module `Epx.Window` opens one, shows a pixmap in it and
+/// closes it.
+///
+/// ### Examples
+///
+/// ```ernest
+/// Epx.Window.open(0, 0, 640, 480)
+/// ```
+///
+/// since 0.2.0
+export foreign type Window
+
 //
 // Making a pixmap and reading what it is
 //
