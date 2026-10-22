@@ -38,7 +38,7 @@ After milestone 6, once Ernest 0.5.0 is released, since `make release` refuses a
 
 The release as [`release.md`](release.md) says, the two readers over the new pages, `Epx.Gc` and `Epx.Window`, the drawing functions and the examples' windows among them, `make man` with the three pages, the tag `v0.2.0` and the archive with `THIRD_PARTY_LICENSES`, its notes naming epx's commit and the platform the NIF was built on. Decided 2026-10-20 with the user.
 
-Before the tag, while the release waits, two items in order.
+The window was tried by hand on a screen 2026-10-22, every example with the word `show`, `release.md`'s step 2. Before the tag, while the release waits, two items in order.
 
 1. **The docs tool holds the design's citations**: every `design §n` in `src/` and `examples/` names a section `design.md` has, and every section is named by a test, so that a section inserted in the middle cannot pass unseen; built in the template's `tools/docs.ern` first and copied here, done 2026-10-22 (the log's *The proposals' reading*).
 2. **The five proposals read with the user and gone**, done 2026-10-22 (the log's *The proposals' reading*, *What epx offers that the library leaves*):, each as CLAUDE.md's rule for a built proposal says, what no owner holds yet going to `design.md` or the log first, and the table's rows and milestone 2's items naming the log alone; milestone 1's section goes with them, a finished milestone being a row of the table; the README's line for `docs/proposals/` then says the directory holds the next proposal. Decided 2026-10-22 (the log's *The proposals' reading*).
