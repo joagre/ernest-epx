@@ -37,7 +37,7 @@ Clone with `--recursive`: epx and tree_db are git submodules under `erl/`, which
 - [`docs/plan.md`](docs/plan.md): where the library stands and what comes next.
 - [`docs/log.md`](docs/log.md): the dated rationale, never normative.
 - [`docs/release.md`](docs/release.md): what a release runs to be ready.
-- `docs/proposals/`: what is designed, a directory for each proposal, from the first one on.
+- `docs/proposals/`: what is designed, a directory for each proposal while one is open; none is open.
 - `language_feedback.md`, under `docs/` from its first line and absent while it is empty: what writing Ernest felt against the principles, a queue carried to Ernest by copy.
 - [`CLAUDE.md`](CLAUDE.md): the working rules.
 - [`docs/epx_bugs.md`](docs/epx_bugs.md): the defects found in epx, each a report for its tracker.
