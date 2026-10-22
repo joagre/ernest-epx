@@ -32,10 +32,12 @@
 // Run it from the repository's root once `make` has built the library,
 // and with the word `show` on a machine with a screen:
 //
-//     LOAD="--load-path build --libs-dir lib"
-//     ern build --load-path build examples/mandelbrot.ern
-//     ern run $LOAD examples/mandelbrot.erc build/mandelbrot.ppm
-//     ern run $LOAD examples/mandelbrot.erc build/mandelbrot.ppm show
+//     ern build --source-root examples --build-root examples/build --load-path build \
+//         examples/mandelbrot.ern
+//     ern run --load-path build --libs-dir lib examples/build/mandelbrot.erc \
+//         build/mandelbrot.ppm
+//     ern run --load-path build --libs-dir lib examples/build/mandelbrot.erc \
+//         build/mandelbrot.ppm show
 //
 
 // The picture's size in pixels, and the most steps a point is followed.

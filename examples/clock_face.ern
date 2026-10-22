@@ -44,10 +44,12 @@
 // Run it from the repository's root once `make` has built the library,
 // and with the word `show` on a machine with a screen:
 //
-//     LOAD="--load-path build --libs-dir lib"
-//     ern build --load-path build examples/clock_face.ern
-//     ern run $LOAD examples/clock_face.erc build/clock_face.ppm
-//     ern run $LOAD examples/clock_face.erc build/clock_face.ppm show
+//     ern build --source-root examples --build-root examples/build --load-path build \
+//         examples/clock_face.ern
+//     ern run --load-path build --libs-dir lib examples/build/clock_face.erc \
+//         build/clock_face.ppm
+//     ern run --load-path build --libs-dir lib examples/build/clock_face.erc \
+//         build/clock_face.ppm show
 //
 
 // The picture's width and height in pixels, the dial's center, and its

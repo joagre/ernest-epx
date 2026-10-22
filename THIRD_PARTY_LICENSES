@@ -35,4 +35,4 @@ dealings in this Software without prior written authorization.
 
 ## tree_db
 
-https://github.com/tonyrog/tree_db, the tree-based ets storage epx's application depends on, copyright 2015 Tony Rogvall. Its repository states no license; one is asked of its author, and until it is given the archive carries its compiled code on the author's leave alone.
+https://github.com/tonyrog/tree_db, the tree-based ets storage epx's application depends on, copyright 2015 Tony Rogvall. Its repository states no license. One is asked of its author (`docs/plan.md`, milestone 2), and no answer has come; until one does, the archive carries its compiled code on that open request alone, which a redistributor weighs for itself.

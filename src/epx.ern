@@ -5,7 +5,8 @@
 /// Use it where a program makes a picture pixel by pixel or a rectangle at
 /// a time: a pixmap is changed in place, where a `Bytes` would be made
 /// again at each change. A picture kept as a value is the bytes `getPixels`
-/// answers, or the file `toPpm` writes.
+/// answers, or the bytes of a PPM file that `toPpm` answers, which a
+/// program writes with `Fs.write`.
 ///
 /// A program puts the library's build on its load path when it is compiled
 /// and when it is run, and epx's `ebin` directory when it is run; epx finds
@@ -70,11 +71,13 @@
 ///
 /// **A call's cost.** A call runs on the host's scheduler until it ends,
 /// and nothing else runs on that scheduler meanwhile. Most calls end at
-/// once; `create`, `scale` and `toPpm` of a large pixmap do not, and
-/// `scale` of an 8192 by 8192 pixmap holds its scheduler for seconds. A
-/// drawing function traces its shape whole, the part outside the pixmap
-/// among it: a triangle with its corners at the coordinates' bounds holds
-/// its scheduler for a fifth of a second.
+/// once; one that touches each pixel of a large pixmap or rectangle does
+/// not: `create`, `copy`, `fill`, `copyTo`, `flip`, `scale` and `toPpm` of
+/// a large pixmap, and `fillArea`, `getPixels`, `putPixels`, `copyArea` and
+/// the blends of a large rectangle. `scale` of an 8192 by 8192 pixmap holds
+/// its scheduler for seconds. A drawing function traces its shape whole,
+/// the part outside the pixmap among it: a triangle with its corners at the
+/// coordinates' bounds holds its scheduler for a fifth of a second.
 ///
 /// ## Examples
 ///
@@ -91,7 +94,7 @@
 /// ```
 ///
 /// A rectangle drawn on white with a border two pixels wide, and a pixel
-/// of its border and one of its fill read back, the context's colors
+/// of its border beside one of its fill read back, the context's colors
 /// epx's defaults:
 ///
 /// ```ernest
@@ -101,9 +104,9 @@
 ///     let context = Epx.Gc.create();
 ///     Epx.Gc.setBorderWidth(context, 2);
 ///     Epx.drawRectangle(pixmap, context, 1, 1, 6, 6);
-///     #(Epx.getPixel(pixmap, 2, 2), Epx.getPixel(pixmap, 3, 3))
+///     Epx.getPixels(pixmap, 2, 3, 2, 1)
 /// }
-/// // => #(Color(alpha = 255, red = 0, green = 0, blue = 0), Color(alpha = 255, red = 255, green = 0, blue = 0))
+/// // => <<0, 0, 0, 255, 0, 0>>
 /// ```
 ///
 /// A picture written to a file as PPM, which an image viewer opens:
@@ -118,8 +121,9 @@
 ///
 /// ## See also
 ///
-/// `Epx.Gc` for the context the drawing functions draw with, and `Bytes`
-/// for the pixels held as a value.
+/// `Epx.Gc` for the context the drawing functions draw with, `Epx.Window`
+/// for a window that shows a pixmap on the screen, and `Bytes` for the
+/// pixels held as a value.
 ///
 /// since 0.1.0
 
@@ -421,23 +425,20 @@ export fn fillArea(pixmap : Pixmap,
                    y : Int,
                    width : Int,
                    height : Int,
-                   color : Color) : Unit = {
-    let _ =
-        rawFillArea(pixmap,
-                    coordinate(x),
-                    coordinate(y),
-                    extent(width),
-                    extent(height),
-                    channels(color));
-    Unit
-}
+                   color : Color) : Unit =
+    rawFillArea(pixmap,
+                coordinate(x),
+                coordinate(y),
+                extent(width),
+                extent(height),
+                channels(color))
 
 foreign fn rawFillArea(pixmap : Pixmap,
                        x : Int,
                        y : Int,
                        width : Int,
                        height : Int,
-                       color : #(Int, Int, Int, Int)) : Foreign.Term =
+                       color : #(Int, Int, Int, Int)) : Unit =
     "epx:pixmap_fill_area/6"
 
 /// The color of the pixel at `x`, `y`, or opaque black, `Color(alpha =
@@ -590,10 +591,7 @@ foreign fn rawPutPixels(pixmap : Pixmap,
 /// }
 /// // => <<7, 8, 9, 0, 0, 0>>
 /// ```
-export fn copyTo(source : Pixmap, target : Pixmap) : Unit =
-    rawCopyTo(source, target)
-
-foreign fn rawCopyTo(source : Pixmap, target : Pixmap) : Unit =
+export foreign fn copyTo(source : Pixmap, target : Pixmap) : Unit =
     "epx:pixmap_copy_to/2"
 
 /// Copies the source's rectangle at `sourceX`, `sourceY` into the target at
@@ -646,18 +644,15 @@ export fn copyArea(source : Pixmap,
                    targetX : Int,
                    targetY : Int,
                    width : Int,
-                   height : Int) : Unit = {
-    let _ =
-        rawCopyArea(source,
-                    target,
-                    coordinate(sourceX),
-                    coordinate(sourceY),
-                    coordinate(targetX),
-                    coordinate(targetY),
-                    extent(width),
-                    extent(height));
-    Unit
-}
+                   height : Int) : Unit =
+    rawCopyArea(source,
+                target,
+                coordinate(sourceX),
+                coordinate(sourceY),
+                coordinate(targetX),
+                coordinate(targetY),
+                extent(width),
+                extent(height))
 
 foreign fn rawCopyArea(source : Pixmap,
                        target : Pixmap,
@@ -666,7 +661,7 @@ foreign fn rawCopyArea(source : Pixmap,
                        targetX : Int,
                        targetY : Int,
                        width : Int,
-                       height : Int) : Foreign.Term =
+                       height : Int) : Unit =
     "epx:pixmap_copy_area/8"
 
 /// Scales the whole source to `width` by `height` pixels and writes it into
@@ -713,10 +708,7 @@ foreign fn rawScale(source : Pixmap, target : Pixmap, width : Int, height : Int)
 /// }
 /// // => <<0, 0, 0, 255, 255, 255>>
 /// ```
-export fn flip(pixmap : Pixmap) : Unit =
-    rawFlip(pixmap)
-
-foreign fn rawFlip(pixmap : Pixmap) : Unit =
+export foreign fn flip(pixmap : Pixmap) : Unit =
     "epx:pixmap_flip/1"
 
 //
@@ -770,19 +762,17 @@ export fn blendArea(source : Pixmap,
                     width : Int,
                     height : Int) : Unit =
     // epx takes an alpha above 255 as 255 (design §5).
-    if isByte(alpha) then {
-        let _ =
-            rawAlphaArea(source,
-                         target,
-                         alpha,
-                         coordinate(sourceX),
-                         coordinate(sourceY),
-                         coordinate(targetX),
-                         coordinate(targetY),
-                         extent(width),
-                         extent(height));
-        Unit
-    } else
+    if isByte(alpha) then
+        rawAlphaArea(source,
+                     target,
+                     alpha,
+                     coordinate(sourceX),
+                     coordinate(sourceY),
+                     coordinate(targetX),
+                     coordinate(targetY),
+                     extent(width),
+                     extent(height))
+    else
         fault("the alpha is outside 0 to 255")
 
 foreign fn rawAlphaArea(source : Pixmap,
@@ -793,7 +783,7 @@ foreign fn rawAlphaArea(source : Pixmap,
                         targetX : Int,
                         targetY : Int,
                         width : Int,
-                        height : Int) : Foreign.Term =
+                        height : Int) : Unit =
     "epx:pixmap_alpha_area/9"
 
 /// Blends the source's rectangle into the target's by the source's own
@@ -842,19 +832,17 @@ export fn fadeArea(source : Pixmap,
                    width : Int,
                    height : Int) : Unit =
     // epx takes a fade above 255 as 255 (design §5).
-    if isByte(fade) then {
-        let _ =
-            rawFadeArea(source,
-                        target,
-                        fade,
-                        coordinate(sourceX),
-                        coordinate(sourceY),
-                        coordinate(targetX),
-                        coordinate(targetY),
-                        extent(width),
-                        extent(height));
-        Unit
-    } else
+    if isByte(fade) then
+        rawFadeArea(source,
+                    target,
+                    fade,
+                    coordinate(sourceX),
+                    coordinate(sourceY),
+                    coordinate(targetX),
+                    coordinate(targetY),
+                    extent(width),
+                    extent(height))
+    else
         fault("the fade is outside 0 to 255")
 
 foreign fn rawFadeArea(source : Pixmap,
@@ -865,7 +853,7 @@ foreign fn rawFadeArea(source : Pixmap,
                        targetX : Int,
                        targetY : Int,
                        width : Int,
-                       height : Int) : Foreign.Term =
+                       height : Int) : Unit =
     "epx:pixmap_fade_area/9"
 
 /// Darkens the target by the source's rectangle: each channel of the
@@ -905,18 +893,15 @@ export fn shadowArea(source : Pixmap,
                      targetX : Int,
                      targetY : Int,
                      width : Int,
-                     height : Int) : Unit = {
-    let _ =
-        rawShadowArea(source,
-                      target,
-                      coordinate(sourceX),
-                      coordinate(sourceY),
-                      coordinate(targetX),
-                      coordinate(targetY),
-                      extent(width),
-                      extent(height));
-    Unit
-}
+                     height : Int) : Unit =
+    rawShadowArea(source,
+                  target,
+                  coordinate(sourceX),
+                  coordinate(sourceY),
+                  coordinate(targetX),
+                  coordinate(targetY),
+                  extent(width),
+                  extent(height))
 
 foreign fn rawShadowArea(source : Pixmap,
                          target : Pixmap,
@@ -925,7 +910,7 @@ foreign fn rawShadowArea(source : Pixmap,
                          targetX : Int,
                          targetY : Int,
                          width : Int,
-                         height : Int) : Foreign.Term =
+                         height : Int) : Unit =
     "epx:pixmap_shadow_area/8"
 
 /// Combines the source's rectangle with the target's by the operation,
@@ -963,19 +948,16 @@ export fn operationArea(source : Pixmap,
                         targetX : Int,
                         targetY : Int,
                         width : Int,
-                        height : Int) : Unit = {
-    let _ =
-        rawOperationArea(source,
-                         target,
-                         operationAtom(operation),
-                         coordinate(sourceX),
-                         coordinate(sourceY),
-                         coordinate(targetX),
-                         coordinate(targetY),
-                         extent(width),
-                         extent(height));
-    Unit
-}
+                        height : Int) : Unit =
+    rawOperationArea(source,
+                     target,
+                     operationAtom(operation),
+                     coordinate(sourceX),
+                     coordinate(sourceY),
+                     coordinate(targetX),
+                     coordinate(targetY),
+                     extent(width),
+                     extent(height))
 
 foreign fn rawOperationArea(source : Pixmap,
                             target : Pixmap,
@@ -985,7 +967,7 @@ foreign fn rawOperationArea(source : Pixmap,
                             targetX : Int,
                             targetY : Int,
                             width : Int,
-                            height : Int) : Foreign.Term =
+                            height : Int) : Unit =
     "epx:pixmap_operation_area/9"
 
 //
@@ -1090,20 +1072,20 @@ export fn drawLine(pixmap : Pixmap,
                    y1 : Int,
                    x2 : Int,
                    y2 : Int) : Unit =
-    lineBetween(pixmap, context, coordinate(x1), coordinate(y1), coordinate(x2), coordinate(y2))
+    drawBetween(pixmap, context, coordinate(x1), coordinate(y1), coordinate(x2), coordinate(y2))
 
 // The line once its ends are known to be within the bounds. epx draws a
 // horizontal or vertical line wider than 1 from where its band is cut to
 // the clip and as wide as the line whatever the cut, past the clip and past
 // the pixmap, so such a line is the rectangle epx means, filled (design §9,
 // epx_bugs.md 9).
-fn lineBetween(pixmap : Pixmap, context : Context, x1 : Int, y1 : Int, x2 : Int, y2 : Int) : Unit =
+fn drawBetween(pixmap : Pixmap, context : Context, x1 : Int, y1 : Int, x2 : Int, y2 : Int) : Unit =
     if x1 == x2 || y1 == y2 then
-        axialLine(pixmap, context, x1, y1, x2, y2, rawWidth(context, Foreign.atom("line_width")))
+        drawAxial(pixmap, context, x1, y1, x2, y2, rawGetWidth(context, Foreign.atom("line_width")))
     else
-        epxLine(pixmap, context, x1, y1, x2, y2)
+        rawDrawLine(pixmap, context, x1, y1, x2, y2)
 
-fn axialLine(pixmap : Pixmap,
+fn drawAxial(pixmap : Pixmap,
              context : Context,
              x1 : Int,
              y1 : Int,
@@ -1111,22 +1093,24 @@ fn axialLine(pixmap : Pixmap,
              y2 : Int,
              width : Int) : Unit =
     if width <= 1 then
-        epxLine(pixmap, context, x1, y1, x2, y2)
+        rawDrawLine(pixmap, context, x1, y1, x2, y2)
     else if y1 == y2 then
-        band(pixmap, context, Int.min(x1, x2), y1 - width / 2, Int.abs(x2 - x1) + 1, width)
+        fillBand(pixmap, context, Int.min(x1, x2), y1 - width / 2, Int.abs(x2 - x1) + 1, width)
     else
-        band(pixmap, context, x1 - width / 2, Int.min(y1, y2), width, Int.abs(y2 - y1) + 1)
+        fillBand(pixmap, context, x1 - width / 2, Int.min(y1, y2), width, Int.abs(y2 - y1) + 1)
 
 // The rectangle at `x`, `y` filled in the context's foreground, by its
 // line's style (design §9).
-fn band(pixmap : Pixmap, context : Context, x : Int, y : Int, width : Int, height : Int) : Unit = {
-    let color = rawKey(context, Foreign.atom("foreground_color"));
-    let style = rawKey(context, Foreign.atom("line_style"));
+fn fillBand(pixmap : Pixmap,
+            context : Context,
+            x : Int,
+            y : Int,
+            width : Int,
+            height : Int) : Unit = {
+    let color = rawGetColor(context, Foreign.atom("foreground_color"));
+    let style = rawGetStyle(context, Foreign.atom("line_style"));
     rawStyledArea(pixmap, x, y, width, height, color, style)
 }
-
-fn epxLine(pixmap : Pixmap, context : Context, x1 : Int, y1 : Int, x2 : Int, y2 : Int) : Unit =
-    rawDrawLine(pixmap, context, x1, y1, x2, y2)
 
 foreign fn rawDrawLine(pixmap : Pixmap,
                        context : Context,
@@ -1136,10 +1120,13 @@ foreign fn rawDrawLine(pixmap : Pixmap,
                        y2 : Int) : Unit =
     "epx:pixmap_draw_line/6"
 
-foreign fn rawWidth(context : Context, key : Foreign.Term) : Int =
+foreign fn rawGetWidth(context : Context, key : Foreign.Term) : Int =
     "epx:gc_get/2"
 
-foreign fn rawKey(context : Context, key : Foreign.Term) : Foreign.Term =
+foreign fn rawGetColor(context : Context, key : Foreign.Term) : #(Int, Int, Int, Int) =
+    "epx:gc_get/2"
+
+foreign fn rawGetStyle(context : Context, key : Foreign.Term) : List(Foreign.Term) =
     "epx:gc_get/2"
 
 foreign fn rawStyledArea(pixmap : Pixmap,
@@ -1147,8 +1134,8 @@ foreign fn rawStyledArea(pixmap : Pixmap,
                          y : Int,
                          width : Int,
                          height : Int,
-                         color : Foreign.Term,
-                         style : Foreign.Term) : Unit =
+                         color : #(Int, Int, Int, Int),
+                         style : List(Foreign.Term)) : Unit =
     "epx:pixmap_fill_area/7"
 
 /// Draws the rectangle at `x`, `y` within the clip: its border, the
@@ -1182,9 +1169,9 @@ foreign fn rawStyledArea(pixmap : Pixmap,
 ///     Epx.Gc.setFillStyle(context, None);
 ///     Epx.Gc.setBorderColor(context, Epx.rgb(255, 255, 255));
 ///     Epx.drawRectangle(pixmap, context, 0, 0, 3, 3);
-///     #(Epx.getPixel(pixmap, 0, 0), Epx.getPixel(pixmap, 1, 1))
+///     Epx.getPixels(pixmap, 0, 1, 3, 1)
 /// }
-/// // => #(Color(alpha = 255, red = 255, green = 255, blue = 255), Color(alpha = 255, red = 0, green = 0, blue = 0))
+/// // => <<255, 255, 255, 0, 0, 0, 255, 255, 255>>
 /// ```
 ///
 /// since 0.2.0
@@ -1193,23 +1180,15 @@ export fn drawRectangle(pixmap : Pixmap,
                         x : Int,
                         y : Int,
                         width : Int,
-                        height : Int) : Unit = {
-    let _ =
-        rawDrawRectangle(pixmap,
-                         context,
-                         coordinate(x),
-                         coordinate(y),
-                         extent(width),
-                         extent(height));
-    Unit
-}
+                        height : Int) : Unit =
+    rawDrawRectangle(pixmap, context, coordinate(x), coordinate(y), extent(width), extent(height))
 
 foreign fn rawDrawRectangle(pixmap : Pixmap,
                             context : Context,
                             x : Int,
                             y : Int,
                             width : Int,
-                            height : Int) : Foreign.Term =
+                            height : Int) : Unit =
     "epx:pixmap_draw_rectangle/6"
 
 /// Draws the ellipse in the rectangle at `x`, `y` within the clip:
@@ -1256,16 +1235,13 @@ export fn drawEllipse(pixmap : Pixmap,
                       x : Int,
                       y : Int,
                       width : Int,
-                      height : Int) : Unit = {
-    let _ =
-        rawDrawEllipse(pixmap,
-                       context,
-                       coordinate(x),
-                       coordinate(y),
-                       ellipseExtent(width),
-                       ellipseExtent(height));
-    Unit
-}
+                      height : Int) : Unit =
+    rawDrawEllipse(pixmap,
+                   context,
+                   coordinate(x),
+                   coordinate(y),
+                   ellipseExtent(width),
+                   ellipseExtent(height))
 
 // The farthest an ellipse's width or height goes: epx computes the square
 // of a radius in 32 bits, and a ring past a radius of 65535 is drawn wrong
@@ -1285,7 +1261,7 @@ foreign fn rawDrawEllipse(pixmap : Pixmap,
                           x : Int,
                           y : Int,
                           width : Int,
-                          height : Int) : Foreign.Term =
+                          height : Int) : Unit =
     "epx:pixmap_draw_ellipse/6"
 
 /// Draws the triangle of corners `x1`, `y1`, `x2`, `y2` and `x3`, `y3`,
@@ -1321,18 +1297,15 @@ export fn drawTriangle(pixmap : Pixmap,
                        x2 : Int,
                        y2 : Int,
                        x3 : Int,
-                       y3 : Int) : Unit = {
-    let _ =
-        rawDrawTriangle(pixmap,
-                        context,
-                        coordinate(x1),
-                        coordinate(y1),
-                        coordinate(x2),
-                        coordinate(y2),
-                        coordinate(x3),
-                        coordinate(y3));
-    Unit
-}
+                       y3 : Int) : Unit =
+    rawDrawTriangle(pixmap,
+                    context,
+                    coordinate(x1),
+                    coordinate(y1),
+                    coordinate(x2),
+                    coordinate(y2),
+                    coordinate(x3),
+                    coordinate(y3))
 
 foreign fn rawDrawTriangle(pixmap : Pixmap,
                            context : Context,
@@ -1341,7 +1314,7 @@ foreign fn rawDrawTriangle(pixmap : Pixmap,
                            x2 : Int,
                            y2 : Int,
                            x3 : Int,
-                           y3 : Int) : Foreign.Term =
+                           y3 : Int) : Unit =
     "epx:pixmap_draw_triangle/8"
 
 //
@@ -1529,7 +1502,7 @@ let blended = Test.Case(name = "blendArea blends by the alpha", run = fn() = {
 // design §1: `fadeArea` blends by the source's alpha scaled by the fade,
 // and at a fade of 255 by the source's alpha itself.
 let faded = Test.Case(name = "fadeArea blends by the source's alpha scaled", run = fn() = {
-    let faded = fn(fade : Int) : Color = {
+    let fadedBy = fn(fade : Int) : Color = {
         let source = create(1, 1, Argb);
         let target = create(1, 1, Argb);
         fill(source, Color(alpha = 128, red = 200, green = 200, blue = 200));
@@ -1537,7 +1510,7 @@ let faded = Test.Case(name = "fadeArea blends by the source's alpha scaled", run
         fadeArea(source, target, fade, 0, 0, 0, 0, 1, 1);
         getPixel(target, 0, 0)
     };
-    Test.equal(List.map([0, 128, 255], faded),
+    Test.equal(List.map([0, 128, 255], fadedBy),
                [black,
                 Color(alpha = 223, red = 50, green = 50, blue = 50),
                 Color(alpha = 191, red = 100, green = 100, blue = 100)])
@@ -1835,17 +1808,17 @@ let refused = Test.Case(name = "the library's own faults", run = fn() = {
     let pixmap = create(2, 1, Argb);
     let tooRed = Color(alpha = 255, red = 256, green = 0, blue = 0);
     let unseen = Color(alpha = -1, red = 0, green = 0, blue = 0);
-    let coordinate = "a coordinate is beyond 16777216";
-    let extent = "a width or height is beyond 16777216";
-    let channel = "a channel of a Color is outside 0 to 255";
-    Test.equal([Test.faults(fn() = fillArea(pixmap, -16777217, 0, 1, 1, white), coordinate),
-                Test.faults(fn() = putPixel(pixmap, 0, 16777217, white), coordinate),
-                Test.faults(fn() = setClip(pixmap, 0, 0, 16777217, 1), extent),
-                Test.faults(fn() = create(1, 16777217, Argb), extent),
+    let coordinateCause = "a coordinate is beyond 16777216";
+    let extentCause = "a width or height is beyond 16777216";
+    let channelCause = "a channel of a Color is outside 0 to 255";
+    Test.equal([Test.faults(fn() = fillArea(pixmap, -16777217, 0, 1, 1, white), coordinateCause),
+                Test.faults(fn() = putPixel(pixmap, 0, 16777217, white), coordinateCause),
+                Test.faults(fn() = setClip(pixmap, 0, 0, 16777217, 1), extentCause),
+                Test.faults(fn() = create(1, 16777217, Argb), extentCause),
                 Test.faults(fn() = create(42, 16777216, Rgb), "the pixmap's bytes reach 2 GiB"),
-                Test.faults(fn() = fill(pixmap, tooRed), channel),
-                Test.faults(fn() = fillArea(pixmap, 0, 0, 1, 1, tooRed), channel),
-                Test.faults(fn() = putPixel(pixmap, 0, 0, unseen), channel),
+                Test.faults(fn() = fill(pixmap, tooRed), channelCause),
+                Test.faults(fn() = fillArea(pixmap, 0, 0, 1, 1, tooRed), channelCause),
+                Test.faults(fn() = putPixel(pixmap, 0, 0, unseen), channelCause),
                 Test.faults(fn() = blendArea(pixmap, pixmap, 256, 0, 0, 0, 0, 1, 1),
                             "the alpha is outside 0 to 255"),
                 Test.faults(fn() = fadeArea(pixmap, pixmap, -1, 0, 0, 0, 0, 1, 1),

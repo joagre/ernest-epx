@@ -3,8 +3,8 @@
 ///
 /// Use it to watch a picture while a program draws it: a window shows a
 /// pixmap, or a rectangle of one, each time `show` or `showArea` is called.
-/// A picture to keep is written to a file with `Epx.toPpm`: a window keeps
-/// nothing once it is closed.
+/// A picture to keep is made the bytes of a PPM file with `Epx.toPpm`, and
+/// written with `Fs.write`: a window keeps nothing once it is closed.
 ///
 /// A program puts epx's `ebin` directory on its load path when it is run,
 /// as for `Epx`, and beside it the `ebin` of tree_db, an application epx's
@@ -29,13 +29,14 @@
 /// row at a time does not flicker, and a window covered and uncovered keeps
 /// its picture.
 ///
-/// **The close button.** A window reads no key and no button. Its close
-/// button does not close it: epx sends the process that opened the window
-/// a message no Ernest type names. A `receive` whose patterns each name a
-/// constructor leaves that message in the mailbox, and one whose pattern is
-/// a variable takes it as a message of the mailbox's type, so a program
-/// opens a window in a process that receives nothing, or whose patterns
-/// each name a constructor, and closes it with `close`.
+/// **The close button.** The process that opens a window must not
+/// `receive` with a variable pattern. A window reads no key and no button.
+/// Its close button does not close it: epx sends the process that opened
+/// the window a message no Ernest type names. A `receive` whose patterns
+/// each name a constructor leaves that message in the mailbox, and one
+/// whose pattern is a variable takes it as a message of the mailbox's type,
+/// so a program opens a window in a process that receives nothing, or whose
+/// patterns each name a constructor, and closes it with `close`.
 ///
 /// **Bounds.** A window's coordinates are from -32767 to 32767, and its
 /// width and height from 1 to 32767, one below 1 being 1. The place is
@@ -89,7 +90,7 @@
 /// ## See also
 ///
 /// `Epx` for the type `Window` and the pixmaps a window shows, and
-/// `Epx.toPpm` for a picture kept as a file.
+/// `Epx.toPpm` for a picture kept as the bytes of a PPM file.
 ///
 /// since 0.2.0
 
@@ -110,7 +111,9 @@
 /// 32767, with the cause `a window's width or height is beyond 32767`.
 /// Faults where no display can be opened, `DISPLAY` unset or naming no X
 /// server, with epx's cause: `foreign function epx:window_attach/1 raised
-/// error:badarg`.
+/// error:badarg`. Faults where tree_db, which epx's application depends
+/// on, is not on the load path, with epx's cause from `epx:start/0`, a
+/// `badmatch` naming `tree_db.app`.
 ///
 /// ### Examples
 ///
@@ -118,10 +121,10 @@
 /// Epx.Window.open(100, 100, 400, 300)
 /// ```
 export fn open(x : Int, y : Int, width : Int, height : Int) : Epx.Window = {
-    let left = place(x);
-    let top = place(y);
-    let columns = size(width);
-    let rows = size(height);
+    let left = windowCoordinate(x);
+    let top = windowCoordinate(y);
+    let columns = windowExtent(width);
+    let rows = windowExtent(height);
     rawStart();
     // No event flag: epx sends the window's maker no key and no button,
     // its close button alone excepted (design §11, epx_bugs.md 16).
@@ -179,7 +182,10 @@ foreign fn rawAdjust(window : Epx.Window, parameters : List(#(Foreign.Term, Bool
 /// {
 ///     let pixmap = Epx.create(400, 300, Epx.Rgb);
 ///     Epx.fill(pixmap, Epx.rgb(255, 255, 255));
-///     Epx.Window.show(Epx.Window.open(100, 100, 400, 300), pixmap)
+///     let window = Epx.Window.open(100, 100, 400, 300);
+///     Epx.Window.show(window, pixmap);
+///     let _ = Io.readLine();
+///     Epx.Window.close(window)
 /// }
 /// ```
 export fn show(window : Epx.Window, pixmap : Epx.Pixmap) : Unit =
@@ -210,7 +216,9 @@ export fn show(window : Epx.Window, pixmap : Epx.Pixmap) : Unit =
 ///     let pixmap = Epx.create(400, 300, Epx.Rgb);
 ///     let window = Epx.Window.open(100, 100, 400, 300);
 ///     Epx.fillArea(pixmap, 0, 10, 400, 1, Epx.rgb(255, 255, 255));
-///     Epx.Window.showArea(window, pixmap, 0, 10, 400, 1)
+///     Epx.Window.showArea(window, pixmap, 0, 10, 400, 1);
+///     let _ = Io.readLine();
+///     Epx.Window.close(window)
 /// }
 /// ```
 export fn showArea(window : Epx.Window,
@@ -224,27 +232,23 @@ export fn showArea(window : Epx.Window,
     let columns = extent(width);
     let rows = extent(height);
     attach(pixmap);
-    let _ =
-        rawDraw(pixmap,
-                window,
-                left,
-                top,
-                left,
-                top,
-                withinReach(left, columns),
-                withinReach(top, rows));
-    Unit
+    rawDraw(pixmap,
+            window,
+            left,
+            top,
+            left,
+            top,
+            withinReach(left, columns),
+            withinReach(top, rows))
 }
 
 // The pixmap attached to epx's backend where it is not, once its format is
 // one the window shows (design §11, epx_bugs.md 18).
 fn attach(pixmap : Epx.Pixmap) : Unit =
     match Epx.format(pixmap) {
-        Epx.Rgba ->
+        Epx.Rgba or Epx.Abgr ->
             fault("a window shows no pixmap in Rgba or Abgr")
-      | Epx.Abgr ->
-            fault("a window shows no pixmap in Rgba or Abgr")
-      | _ ->
+      | Epx.Argb or Epx.Bgra or Epx.Rgb or Epx.Bgr ->
             if rawBackend(pixmap, Foreign.atom("backend")) == Foreign.atom("undefined") then
                 rawAttachPixmap(pixmap)
             else
@@ -264,7 +268,7 @@ foreign fn rawDraw(pixmap : Epx.Pixmap,
                    targetX : Int,
                    targetY : Int,
                    width : Int,
-                   height : Int) : Foreign.Term =
+                   height : Int) : Unit =
     "epx:pixmap_draw/8"
 
 //
@@ -279,7 +283,7 @@ let windowLimit : Int = 32767
 
 // A window's coordinate as epx takes it, once it is within the limit
 // (design §12).
-fn place(value : Int) : Int =
+fn windowCoordinate(value : Int) : Int =
     if value < -windowLimit || value > windowLimit then
         fault("a window's coordinate is beyond 32767")
     else
@@ -287,7 +291,7 @@ fn place(value : Int) : Int =
 
 // A window's width or height as epx takes it: one below 1 is 1, and one
 // past the limit faults (design §12).
-fn size(value : Int) : Int =
+fn windowExtent(value : Int) : Int =
     if value > windowLimit then
         fault("a window's width or height is beyond 32767")
     else if value < 1 then
@@ -295,15 +299,17 @@ fn size(value : Int) : Int =
     else
         value
 
-// A rectangle's width or height from `start` cut where it would reach past
-// the last column or row a window has, so that no row is drawn past 65535,
-// which the X protocol takes back into the window (design §11, epx_bugs.md
-// 20).
-fn withinReach(start : Int, span : Int) : Int =
-    Int.max(0, Int.min(start + span, windowLimit) - start)
+// The count of a rectangle's columns or rows from `origin` cut where it
+// would reach past the last column or row a window has, so that no row is
+// drawn past 65535, which the X protocol takes back into the window (design
+// §11, epx_bugs.md 20).
+fn withinReach(origin : Int, count : Int) : Int =
+    Int.max(0, Int.min(origin + count, windowLimit) - origin)
 
+//
 // The checks `Epx` makes of a coordinate and of a width or a height, which
-// it keeps private: the same rules and causes (design §5, §12).
+// it keeps private: the same rules and causes (design §5, §12)
+//
 
 // The farthest from 0 a coordinate, a width or a height goes (design §4).
 let limit : Int = 16777216
@@ -321,3 +327,51 @@ fn extent(value : Int) : Int =
         0
     else
         value
+
+//
+// Tests
+//
+
+// design §12: `open` refuses a coordinate beyond 32767 and a width or a
+// height beyond 32767 before epx is called, so that no window is opened.
+let openRefused = Test.Case(name = "open's own faults", run = fn() = {
+    let coordinateCause = "a window's coordinate is beyond 32767";
+    let extentCause = "a window's width or height is beyond 32767";
+    Test.equal([Test.faults(fn() = open(32768, 0, 1, 1), coordinateCause),
+                Test.faults(fn() = open(0, -32768, 1, 1), coordinateCause),
+                Test.faults(fn() = open(0, 0, 32768, 1), extentCause),
+                Test.faults(fn() = open(0, 0, 1, 32768), extentCause)],
+               List.repeat(Test.Passed, 4))
+})
+
+// design §12: `showArea` refuses a coordinate and a width or a height past
+// 16777216, and `show` and `showArea` a pixmap in `Rgba` or `Abgr`, before
+// epx is called; the window is one `window_create/4` makes with no display.
+let showRefused = Test.Case(name = "show's and showArea's own faults", run = fn() = {
+    let window = rawCreate(0, 0, 1, 1);
+    let pixmap = Epx.create(1, 1, Epx.Rgb);
+    let coordinateCause = "a coordinate is beyond 16777216";
+    let extentCause = "a width or height is beyond 16777216";
+    let formatCause = "a window shows no pixmap in Rgba or Abgr";
+    Test.equal([Test.faults(fn() = showArea(window, pixmap, -16777217, 0, 1, 1), coordinateCause),
+                Test.faults(fn() = showArea(window, pixmap, 0, 16777217, 1, 1), coordinateCause),
+                Test.faults(fn() = showArea(window, pixmap, 0, 0, 16777217, 1), extentCause),
+                Test.faults(fn() = showArea(window, pixmap, 0, 0, 1, 16777217), extentCause),
+                Test.faults(fn() = show(window, Epx.create(1, 1, Epx.Rgba)), formatCause),
+                Test.faults(fn() = showArea(window, Epx.create(1, 1, Epx.Abgr), 0, 0, 1, 1),
+                            formatCause)],
+               List.repeat(Test.Passed, 6))
+})
+
+// design §11, §12: within their bounds the window's checks answer what they
+// are given, a window's width or height below 1 being 1 and a rectangle's
+// below 0 being 0, and a rectangle shown is cut to the first 32767 columns
+// and rows.
+let bounds = Test.Case(name = "the window's checks answer within their bounds", run = fn() = {
+    let windowCoordinates = List.map([-32767, 32767], windowCoordinate);
+    let windowExtents = List.map([-5, 0, 32767], windowExtent);
+    let rectangle = List.map([-16777216, 16777216], coordinate) <> List.map([-1, 16777216], extent);
+    let reached = [withinReach(32700, 100), withinReach(-5, 10), withinReach(40000, 5)];
+    Test.equal(#(windowCoordinates, windowExtents, rectangle, reached),
+               #([-32767, 32767], [1, 1, 32767], [-16777216, 16777216, 0, 16777216], [67, 10, 0]))
+})

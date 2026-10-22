@@ -58,11 +58,14 @@
 // with one worker and with eight, and compare the times the shell gives;
 // and with the word `show` on a machine with a screen:
 //
-//     LOAD="--load-path build --libs-dir lib"
-//     ern build --load-path build examples/raytracer.ern
-//     time ern run $LOAD examples/raytracer.erc build/raytracer.ppm 1
-//     time ern run $LOAD examples/raytracer.erc build/raytracer.ppm 8
-//     ern run $LOAD examples/raytracer.erc build/raytracer.ppm 8 show
+//     ern build --source-root examples --build-root examples/build --load-path build \
+//         examples/raytracer.ern
+//     time ern run --load-path build --libs-dir lib examples/build/raytracer.erc \
+//         build/raytracer.ppm 1
+//     time ern run --load-path build --libs-dir lib examples/build/raytracer.erc \
+//         build/raytracer.ppm 8
+//     ern run --load-path build --libs-dir lib examples/build/raytracer.erc \
+//         build/raytracer.ppm 8 show
 //
 
 // A point or a direction in the scene: `x` grows to the right, `y` upward,

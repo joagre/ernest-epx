@@ -3,13 +3,14 @@
 *Since 0.1.0.*
 
 Pixmaps, rectangles of pixels held outside any process, made, read,
-written, copied, scaled and blended over epx, the pixel library for
-Erlang.
+written, drawn into, copied, scaled and blended over epx, the pixel
+library for Erlang.
 
 Use it where a program makes a picture pixel by pixel or a rectangle at
 a time: a pixmap is changed in place, where a `Bytes` would be made
 again at each change. A picture kept as a value is the bytes `getPixels`
-answers, or the file `toPpm` writes.
+answers, or the bytes of a PPM file that `toPpm` answers, which a
+program writes with `Fs.write`.
 
 A program puts the library's build on its load path when it is compiled
 and when it is run, and epx's `ebin` directory when it is run; epx finds
@@ -66,10 +67,21 @@ shows.
 opaque. A function given a channel outside that range faults, with the
 cause `a channel of a Color is outside 0 to 255`.
 
+**Drawing.** `drawPoint`, `drawLine`, `drawRectangle`, `drawEllipse` and
+`drawTriangle` draw into a pixmap with a `Context`, which holds the
+colors, the styles and the widths they draw with, and which `Epx.Gc`
+makes, sets and reads. Each writes only within the clip, and its doc
+block names the keys of the context it reads.
+
 **A call's cost.** A call runs on the host's scheduler until it ends,
 and nothing else runs on that scheduler meanwhile. Most calls end at
-once; `create`, `scale` and `toPpm` of a large pixmap do not, and
-`scale` of an 8192 by 8192 pixmap holds its scheduler for seconds.
+once; one that touches each pixel of a large pixmap or rectangle does
+not: `create`, `copy`, `fill`, `copyTo`, `flip`, `scale` and `toPpm` of
+a large pixmap, and `fillArea`, `getPixels`, `putPixels`, `copyArea` and
+the blends of a large rectangle. `scale` of an 8192 by 8192 pixmap holds
+its scheduler for seconds. A drawing function traces its shape whole,
+the part outside the pixmap among it: a triangle with its corners at the
+coordinates' bounds holds its scheduler for a fifth of a second.
 
 ## Examples
 
@@ -85,6 +97,22 @@ A pixmap filled, a pixel set, and the pixel read back:
 // => Color(alpha = 255, red = 255, green = 0, blue = 0)
 ```
 
+A rectangle drawn on white with a border two pixels wide, and a pixel
+of its border beside one of its fill read back, the context's colors
+epx's defaults:
+
+```ernest
+{
+    let pixmap = Epx.create(8, 8, Epx.Rgb);
+    Epx.fill(pixmap, Epx.rgb(255, 255, 255));
+    let context = Epx.Gc.create();
+    Epx.Gc.setBorderWidth(context, 2);
+    Epx.drawRectangle(pixmap, context, 1, 1, 6, 6);
+    Epx.getPixels(pixmap, 2, 3, 2, 1)
+}
+// => <<0, 0, 0, 255, 0, 0>>
+```
+
 A picture written to a file as PPM, which an image viewer opens:
 
 ```ernest
@@ -97,7 +125,9 @@ A picture written to a file as PPM, which an image viewer opens:
 
 ## See also
 
-`Bytes` for the pixels held as a value.
+`Epx.Gc` for the context the drawing functions draw with, `Epx.Window`
+for a window that shows a pixmap on the screen, and `Bytes` for the
+pixels held as a value.
 
 ## Epx.Pixmap
 
@@ -235,6 +265,43 @@ least.
 the channels blended.
 - `DstBlend`: The target blended into the source by the target's alpha, as
 `SrcBlend` with the two swapped.
+
+## Epx.Context
+
+```ernest
+foreign type Context
+```
+
+*Since 0.2.0.*
+
+A graphics context: the colors, the styles and the widths the drawing
+functions draw with, held by epx outside any process, changed in place
+and shared by every process that holds it. `Epx.Gc` makes one, and sets
+and reads its keys.
+
+### Examples
+
+```ernest
+Epx.Gc.create()
+```
+
+## Epx.Window
+
+```ernest
+foreign type Window
+```
+
+*Since 0.2.0.*
+
+A window on the screen, in which a pixmap is shown, held by epx outside
+any process. The module `Epx.Window` opens one, shows a pixmap in it and
+closes it.
+
+### Examples
+
+```ernest
+Epx.Window.open(0, 0, 640, 480)
+```
 
 ## Epx.create
 
@@ -772,6 +839,196 @@ coordinate is beyond 16777216`, and on a width or a height above
     Epx.getPixels(pixmap, 0, 0, 2, 1)
 }
 // => <<255, 255, 255, 0, 0, 0>>
+```
+
+## Epx.drawPoint
+
+```ernest
+Epx.drawPoint(pixmap : Pixmap, context : Context, x : Int, y : Int) : Unit
+```
+
+*Since 0.2.0.*
+
+Sets the pixel at `x`, `y` to the context's foreground, written by its
+line's style. A point outside the clip is left as it was. It reads the
+context's foreground and line style, and not its line's width.
+
+### Errors
+
+Faults on a coordinate outside -16777216 to 16777216, with the cause `a
+coordinate is beyond 16777216`.
+
+### Examples
+
+```ernest
+{
+    let pixmap = Epx.create(2, 1, Epx.Rgb);
+    Epx.drawPoint(pixmap, Epx.Gc.create(), 1, 0);
+    Epx.getPixels(pixmap, 0, 0, 2, 1)
+}
+// => <<0, 0, 0, 0, 0, 255>>
+```
+
+## Epx.drawLine
+
+```ernest
+Epx.drawLine(pixmap : Pixmap, context : Context, x1 : Int, y1 : Int, x2 : Int, y2 : Int) : Unit
+```
+
+*Since 0.2.0.*
+
+Draws the line from `x1`, `y1` to `x2`, `y2` in the context's
+foreground, by its line's style, as wide as its line's width, within the
+clip. It reads the context's foreground, line style and line width.
+
+A line of width 0 draws nothing, and one of width 1 every pixel from one
+end to the other, both ends among them. A horizontal or vertical line
+wider than 1 is the rectangle that runs from one end of the line to the
+other and is the line's width across, `width / 2` of its rows or columns
+above or left of the line, rounded down. Any other line wider than 1 is
+a band beside the line, not centered on it, and which pixels it covers
+is not stated. `Antialiased` smooths a line of width 1 that is neither
+horizontal nor vertical, and no other.
+
+### Errors
+
+Faults on a coordinate outside -16777216 to 16777216, with the cause `a
+coordinate is beyond 16777216`.
+
+### Examples
+
+```ernest
+{
+    let pixmap = Epx.create(4, 3, Epx.Rgb);
+    let context = Epx.Gc.create();
+    Epx.Gc.setLineWidth(context, 3);
+    Epx.drawLine(pixmap, context, 1, 0, 1, 2);
+    Epx.getPixels(pixmap, 0, 1, 4, 1)
+}
+// => <<0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 0>>
+```
+
+## Epx.drawRectangle
+
+```ernest
+Epx.drawRectangle(pixmap : Pixmap, context : Context, x : Int, y : Int, width : Int, height : Int) : Unit
+```
+
+*Since 0.2.0.*
+
+Draws the rectangle at `x`, `y` within the clip: its border, the
+outermost pixels of the rectangle, as many on each side as the
+context's border's width, in its border's color by its border's style;
+and its fill, the rest, in its fill's color by its fill's style. It
+reads the context's fill style and color and its border style, color
+and width.
+
+With a fill, a border of width 0 is none. With no fill, the border alone
+is drawn, one pixel wide where its width is 0. Where the border is wider
+than the rectangle's width or height, which pixels it writes outside the
+rectangle is not stated. A width or a height below 0 is 0, and a
+rectangle with no pixels draws nothing.
+
+### Errors
+
+Faults on a coordinate outside -16777216 to 16777216, with the cause `a
+coordinate is beyond 16777216`, and on a width or a height above
+16777216, with the cause `a width or height is beyond 16777216`.
+
+### Examples
+
+A rectangle with no fill and a white border of width 0, drawn one
+pixel wide:
+
+```ernest
+{
+    let pixmap = Epx.create(3, 3, Epx.Rgb);
+    let context = Epx.Gc.create();
+    Epx.Gc.setFillStyle(context, None);
+    Epx.Gc.setBorderColor(context, Epx.rgb(255, 255, 255));
+    Epx.drawRectangle(pixmap, context, 0, 0, 3, 3);
+    Epx.getPixels(pixmap, 0, 1, 3, 1)
+}
+// => <<255, 255, 255, 0, 0, 0, 255, 255, 255>>
+```
+
+## Epx.drawEllipse
+
+```ernest
+Epx.drawEllipse(pixmap : Pixmap, context : Context, x : Int, y : Int, width : Int, height : Int) : Unit
+```
+
+*Since 0.2.0.*
+
+Draws the ellipse in the rectangle at `x`, `y` within the clip:
+centered at `x + width / 2`, `y + height / 2`, its radii `width / 2`
+and `height / 2`, each rounded down, so that it covers
+`2 * (width / 2) + 1` columns and `2 * (height / 2) + 1` rows, one more
+than an even width or height. An ellipse whose width or height is below 2 draws
+nothing. It reads the context's fill style and color and its border
+style, color and width.
+
+Its border is the ring from its edge inward, the context's border's
+width and one pixel across, both its edges drawn, in the border's color
+by the border's style; its fill is within the ring, in the fill's color
+by the fill's style. With a fill, a border of width 0 is none. With no
+fill, the ring alone is drawn, one pixel across where the border's width
+is 0. `Antialiased` smooths the edge of the fill.
+
+A ring may leave a pixel undrawn near the top and the bottom where the
+border's width is 1, and a ring drawn by `Blend` or `Antialiased` blends
+a few of its pixels twice.
+
+### Errors
+
+Faults on a coordinate outside -16777216 to 16777216, with the cause `a
+coordinate is beyond 16777216`, and on a width or a height above 131071,
+with the cause `an ellipse's width or height is beyond 131071`.
+
+### Examples
+
+The ellipse 4 by 4 covers 5 columns:
+
+```ernest
+{
+    let pixmap = Epx.create(6, 5, Epx.Rgb);
+    Epx.drawEllipse(pixmap, Epx.Gc.create(), 0, 0, 4, 4);
+    Epx.getPixels(pixmap, 0, 2, 6, 1)
+}
+// => <<255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 0, 0, 0>>
+```
+
+## Epx.drawTriangle
+
+```ernest
+Epx.drawTriangle(pixmap : Pixmap, context : Context, x1 : Int, y1 : Int, x2 : Int, y2 : Int, x3 : Int, y3 : Int) : Unit
+```
+
+*Since 0.2.0.*
+
+Draws the triangle of corners `x1`, `y1`, `x2`, `y2` and `x3`, `y3`,
+within the clip. With a fill, it is every pixel within the corners, its
+edges among them, in the context's fill's color by its fill's style.
+With no fill, it is its three edges, each a line from corner to corner
+in the context's foreground by its line's style, one pixel wide where
+the line's width is 0 or 1; where the width is above 1, which pixels the
+edges cover is not stated. It reads the context's fill style and color,
+and with no fill its foreground, line style and line width.
+
+### Errors
+
+Faults on a coordinate outside -16777216 to 16777216, with the cause `a
+coordinate is beyond 16777216`.
+
+### Examples
+
+```ernest
+{
+    let pixmap = Epx.create(3, 3, Epx.Rgb);
+    Epx.drawTriangle(pixmap, Epx.Gc.create(), 0, 0, 2, 0, 0, 2);
+    Epx.getPixels(pixmap, 0, 1, 3, 1)
+}
+// => <<255, 0, 0, 255, 0, 0, 0, 0, 0>>
 ```
 
 ## Epx.rgb

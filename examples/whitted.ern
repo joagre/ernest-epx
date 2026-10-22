@@ -75,14 +75,19 @@
 // Run it from the repository's root once `make` has built the library,
 // with sixteen samples on one worker and on eight, compare the times the
 // shell gives and the two pictures, and watch the eight workers fill the
-// window on a machine with a screen:
+// window on a machine with a screen. On a laptop of four cores the
+// sixteen-sample runs take about 12 minutes on one worker and 5 on eight,
+// the eight spending 37 minutes of processor time:
 //
-//     LOAD="--load-path build --libs-dir lib"
-//     ern build --load-path build examples/whitted.ern
-//     time ern run $LOAD examples/whitted.erc build/whitted1.ppm 1 16
-//     time ern run $LOAD examples/whitted.erc build/whitted8.ppm 8 16
+//     ern build --source-root examples --build-root examples/build --load-path build \
+//         examples/whitted.ern
+//     time ern run --load-path build --libs-dir lib examples/build/whitted.erc \
+//         build/whitted1.ppm 1 16
+//     time ern run --load-path build --libs-dir lib examples/build/whitted.erc \
+//         build/whitted8.ppm 8 16
 //     cmp build/whitted1.ppm build/whitted8.ppm
-//     ern run $LOAD examples/whitted.erc build/whitted.ppm 8 16 show
+//     ern run --load-path build --libs-dir lib examples/build/whitted.erc \
+//         build/whitted.ppm 8 16 show
 //
 
 // What the command line asks for: the file to write, the counts of workers

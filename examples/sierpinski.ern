@@ -39,10 +39,12 @@
 // Run it from the repository's root once `make` has built the library,
 // and with the word `show` on a machine with a screen:
 //
-//     LOAD="--load-path build --libs-dir lib"
-//     ern build --load-path build examples/sierpinski.ern
-//     ern run $LOAD examples/sierpinski.erc build/sierpinski.ppm
-//     ern run $LOAD examples/sierpinski.erc build/sierpinski.ppm show
+//     ern build --source-root examples --build-root examples/build --load-path build \
+//         examples/sierpinski.ern
+//     ern run --load-path build --libs-dir lib examples/build/sierpinski.erc \
+//         build/sierpinski.ppm
+//     ern run --load-path build --libs-dir lib examples/build/sierpinski.erc \
+//         build/sierpinski.ppm show
 //
 
 // The picture's width and height in pixels: a power of two, so that every

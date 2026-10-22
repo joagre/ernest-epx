@@ -8,11 +8,11 @@ The library is three modules over epx, the pixel library for Erlang. `Epx`, over
 
 The library reads no event. It starts no process of its own, `open` starting epx's application (§11), and holds no Erlang of its own.
 
-`Epx` declares the types of §3, the context's type `Context` and the window's type `Window` among them, and the drawing functions (§9). `Epx.Gc` declares `Style` (§8) and the functions of §7's table, which name `Epx`'s `Context` and `Color`. `Epx.Window` declares the functions of §11's table, which name `Epx`'s `Window` and `Pixmap`. `Epx` names nothing of `Epx.Gc`'s or `Epx.Window`'s.
+`Epx` declares the types of §3, the context's type `Context` and the window's type `Window` among them, and the drawing functions (§9). `Epx.Gc` declares `Style` (§8) and the functions of §7's table, which name `Epx`'s `Context` and `Color`. `Epx.Window` declares the functions of §11's table, which name `Epx`'s `Window` and `Pixmap`. `Epx`'s code names nothing of `Epx.Gc`'s or `Epx.Window`'s; its doc examples may.
 
 Each function but `toPpm`, `drawLine` and the window's calls the epx functions its table names, each at most once: the table below for the pixmap's functions, §7's for the context's, §9's for the drawing functions. The window's call those §11's table names, as §11 says. Where one epx function does a function's work exactly, the function is a `foreign fn` over it, and where it differs, Ernest closes the difference around the call.
 
-The differences closed are these, each stated where its rule is (§2 to §10): a `Color` crosses as the tuple epx takes, and a `Format`, an `Operation` or a `Style` as its atoms; epx's `ok` is `Unit`; a width or a height below 0 is 0; a precondition of §5 or §10 is checked before the call.
+The differences closed are these, each stated where its rule is (§2 to §10): a `Color` crosses as the tuple epx takes, and a `Format`, an `Operation` or a `Style` as its atoms; epx's `ok` is `Unit`; a width or a height below 0 is 0; a precondition of §5, §10 or §12 is checked before the call. Each module checks with functions of its own, since Ernest has no function private to a library (report §4.2).
 
 Also closed: a new pixmap is filled; a new context's border lies within its shape; a horizontal or vertical line wider than 1 is drawn as a rectangle; and `getPixels` answers a rectangle of width and height 0 without epx, which answers its whole memory for one at `0`, `0`.
 
@@ -171,7 +171,9 @@ A drawing function draws into a pixmap with a context, the pixmap first and the 
 
 A point is the pixel at `x`, `y`, in the foreground by the line's style.
 
-A line of width 0 draws nothing, and one of width 1 every pixel from `x1`, `y1` to `x2`, `y2`, both ends among them. A horizontal or vertical line wider than 1 is the rectangle that runs from one end of the line to the other and is the line's width across, `width / 2` of its rows or columns above or left of the line, rounded down. Any other line wider than 1 is a band beside the line, and which pixels it covers is not stated (`epx_bugs.md` 10).
+A line of width 0 draws nothing, and one of width 1 every pixel from `x1`, `y1` to `x2`, `y2`, both ends among them. A line whose two ends are one pixel is a horizontal line of one pixel's length.
+
+A horizontal or vertical line wider than 1 is the rectangle that runs from one end of the line to the other and is the line's width across, `width / 2` of its rows or columns above or left of the line, rounded down. Any other line wider than 1 is a band beside the line, and which pixels it covers is not stated (`epx_bugs.md` 10).
 
 `drawLine` reads the line's width for a horizontal or vertical line, and where it is above 1 reads the foreground and the line's style and fills that rectangle with `pixmap_fill_area/7`, where epx's own line writes past the clip and past the pixmap (`epx_bugs.md` 9).
 
@@ -213,7 +215,7 @@ A getter of a style faults with `Fault("the context's style is none of Style's")
 
 `showArea` reads the pixmap's format and whether it is attached to the backend with `pixmap_info_/2`, attaches it with `pixmap_attach/1` where it is not, and draws the rectangle with `pixmap_draw/8`. A pixmap is attached by the first `show` or `showArea` that shows it and stays attached while it lives.
 
-The rectangle `showArea` shows is cut to the pixmap's clip, as an area function's source is (§4), and to the first 32,767 columns and rows, beyond which no window reaches. The pixmap's pixel at `x + i`, `y + j` is drawn at the window's pixel at `x + i`, `y + j`, and a pixel outside the window is not drawn. `show` is `showArea` of the rectangle at `0`, `0` of the pixmap's width and height.
+The rectangle `showArea` shows is cut to the pixmap's clip, the cut moving its place in the window with it, and to the first 32,767 columns and rows, beyond which no window reaches. The pixmap's pixel at `x + i`, `y + j` is drawn at the window's pixel at `x + i`, `y + j`, and a pixel outside the window is not drawn. `show` is `showArea` of the rectangle at `0`, `0` of the pixmap's width and height.
 
 `show` and `showArea` answer once the backend has the request, before the pixels are on the screen, and the backend draws the requests in the order it takes them, each on the screen without a sync. The backend reads the pixmap's pixels when it draws them, so that a write made after `show` answered may be shown, and, since epx takes no lock, a write half done may be seen (§2). A pixmap may be shown in a window by any process that holds both.
 
@@ -229,7 +231,7 @@ Where no display can be opened, `DISPLAY` unset or naming no X server, epx's app
 
 The copy off the screen takes four bytes a pixel of the X server's memory, and a window whose copy the server cannot allocate shows nothing. Each request costs the backend a copy of the whole window to the screen and a round trip to the X server: requests made faster than the backend draws them wait in epx's queue, and are drawn after the program has gone on.
 
-`make test` runs with or without a display, and no test opens a window: this section and §12 have no test, and the window is tried by hand before a release (`release.md`).
+`make test` runs with or without a display, and no test opens a window. §12's refusals come before epx is called and are tested, those of `show` and `showArea` on a window `window_create/4` makes with no display; the rest of this section and of §12 is tried by hand before a release (`release.md`).
 
 ## 12. What the window functions fault
 
@@ -240,7 +242,9 @@ An argument the library refuses faults the calling process before epx is called 
 - a coordinate given to `showArea` outside −16,777,216 to 16,777,216: `Fault("a coordinate is beyond 16777216")`, and a width or a height above 16,777,216: `Fault("a width or height is beyond 16777216")`;
 - a pixmap in `Rgba` or `Abgr`, given to `show` or `showArea`: `Fault("a window shows no pixmap in Rgba or Abgr")` (`epx_bugs.md` 18).
 
-`open` where no display can be opened faults with epx's cause, `Fault("foreign function epx:window_attach/1 raised error:badarg")` (`epx_bugs.md` 21). Two processes that make the first `show` of one pixmap at once may each find it not attached, and the second to attach it faults with `Fault("foreign function epx:pixmap_attach/1 raised error:badarg")`; a program shows a pixmap from one process before others show it. `show` and `showArea` fault as `Epx.format` does on a pixmap that foreign code made in a format `Format` does not name (§5). Nothing else faults.
+`open` where no display can be opened faults with epx's cause, `Fault("foreign function epx:window_attach/1 raised error:badarg")` (`epx_bugs.md` 21), and where tree_db, which epx's application depends on, is not on the load path, with epx's cause from `epx:start/0`, a `badmatch` naming `tree_db.app`.
+
+Two processes that make the first `show` of one pixmap at once may each find it not attached, and the second to attach it faults with `Fault("foreign function epx:pixmap_attach/1 raised error:badarg")`; a program shows a pixmap from one process before others show it. `show` and `showArea` fault as `Epx.format` does on a pixmap that foreign code made in a format `Format` does not name (§5). Nothing else faults.
 
 ## Glossary
 

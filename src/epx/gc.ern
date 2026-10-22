@@ -38,7 +38,8 @@
 ///
 /// ## Examples
 ///
-/// A context set to draw a thick white line, and the line drawn:
+/// A context set to draw a thick white line, the line drawn, and a column
+/// read back across it:
 ///
 /// ```ernest
 /// {
@@ -47,9 +48,9 @@
 ///     Epx.Gc.setForeground(context, Epx.rgb(255, 255, 255));
 ///     Epx.Gc.setLineWidth(context, 3);
 ///     Epx.drawLine(pixmap, context, 0, 2, 4, 2);
-///     #(Epx.getPixel(pixmap, 2, 1), Epx.getPixel(pixmap, 2, 4))
+///     Epx.getPixels(pixmap, 2, 0, 1, 5)
 /// }
-/// // => #(Color(alpha = 255, red = 255, green = 255, blue = 255), Color(alpha = 255, red = 0, green = 0, blue = 0))
+/// // => <<0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0, 0>>
 /// ```
 ///
 /// A circle with a border and no fill, written to a file as PPM:
@@ -312,7 +313,7 @@ export fn lineWidth(context : Epx.Context) : Int =
 /// // => Blend
 /// ```
 export fn setBorderStyle(context : Epx.Context, style : Style) : Unit =
-    // design §8: the border lies within its shape.
+    // The border lies within its shape (design §8).
     setStyle(context, "border_style", styleAtoms(style) <> [inside])
 
 /// The style the border of a rectangle and of an ellipse is drawn by.
@@ -495,14 +496,16 @@ let inside : Foreign.Term = Foreign.atom("inside")
 let center : Foreign.Term = Foreign.atom("center")
 
 // A color as epx answers it, `{A, R, G, B}`.
-fn colorOf(channels : #(Int, Int, Int, Int)) : Epx.Color =
-    match channels {
+fn colorOf(term : #(Int, Int, Int, Int)) : Epx.Color =
+    match term {
         #(alpha, red, green, blue) ->
             Epx.Color(alpha = alpha, red = red, green = green, blue = blue)
     }
 
+//
 // The checks `Epx` makes of a width and a color, which it keeps private:
-// the same rules and causes (design §5, §10).
+// the same rules and causes (design §5, §10)
+//
 
 // The farthest from 0 a width goes (design §4).
 let limit : Int = 16777216
@@ -721,11 +724,10 @@ let foreignStyle = Test.Case(name = "a style none of Style's faults", run = fn()
 })
 
 //
-// Tests of `Epx`'s drawing functions
+// Tests of `Epx`'s drawing functions, which stand here, since a context is
+// made and set by this module, which `Epx` cannot name: report §4.1 refuses
+// a cycle
 //
-
-// They stand here, since a context is made and set by this module, which
-// `Epx` cannot name: report §4.1 refuses a cycle.
 
 // design §9: a point is the foreground at its pixel, within the clip, and
 // the line's width is not read.
@@ -759,6 +761,29 @@ let lines = Test.Case(name = "drawLine draws by the line's width", run = fn() = 
                 [".LLLLL.", ".LLLLL.", ".......", ".......", "....LL.", "....LL.", "....LL."],
                 [".LLLLL.", ".LLLLL.", ".LLLLL.", ".......", "....LLL", "....LLL", "....LLL"]])
 })
+
+// design §9: a line whose two ends are one pixel is a horizontal line of
+// one pixel's length, the line's width across it.
+let onePixelLine = Test.Case(name = "a line of one pixel is horizontal", run = fn() = {
+    let pixmap = blank(7, 7);
+    let context = create();
+    setLineWidth(context, 3);
+    Epx.drawLine(pixmap, context, 3, 3, 3, 3);
+    Test.equal(rows(pixmap),
+               [".......", ".......", "...L...", "...L...", "...L...", ".......", "......."])
+})
+
+// design §9: a line of width 0 draws nothing, one neither horizontal nor
+// vertical among them.
+let diagonalOfWidthZero =
+    Test.Case(name = "a diagonal line of width 0 draws nothing", run = fn() = {
+        let pixmap = blank(4, 4);
+        let context = create();
+        setLineWidth(context, 0);
+        Epx.drawLine(pixmap, context, 0, 0, 3, 3);
+        Epx.drawLine(pixmap, context, 0, 3, 2, 0);
+        Test.equal(rows(pixmap), ["....", "....", "....", "...."])
+    })
 
 // design §9: a horizontal or vertical line wider than 1 is written within
 // the clip and within the pixmap, at the last row and column among them,
@@ -838,18 +863,20 @@ let ellipses = Test.Case(name = "drawEllipse covers its radii and its ring", run
 })
 
 // design §9: a triangle with a fill covers its corners and edges, and with
-// no fill is its edges in the foreground.
+// no fill is its edges in the foreground, one pixel wide where the line's
+// width is 0 or 1.
 let triangles = Test.Case(name = "drawTriangle fills or draws its edges", run = fn() = {
-    let drawn = fn(fill : Optional(Style)) : List(String) = {
+    let drawn = fn(fill : Optional(Style), width : Int) : List(String) = {
         let pixmap = blank(5, 5);
         let context = create();
         setFillStyle(context, fill);
+        setLineWidth(context, width);
         Epx.drawTriangle(pixmap, context, 0, 0, 4, 0, 0, 4);
         rows(pixmap)
     };
-    Test.equal(#(drawn(Some(Solid)), drawn(None)),
-               #(["RRRRR", "RRRR.", "RRR..", "RR...", "R...."],
-                 ["LLLLL", "L..L.", "L.L..", "LL...", "L...."]))
+    let edges = ["LLLLL", "L..L.", "L.L..", "LL...", "L...."];
+    Test.equal([drawn(Some(Solid), 1), drawn(None, 1), drawn(None, 0)],
+               [["RRRRR", "RRRR.", "RRR..", "RR...", "R...."], edges, edges])
 })
 
 // design §9: every drawing function writes only within the clip.
@@ -885,22 +912,24 @@ let refused = Test.Case(name = "the drawing functions' and the context's faults"
     let context = create();
     let tooRed = Epx.Color(alpha = 255, red = 256, green = 0, blue = 0);
     let unseen = Epx.Color(alpha = -1, red = 0, green = 0, blue = 0);
-    let coordinate = "a coordinate is beyond 16777216";
-    let extent = "a width or height is beyond 16777216";
-    let channel = "a channel of a Color is outside 0 to 255";
-    Test.equal([Test.faults(fn() = Epx.drawPoint(pixmap, context, 16777217, 0), coordinate),
-                Test.faults(fn() = Epx.drawLine(pixmap, context, 0, 0, 0, -16777217), coordinate),
+    let coordinateCause = "a coordinate is beyond 16777216";
+    let extentCause = "a width or height is beyond 16777216";
+    let channelCause = "a channel of a Color is outside 0 to 255";
+    Test.equal([Test.faults(fn() = Epx.drawPoint(pixmap, context, 16777217, 0), coordinateCause),
+                Test.faults(fn() = Epx.drawLine(pixmap, context, 0, 0, 0, -16777217),
+                            coordinateCause),
                 Test.faults(fn() = Epx.drawTriangle(pixmap, context, 0, 0, 1, 1, -16777217, 0),
-                            coordinate),
-                Test.faults(fn() = Epx.drawRectangle(pixmap, context, 0, 0, 1, 16777217), extent),
+                            coordinateCause),
+                Test.faults(fn() = Epx.drawRectangle(pixmap, context, 0, 0, 1, 16777217),
+                            extentCause),
                 Test.faults(fn() = Epx.drawEllipse(pixmap, context, -16777217, 0, 1, 1),
-                            coordinate),
+                            coordinateCause),
                 Test.faults(fn() = Epx.drawEllipse(pixmap, context, 0, 0, 131072, 1),
                             "an ellipse's width or height is beyond 131071"),
-                Test.faults(fn() = setLineWidth(context, 16777217), extent),
-                Test.faults(fn() = setBorderWidth(context, 16777217), extent),
-                Test.faults(fn() = setFillColor(context, tooRed), channel),
-                Test.faults(fn() = setBorderColor(context, unseen), channel),
-                Test.faults(fn() = setForeground(context, tooRed), channel)],
+                Test.faults(fn() = setLineWidth(context, 16777217), extentCause),
+                Test.faults(fn() = setBorderWidth(context, 16777217), extentCause),
+                Test.faults(fn() = setFillColor(context, tooRed), channelCause),
+                Test.faults(fn() = setBorderColor(context, unseen), channelCause),
+                Test.faults(fn() = setForeground(context, tooRed), channelCause)],
                List.repeat(Test.Passed, 11))
 })
