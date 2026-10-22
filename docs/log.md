@@ -143,3 +143,5 @@ The reports keep their numbers, which the design, the plan, the doc blocks and t
 ## The last milestone
 
 *2026-10-23.* Milestone 7, the release 0.3.0 after `sub` and `scroll`, is merged into milestone 2, whose three waiting items it follows: the reports filed, `sub` and `scroll`, and the rounded rectangle, the polygon and the window's three asks, all on epx's fixes. Merging it into 3b was weighed and set aside, since it would make the release 0.2.0, which waits on Ernest 0.5.0 alone, wait on epx's fixes too, which have no date. One milestone for what waits on epx and one for what does not: principle 2, one place for one thing.
+
+The same day the reports were filed with epx, and its author will fix them all, so the milestone's items wait on a release of epx with the fixes and on nothing else.
