@@ -3,20 +3,25 @@
 /// graphics context.
 ///
 /// Use it to make the `Epx.Context` that `Epx.drawPoint`, `Epx.drawLine`,
-/// `Epx.drawRectangle`, `Epx.drawEllipse` and `Epx.drawTriangle` take, and
-/// to set what they draw with. It is in the library `Epx` is in, and a
-/// program that has `Epx` on its load path has it.
+/// `Epx.drawRectangle`, `Epx.drawEllipse`, `Epx.drawRoundedRectangle`,
+/// `Epx.drawTriangle` and `Epx.drawPolygon` take, and to set what they draw
+/// with. It is in the library `Epx` is in, and a program that has `Epx` on
+/// its load path has it.
 ///
 /// **The keys.** A context has eight keys, each set by its setter and read
 /// by its getter:
 ///
-/// - the fill's style and color, which `drawRectangle`, `drawEllipse` and
-///   `drawTriangle` fill with; a fill style of `None` is no fill;
+/// - the fill's style and color, which `drawRectangle`, `drawEllipse`,
+///   `drawRoundedRectangle`, `drawTriangle` and `drawPolygon` fill with; a
+///   fill style of `None` is no fill;
 /// - the line's style and width, which `drawLine` draws with, `drawPoint`
-///   the style alone, and `drawTriangle` its edges where it has no fill;
-/// - the border's style, color and width, which `drawRectangle` and
-///   `drawEllipse` draw their border with, within the shape;
-/// - the foreground, the color of a point, a line and a triangle's edges.
+///   the style alone, and `drawTriangle` and `drawPolygon` their edges
+///   where they have no fill;
+/// - the border's style, color and width, which `drawRectangle`,
+///   `drawEllipse` and `drawRoundedRectangle` draw their border with,
+///   within the shape;
+/// - the foreground, the color of a point, a line, and a triangle's and a
+///   polygon's edges.
 ///
 /// **The defaults.** `create` makes a context of epx's defaults: a fill of
 /// `Solid` in opaque red, a line of `Solid` one pixel wide, a border of
@@ -232,7 +237,8 @@ export fn fillColor(context : Epx.Context) : Epx.Color =
 // The line
 //
 
-/// Sets the style a point, a line and a triangle's edges are drawn by.
+/// Sets the style a point, a line, and a triangle's and a polygon's edges
+/// are drawn by.
 ///
 /// ### Examples
 ///
@@ -247,7 +253,8 @@ export fn fillColor(context : Epx.Context) : Epx.Color =
 export fn setLineStyle(context : Epx.Context, style : Style) : Unit =
     setStyle(context, "line_style", styleAtoms(style))
 
-/// The style a point, a line and a triangle's edges are drawn by.
+/// The style a point, a line, and a triangle's and a polygon's edges are
+/// drawn by.
 ///
 /// ### Errors
 ///
@@ -263,8 +270,8 @@ export fn setLineStyle(context : Epx.Context, style : Style) : Unit =
 export fn lineStyle(context : Epx.Context) : Style =
     styleOf(rawGetStyle(context, Foreign.atom("line_style")))
 
-/// Sets the width a line and a triangle's edges are drawn in, in pixels. A
-/// width below 0 is 0.
+/// Sets the width a line, and a triangle's and a polygon's edges, are drawn
+/// in, in pixels. A width below 0 is 0.
 ///
 /// ### Errors
 ///
@@ -284,7 +291,8 @@ export fn lineStyle(context : Epx.Context) : Style =
 export fn setLineWidth(context : Epx.Context, width : Int) : Unit =
     setWidth(context, "line_width", width)
 
-/// The width a line and a triangle's edges are drawn in, in pixels.
+/// The width a line, and a triangle's and a polygon's edges, are drawn in,
+/// in pixels.
 ///
 /// ### Examples
 ///
@@ -299,7 +307,8 @@ export fn lineWidth(context : Epx.Context) : Int =
 // The border
 //
 
-/// Sets the style the border of a rectangle and of an ellipse is drawn by.
+/// Sets the style the border of a rectangle, a rounded rectangle and an
+/// ellipse is drawn by.
 ///
 /// ### Examples
 ///
@@ -315,7 +324,8 @@ export fn setBorderStyle(context : Epx.Context, style : Style) : Unit =
     // The border lies within its shape (design §8).
     setStyle(context, "border_style", styleAtoms(style) <> [inside])
 
-/// The style the border of a rectangle and of an ellipse is drawn by.
+/// The style the border of a rectangle, a rounded rectangle and an ellipse
+/// is drawn by.
 ///
 /// ### Errors
 ///
@@ -334,7 +344,8 @@ export fn borderStyle(context : Epx.Context) : Style = {
     styleOf(List.filter(placed, fn(atom) = atom != inside))
 }
 
-/// Sets the color the border of a rectangle and of an ellipse is drawn in.
+/// Sets the color the border of a rectangle, a rounded rectangle and an
+/// ellipse is drawn in.
 ///
 /// ### Errors
 ///
@@ -354,7 +365,8 @@ export fn borderStyle(context : Epx.Context) : Style = {
 export fn setBorderColor(context : Epx.Context, color : Epx.Color) : Unit =
     setColor(context, "border_color", color)
 
-/// The color the border of a rectangle and of an ellipse is drawn in.
+/// The color the border of a rectangle, a rounded rectangle and an ellipse
+/// is drawn in.
 ///
 /// ### Examples
 ///
@@ -365,9 +377,9 @@ export fn setBorderColor(context : Epx.Context, color : Epx.Color) : Unit =
 export fn borderColor(context : Epx.Context) : Epx.Color =
     colorOf(rawGetColor(context, Foreign.atom("border_color")))
 
-/// Sets the width of the border of a rectangle and of an ellipse, in
-/// pixels. A width below 0 is 0, and a border of width 0 is none where the
-/// shape has a fill.
+/// Sets the width of the border of a rectangle, a rounded rectangle and an
+/// ellipse, in pixels. A width below 0 is 0, and a border of width 0 is
+/// none where the shape has a fill.
 ///
 /// ### Errors
 ///
@@ -387,7 +399,8 @@ export fn borderColor(context : Epx.Context) : Epx.Color =
 export fn setBorderWidth(context : Epx.Context, width : Int) : Unit =
     setWidth(context, "border_width", width)
 
-/// The width of the border of a rectangle and of an ellipse, in pixels.
+/// The width of the border of a rectangle, a rounded rectangle and an
+/// ellipse, in pixels.
 ///
 /// ### Examples
 ///
@@ -402,7 +415,8 @@ export fn borderWidth(context : Epx.Context) : Int =
 // The foreground
 //
 
-/// Sets the color a point, a line and a triangle's edges are drawn in.
+/// Sets the color a point, a line, and a triangle's and a polygon's edges
+/// are drawn in.
 ///
 /// ### Errors
 ///
@@ -422,7 +436,8 @@ export fn borderWidth(context : Epx.Context) : Int =
 export fn setForeground(context : Epx.Context, color : Epx.Color) : Unit =
     setColor(context, "foreground_color", color)
 
-/// The color a point, a line and a triangle's edges are drawn in.
+/// The color a point, a line, and a triangle's and a polygon's edges are
+/// drawn in.
 ///
 /// ### Examples
 ///
@@ -892,6 +907,132 @@ let ellipses = Test.Case(name = "drawEllipse covers its radii and its ring", run
                 empty])
 })
 
+// design §9: a rounded rectangle with both radii 0 has square corners, its
+// border a row thicker at the top and the bottom than at the sides; a
+// radius above (width - 1) / 2 or (height - 1) / 2 is that, and one below
+// 0 is 0; and one of width or height 0 draws nothing, of width or height 1
+// a line of pixels. A regression test, written after the code; it does not
+// cover which pixels a corner covers but at radii 3 on 7 by 7.
+let roundedRectangles =
+    Test.Case(name = "drawRoundedRectangle's corners and its radii", run = fn() = {
+        let drawn =
+            fn(border : Int,
+               width : Int,
+               height : Int,
+               radiusX : Int,
+               radiusY : Int) : List(String) = {
+                let pixmap = blank(width + 2, height + 2);
+                let context = create();
+                setBorderWidth(context, border);
+                Epx.drawRoundedRectangle(pixmap, context, 1, 1, width, height, radiusX, radiusY);
+                rows(pixmap)
+            };
+        Test.equal(#(drawn(0, 6, 4, 0, 0),
+                     drawn(1, 6, 5, 0, 0),
+                     drawn(0, 7, 7, 3, 3),
+                     drawn(0, 7, 7, 9, 4) == drawn(0, 7, 7, 3, 3),
+                     drawn(0, 12, 8, 6, 9) == drawn(0, 12, 8, 5, 3),
+                     drawn(0, 12, 8, 4, 3) == drawn(0, 12, 8, 5, 3),
+                     drawn(0, 4, 0, 1, 1),
+                     drawn(0, 4, 1, 1, 1),
+                     drawn(0, 6, 4, -5, -5) == drawn(0, 6, 4, 0, 0)),
+                   #(["........", ".RRRRRR.", ".RRRRRR.", ".RRRRRR.", ".RRRRRR.", "........"],
+                     ["........",
+                      ".BBBBBB.",
+                      ".BBBBBB.",
+                      ".BRRRRB.",
+                      ".BBBBBB.",
+                      ".BBBBBB.",
+                      "........"],
+                     [".........",
+                      "....R....",
+                      "..RRRRR..",
+                      ".RRRRRRR.",
+                      ".RRRRRRR.",
+                      ".RRRRRRR.",
+                      "..RRRRR..",
+                      "....R....",
+                      "........."],
+                     true,
+                     true,
+                     false,
+                     ["......", "......"],
+                     ["......", ".RRRR.", "......"],
+                     true))
+    })
+
+// design §9: a filled polygon is every pixel within its figure by the
+// even-odd rule, its edges among them, in the fill's color, a concave
+// figure and a square within a square among them; with no fill it is its
+// edges in the foreground; no points draw nothing, one point its pixel,
+// and two the line between them. A regression test, written after the code;
+// the outline's edges neither horizontal nor vertical, and its widths but
+// 1, are the next test's.
+let polygons = Test.Case(name = "drawPolygon fills by even-odd or draws its edges", run = fn() = {
+    let drawn =
+        fn(fill : Optional(Style), size : Int, points : List(#(Int, Int))) : List(String) = {
+            let pixmap = blank(size, size);
+            let context = create();
+            setFillStyle(context, fill);
+            Epx.drawPolygon(pixmap, context, points);
+            rows(pixmap)
+        };
+    let square = [#(1, 1), #(4, 1), #(4, 4), #(1, 4)];
+    let concave = [#(0, 0), #(6, 0), #(6, 6), #(3, 3), #(0, 6)];
+    let nested =
+        [#(0, 0), #(8, 0), #(8, 8), #(0, 8), #(0, 0), #(2, 2), #(6, 2), #(6, 6), #(2, 6), #(2, 2)];
+    let full = "RRRRRRRRR";
+    let holed = "RRR...RRR";
+    Test.equal([drawn(Some(Solid), 6, square),
+                drawn(Some(Solid), 7, concave),
+                drawn(Some(Solid), 9, nested),
+                drawn(None, 6, square),
+                drawn(Some(Solid), 3, []),
+                drawn(None, 3, []),
+                drawn(Some(Solid), 3, [#(1, 1)]),
+                drawn(None, 3, [#(1, 1)]),
+                drawn(None, 3, [#(0, 1), #(2, 1)])],
+               [["......", ".RRRR.", ".RRRR.", ".RRRR.", ".RRRR.", "......"],
+                ["RRRRRRR", "RRRRRRR", "RRRRRRR", "RRRRRRR", "RRR.RRR", "RR...RR", "R.....R"],
+                [full, full, full, holed, holed, holed, full, full, full],
+                ["......", ".LLLL.", ".L..L.", ".L..L.", ".LLLL.", "......"],
+                ["...", "...", "..."],
+                ["...", "...", "..."],
+                ["...", ".R.", "..."],
+                ["...", ".L.", "..."],
+                ["...", "LLL", "..."]])
+})
+
+// design §9: a polygon's edge with no fill is one pixel wide where the
+// line's width is 0 or 1, and one neither horizontal nor vertical leaves
+// out its upper end, whichever end the list names first, so that a concave
+// outline lacks the vertex its two diagonal edges share; and one point at
+// a line's width of 3 is a line of no length, three pixels down. A
+// regression test, written after the code; it does not cover a diagonal
+// edge wider than 1.
+let polygonOutlines =
+    Test.Case(name = "a polygon's diagonal edge leaves out its upper end", run = fn() = {
+        let drawn = fn(width : Int, size : Int, points : List(#(Int, Int))) : List(String) = {
+            let pixmap = blank(size, size);
+            let context = create();
+            setFillStyle(context, None);
+            setLineWidth(context, width);
+            Epx.drawPolygon(pixmap, context, points);
+            rows(pixmap)
+        };
+        let diagonal = ["....", ".L..", "..L.", "...L"];
+        Test.equal([drawn(1, 7, [#(0, 0), #(6, 0), #(6, 6), #(3, 3), #(0, 6)]),
+                    drawn(1, 4, [#(0, 0), #(3, 3)]),
+                    drawn(1, 4, [#(3, 3), #(0, 0)]),
+                    drawn(0, 5, [#(1, 1), #(3, 1), #(3, 3), #(1, 3)]),
+                    drawn(3, 7, [#(3, 3)])],
+                   [["LLLLLLL", "L.....L", "L.....L", "L.....L", "L.L.L.L", "LL...LL", "L.....L"],
+                    diagonal,
+                    diagonal,
+                    [".....", ".LLL.", ".L.L.", ".LLL.", "....."],
+                    [".......", ".......", "...L...", "...L...", "...L...", ".......", "......."]])
+    })
+
 // design §9: a triangle with a fill covers its corners and edges, and with
 // no fill is its edges in the foreground, one pixel wide where the line's
 // width is 0 or 1.
@@ -909,7 +1050,9 @@ let triangles = Test.Case(name = "drawTriangle fills or draws its edges", run = 
                [["RRRRR", "RRRR.", "RRR..", "RR...", "R...."], edges, edges])
 })
 
-// design §9: every drawing function writes only within the clip.
+// design §9: every drawing function writes only within the clip. The
+// rounded rectangle's and the polygon's cases are regression cases, written
+// after the code.
 let drawingClipped = Test.Case(name = "the drawing functions write within the clip", run = fn() = {
     let context = create();
     let written = fn(draw : (Epx.Pixmap) -> Unit) : List(String) = {
@@ -926,18 +1069,23 @@ let drawingClipped = Test.Case(name = "the drawing functions write within the cl
                  fn(pixmap) = Epx.drawLine(pixmap, context, 0, 0, 3, 3),
                  fn(pixmap) = Epx.drawRectangle(pixmap, context, 0, 0, 4, 4),
                  fn(pixmap) = Epx.drawEllipse(pixmap, context, 0, 0, 3, 3),
-                 fn(pixmap) = Epx.drawTriangle(pixmap, context, 0, 0, 3, 0, 0, 3)];
+                 fn(pixmap) = Epx.drawTriangle(pixmap, context, 0, 0, 3, 0, 0, 3),
+                 fn(pixmap) = Epx.drawRoundedRectangle(pixmap, context, 0, 0, 4, 4, 0, 0),
+                 fn(pixmap) = Epx.drawPolygon(pixmap, context, [#(0, 0), #(3, 0), #(0, 3)])];
     Test.equal(List.map(draws, written),
                [["....", ".L..", "....", "...."],
                 ["....", ".L..", "..L.", "...."],
                 ["....", ".RR.", ".RR.", "...."],
                 ["....", ".RR.", ".R..", "...."],
+                ["....", ".RR.", ".R..", "...."],
+                ["....", ".RR.", ".RR.", "...."],
                 ["....", ".RR.", ".R..", "...."]])
 })
 
-// design §10: the library refuses a coordinate, a width and a channel past
-// their bounds before epx is called. The ellipse's width among them is a
-// regression case, written after the code.
+// design §10: the library refuses a coordinate, a polygon's among them, a
+// width, a radius and a channel past their bounds before epx is called.
+// The ellipse's width, the rounded rectangle's and the polygon's cases
+// among them are regression cases, written after the code.
 let refused = Test.Case(name = "the drawing functions' and the context's faults", run = fn() = {
     let pixmap = blank(2, 2);
     let context = create();
@@ -946,6 +1094,9 @@ let refused = Test.Case(name = "the drawing functions' and the context's faults"
     let coordinateCause = "a coordinate is beyond 16777216";
     let extentCause = "a width or height is beyond 16777216";
     let channelCause = "a channel of a Color is outside 0 to 255";
+    let rounded =
+        fn(x : Int, width : Int, radiusX : Int, radiusY : Int) : Unit =
+            Epx.drawRoundedRectangle(pixmap, context, x, 0, width, 1, radiusX, radiusY);
     Test.equal([Test.faults(fn() = Epx.drawPoint(pixmap, context, 16777217, 0), coordinateCause),
                 Test.faults(fn() = Epx.drawLine(pixmap, context, 0, 0, 0, -16777217),
                             coordinateCause),
@@ -961,6 +1112,14 @@ let refused = Test.Case(name = "the drawing functions' and the context's faults"
                 Test.faults(fn() = setBorderWidth(context, 16777217), extentCause),
                 Test.faults(fn() = setFillColor(context, tooRed), channelCause),
                 Test.faults(fn() = setBorderColor(context, unseen), channelCause),
-                Test.faults(fn() = setForeground(context, tooRed), channelCause)],
-               List.repeat(Test.Passed, 11))
+                Test.faults(fn() = setForeground(context, tooRed), channelCause),
+                Test.faults(fn() = rounded(16777217, 1, 0, 0), coordinateCause),
+                Test.faults(fn() = rounded(0, 16777217, 0, 0), extentCause),
+                Test.faults(fn() = rounded(0, 1, 16777217, 0), extentCause),
+                Test.faults(fn() = rounded(0, 1, 0, 16777217), extentCause),
+                Test.faults(fn() = Epx.drawPolygon(pixmap, context, [#(0, 0), #(16777217, 0)]),
+                            coordinateCause),
+                Test.faults(fn() = Epx.drawPolygon(pixmap, context, [#(0, -16777217)]),
+                            coordinateCause)],
+               List.repeat(Test.Passed, 17))
 })

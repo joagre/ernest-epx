@@ -7,20 +7,25 @@ drawing functions draw with, held outside any process over epx's
 graphics context.
 
 Use it to make the `Epx.Context` that `Epx.drawPoint`, `Epx.drawLine`,
-`Epx.drawRectangle`, `Epx.drawEllipse` and `Epx.drawTriangle` take, and
-to set what they draw with. It is in the library `Epx` is in, and a
-program that has `Epx` on its load path has it.
+`Epx.drawRectangle`, `Epx.drawEllipse`, `Epx.drawRoundedRectangle`,
+`Epx.drawTriangle` and `Epx.drawPolygon` take, and to set what they draw
+with. It is in the library `Epx` is in, and a program that has `Epx` on
+its load path has it.
 
 **The keys.** A context has eight keys, each set by its setter and read
 by its getter:
 
-- the fill's style and color, which `drawRectangle`, `drawEllipse` and
-  `drawTriangle` fill with; a fill style of `None` is no fill;
+- the fill's style and color, which `drawRectangle`, `drawEllipse`,
+  `drawRoundedRectangle`, `drawTriangle` and `drawPolygon` fill with; a
+  fill style of `None` is no fill;
 - the line's style and width, which `drawLine` draws with, `drawPoint`
-  the style alone, and `drawTriangle` its edges where it has no fill;
-- the border's style, color and width, which `drawRectangle` and
-  `drawEllipse` draw their border with, within the shape;
-- the foreground, the color of a point, a line and a triangle's edges.
+  the style alone, and `drawTriangle` and `drawPolygon` their edges
+  where they have no fill;
+- the border's style, color and width, which `drawRectangle`,
+  `drawEllipse` and `drawRoundedRectangle` draw their border with,
+  within the shape;
+- the foreground, the color of a point, a line, and a triangle's and a
+  polygon's edges.
 
 **The defaults.** `create` makes a context of epx's defaults: a fill of
 `Solid` in opaque red, a line of `Solid` one pixel wide, a border of
@@ -239,7 +244,8 @@ Epx.Gc.fillColor(Epx.Gc.create())
 Epx.Gc.setLineStyle(context : Epx.Context, style : Style) : Unit
 ```
 
-Sets the style a point, a line and a triangle's edges are drawn by.
+Sets the style a point, a line, and a triangle's and a polygon's edges
+are drawn by.
 
 ### Examples
 
@@ -258,7 +264,8 @@ Sets the style a point, a line and a triangle's edges are drawn by.
 Epx.Gc.lineStyle(context : Epx.Context) : Style
 ```
 
-The style a point, a line and a triangle's edges are drawn by.
+The style a point, a line, and a triangle's and a polygon's edges are
+drawn by.
 
 ### Errors
 
@@ -278,8 +285,8 @@ Epx.Gc.lineStyle(Epx.Gc.create())
 Epx.Gc.setLineWidth(context : Epx.Context, width : Int) : Unit
 ```
 
-Sets the width a line and a triangle's edges are drawn in, in pixels. A
-width below 0 is 0.
+Sets the width a line, and a triangle's and a polygon's edges, are drawn
+in, in pixels. A width below 0 is 0.
 
 ### Errors
 
@@ -303,7 +310,8 @@ beyond 16777216`.
 Epx.Gc.lineWidth(context : Epx.Context) : Int
 ```
 
-The width a line and a triangle's edges are drawn in, in pixels.
+The width a line, and a triangle's and a polygon's edges, are drawn in,
+in pixels.
 
 ### Examples
 
@@ -318,7 +326,8 @@ Epx.Gc.lineWidth(Epx.Gc.create())
 Epx.Gc.setBorderStyle(context : Epx.Context, style : Style) : Unit
 ```
 
-Sets the style the border of a rectangle and of an ellipse is drawn by.
+Sets the style the border of a rectangle, a rounded rectangle and an
+ellipse is drawn by.
 
 ### Examples
 
@@ -337,7 +346,8 @@ Sets the style the border of a rectangle and of an ellipse is drawn by.
 Epx.Gc.borderStyle(context : Epx.Context) : Style
 ```
 
-The style the border of a rectangle and of an ellipse is drawn by.
+The style the border of a rectangle, a rounded rectangle and an ellipse
+is drawn by.
 
 ### Errors
 
@@ -357,7 +367,8 @@ Epx.Gc.borderStyle(Epx.Gc.create())
 Epx.Gc.setBorderColor(context : Epx.Context, color : Epx.Color) : Unit
 ```
 
-Sets the color the border of a rectangle and of an ellipse is drawn in.
+Sets the color the border of a rectangle, a rounded rectangle and an
+ellipse is drawn in.
 
 ### Errors
 
@@ -381,7 +392,8 @@ channel of a Color is outside 0 to 255`.
 Epx.Gc.borderColor(context : Epx.Context) : Epx.Color
 ```
 
-The color the border of a rectangle and of an ellipse is drawn in.
+The color the border of a rectangle, a rounded rectangle and an ellipse
+is drawn in.
 
 ### Examples
 
@@ -396,9 +408,9 @@ Epx.Gc.borderColor(Epx.Gc.create())
 Epx.Gc.setBorderWidth(context : Epx.Context, width : Int) : Unit
 ```
 
-Sets the width of the border of a rectangle and of an ellipse, in
-pixels. A width below 0 is 0, and a border of width 0 is none where the
-shape has a fill.
+Sets the width of the border of a rectangle, a rounded rectangle and an
+ellipse, in pixels. A width below 0 is 0, and a border of width 0 is
+none where the shape has a fill.
 
 ### Errors
 
@@ -422,7 +434,8 @@ beyond 16777216`.
 Epx.Gc.borderWidth(context : Epx.Context) : Int
 ```
 
-The width of the border of a rectangle and of an ellipse, in pixels.
+The width of the border of a rectangle, a rounded rectangle and an
+ellipse, in pixels.
 
 ### Examples
 
@@ -437,7 +450,8 @@ Epx.Gc.borderWidth(Epx.Gc.create())
 Epx.Gc.setForeground(context : Epx.Context, color : Epx.Color) : Unit
 ```
 
-Sets the color a point, a line and a triangle's edges are drawn in.
+Sets the color a point, a line, and a triangle's and a polygon's edges
+are drawn in.
 
 ### Errors
 
@@ -461,7 +475,8 @@ channel of a Color is outside 0 to 255`.
 Epx.Gc.foreground(context : Epx.Context) : Epx.Color
 ```
 
-The color a point, a line and a triangle's edges are drawn in.
+The color a point, a line, and a triangle's and a polygon's edges are
+drawn in.
 
 ### Examples
 
