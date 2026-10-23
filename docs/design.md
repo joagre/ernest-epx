@@ -208,7 +208,9 @@ Its border and its fill are the rectangle's above, the border within the shape, 
 
 A polygon is the closed figure of its points, each joined to the next and the last to the first. With a fill it is every pixel within the figure by the even-odd rule, the edges among them, in the fill's color by the fill's style.
 
-With no fill it is its edges, each a line from point to point in the foreground by the line's style and width, one pixel wide where the width is 0 or 1 as a triangle's edges are; an edge that is neither horizontal nor vertical leaves out its upper end, the point of the smaller `y`, whichever end the list names first (`epx_bugs.md` 35). A polygon of no points draws nothing, of one point a line of no length, that pixel where the line's width is at most 1, and of two the line between them. A filled polygon costs its height in rows, within the clip or not (`epx_bugs.md` 30).
+With no fill it is its edges, each a line from point to point in the foreground by the line's style and width, one pixel wide where the width is 0 or 1 as a triangle's edges are; an edge that is neither horizontal nor vertical leaves out its upper end, the point of the smaller `y`, whichever end the list names first (`epx_bugs.md` 35).
+
+A polygon of no points draws nothing, of one point a line of no length, that pixel where the line's width is at most 1, and of two the line between them. A filled polygon costs its height in rows, within the clip or not (`epx_bugs.md` 30).
 
 A triangle with a fill is every pixel within its three corners, its edges among them, in the fill's color by the fill's style. With no fill it is its three edges, each a line from corner to corner in the foreground by the line's style, one pixel wide where the line's width is 0 or 1; where the width is above 1, which pixels the edges cover is not stated.
 
