@@ -5,8 +5,8 @@
 #   make          builds: the floor checked, lib/ filled, each dependency and
 #                 then the program compiled
 #   make test     the layout, the tests of every module, the documents and
-#                 the design's citations, test/ where it exists, and each program of examples/ where
-#                 it exists, built and run
+#                 the design's citations, test/ where it exists, and each
+#                 program of examples/ where it exists, built and run
 #   make run      runs the program through its launcher
 #   make lib      fills lib/: each dependency fetched and unpacked where it is
 #                 not there, and each Erlang application under erl/ built by
