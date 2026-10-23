@@ -40,9 +40,7 @@
 ///
 /// **Bounds.** A window's coordinates are from -32767 to 32767, and its
 /// width and height from 1 to 32767, one below 1 being 1. The place is
-/// asked of the window manager, which may put the window elsewhere. A
-/// pixmap in `Rgba` or `Abgr` is not shown: `show` and `showArea` fault on
-/// it.
+/// asked of the window manager, which may put the window elsewhere.
 ///
 /// **A call's cost.** A call answers at once. The backend copies the whole
 /// window to the screen for each rectangle shown, and rectangles shown
@@ -111,9 +109,9 @@
 /// 32767, with the cause `a window's width or height is beyond 32767`.
 /// Faults where no display can be opened, `DISPLAY` unset or naming no X
 /// server, with epx's cause: `foreign function epx:window_attach/1 raised
-/// error:badarg`. Faults where tree_db, which epx's application depends
-/// on, is not on the load path, with epx's cause from `epx:start/0`, a
-/// `badmatch` naming `tree_db.app`.
+/// error:{no_backend,default}`. Faults where tree_db, which epx's
+/// application depends on, is not on the load path, with epx's cause from
+/// `epx:start/0`, a `badmatch` naming `tree_db.app`.
 ///
 /// ### Examples
 ///
@@ -127,7 +125,7 @@ export fn open(x : Int, y : Int, width : Int, height : Int) : Epx.Window = {
     let rows = windowExtent(height);
     rawStart();
     // No event flag: epx sends the window's maker no key and no button,
-    // its close button alone excepted (design §11, epx_bugs.md 16).
+    // its close button alone excepted (design §11).
     let window = rawCreate(left, top, columns, rows);
     rawAttach(window);
     window
@@ -151,8 +149,8 @@ foreign fn rawAttach(window : Epx.Window) : Unit =
 /// Epx.Window.close(Epx.Window.open(100, 100, 400, 300))
 /// ```
 export fn close(window : Epx.Window) : Unit =
-    // Unmapped and not detached: a draw epx takes after a detach crashes
-    // the node (design §11, epx_bugs.md 17).
+    // Unmapped and not detached, so that a `show` after `close` is taken
+    // the same way every time, drawn off the screen (design §11).
     rawAdjust(window, [#(Foreign.atom("show"), false)])
 
 foreign fn rawAdjust(window : Epx.Window, parameters : List(#(Foreign.Term, Bool))) : Unit =
@@ -169,12 +167,9 @@ foreign fn rawAdjust(window : Epx.Window, parameters : List(#(Foreign.Term, Bool
 ///
 /// ### Errors
 ///
-/// Faults on a pixmap in `Rgba` or `Abgr`, with the cause `a window shows
-/// no pixmap in Rgba or Abgr`, and on one that foreign code made in a
-/// format `Epx.Format` does not name, with the cause `the pixmap's format is
-/// none of Format's`. Faults where two processes show one pixmap for its
-/// first time at once, in the one that comes second, with epx's cause:
-/// `foreign function epx:pixmap_attach/1 raised error:badarg`.
+/// Faults where two processes show one pixmap for its first time at once,
+/// in the one that comes second, with epx's cause: `foreign function
+/// epx:pixmap_attach/1 raised error:badarg`.
 ///
 /// ### Examples
 ///
@@ -202,12 +197,9 @@ export fn show(window : Epx.Window, pixmap : Epx.Pixmap) : Unit =
 /// Faults on a coordinate outside -16777216 to 16777216, with the cause `a
 /// coordinate is beyond 16777216`, and on a width or a height above
 /// 16777216, with the cause `a width or height is beyond 16777216`. Faults
-/// on a pixmap in `Rgba` or `Abgr`, with the cause `a window shows no
-/// pixmap in Rgba or Abgr`, and on one that foreign code made in a format
-/// `Epx.Format` does not name, with the cause `the pixmap's format is none
-/// of Format's`. Faults where two processes show one pixmap for its first
-/// time at once, in the one that comes second, with epx's cause: `foreign
-/// function epx:pixmap_attach/1 raised error:badarg`.
+/// where two processes show one pixmap for its first time at once, in the
+/// one that comes second, with epx's cause: `foreign function
+/// epx:pixmap_attach/1 raised error:badarg`.
 ///
 /// ### Examples
 ///
@@ -242,18 +234,12 @@ export fn showArea(window : Epx.Window,
             withinReach(top, rows))
 }
 
-// The pixmap attached to epx's backend where it is not, once its format is
-// one the window shows (design §11, epx_bugs.md 18).
+// The pixmap attached to epx's backend where it is not (design §11).
 fn attach(pixmap : Epx.Pixmap) : Unit =
-    match Epx.format(pixmap) {
-        Epx.Rgba or Epx.Abgr ->
-            fault("a window shows no pixmap in Rgba or Abgr")
-      | Epx.Argb or Epx.Bgra or Epx.Rgb or Epx.Bgr ->
-            if rawBackend(pixmap, Foreign.atom("backend")) == Foreign.atom("undefined") then
-                rawAttachPixmap(pixmap)
-            else
-                Unit
-    }
+    if rawBackend(pixmap, Foreign.atom("backend")) == Foreign.atom("undefined") then
+        rawAttachPixmap(pixmap)
+    else
+        Unit
 
 foreign fn rawBackend(pixmap : Epx.Pixmap, key : Foreign.Term) : Foreign.Term =
     "epx:pixmap_info_/2"
@@ -301,8 +287,8 @@ fn windowExtent(value : Int) : Int =
 
 // The count of a rectangle's columns or rows from `origin` cut where it
 // would reach past the last column or row a window has, so that no row is
-// drawn past 65535, which the X protocol takes back into the window (design
-// §11, epx_bugs.md 20).
+// drawn past 65535, which the X protocol takes back into the window
+// (design §11).
 fn withinReach(origin : Int, count : Int) : Int =
     Int.max(0, Int.min(origin + count, windowLimit) - origin)
 
@@ -345,22 +331,18 @@ let openRefused = Test.Case(name = "open's own faults", run = fn() = {
 })
 
 // design §12: `showArea` refuses a coordinate and a width or a height past
-// 16777216, and `show` and `showArea` a pixmap in `Rgba` or `Abgr`, before
-// epx is called; the window is one `window_create/4` makes with no display.
-let showRefused = Test.Case(name = "show's and showArea's own faults", run = fn() = {
+// 16777216 before epx is called; the window is one `window_create/4` makes
+// with no display.
+let showRefused = Test.Case(name = "showArea's own faults", run = fn() = {
     let window = rawCreate(0, 0, 1, 1);
     let pixmap = Epx.create(1, 1, Epx.Rgb);
     let coordinateCause = "a coordinate is beyond 16777216";
     let extentCause = "a width or height is beyond 16777216";
-    let formatCause = "a window shows no pixmap in Rgba or Abgr";
     Test.equal([Test.faults(fn() = showArea(window, pixmap, -16777217, 0, 1, 1), coordinateCause),
                 Test.faults(fn() = showArea(window, pixmap, 0, 16777217, 1, 1), coordinateCause),
                 Test.faults(fn() = showArea(window, pixmap, 0, 0, 16777217, 1), extentCause),
-                Test.faults(fn() = showArea(window, pixmap, 0, 0, 1, 16777217), extentCause),
-                Test.faults(fn() = show(window, Epx.create(1, 1, Epx.Rgba)), formatCause),
-                Test.faults(fn() = showArea(window, Epx.create(1, 1, Epx.Abgr), 0, 0, 1, 1),
-                            formatCause)],
-               List.repeat(Test.Passed, 6))
+                Test.faults(fn() = showArea(window, pixmap, 0, 0, 1, 16777217), extentCause)],
+               List.repeat(Test.Passed, 4))
 })
 
 // design §11, §12: within their bounds the window's checks answer what they

@@ -27,10 +27,9 @@
 // - A context is changed in place, as a pixmap is (*In place and shared*):
 //   `face` sets the fill's color to the ink once the dial is drawn, and the
 //   hands and the cap drawn after it are filled in the ink.
-// - A hand is a triangle and not a wide line: a line wider than one pixel
-//   that is neither horizontal nor vertical lies beside its ends, not
-//   centered on them (`Epx.drawLine`), where a triangle's corners are its
-//   own.
+// - A hand is a triangle and not a wide line: it tapers from its width at
+//   the center to a point at its tip, which a triangle draws
+//   (`Epx.drawTriangle`) and a line, one width from end to end, does not.
 // - `hours`, `minutes` and `seconds` take the time apart, and `pointAt`
 //   places a point on the dial: pure arithmetic beside the parts that act,
 //   `main`, `picture`, `write`, `face`, `drawTick`, `drawHand`,

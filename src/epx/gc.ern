@@ -124,8 +124,7 @@ export type Style =
 /// ```
 export fn create() : Epx.Context = {
     let context = rawCreate();
-    // epx's own context draws a border outside its rectangle, a pixel off
-    // (design §8, epx_bugs.md 11).
+    // epx's own context places a border outside its shape (design §1, §8).
     setBorderStyle(context, Solid);
     context
 }
@@ -330,10 +329,9 @@ export fn setBorderStyle(context : Epx.Context, style : Style) : Unit =
 /// // => Solid
 /// ```
 export fn borderStyle(context : Epx.Context) : Style = {
-    // epx answers the placement inside as both inside and center
-    // (design §8, epx_bugs.md 11).
+    // The placement within the shape left out (design §8).
     let placed = rawGetStyle(context, Foreign.atom("border_style"));
-    styleOf(List.filter(placed, fn(atom) = atom != inside && atom != center))
+    styleOf(List.filter(placed, fn(atom) = atom != inside))
 }
 
 /// Sets the color the border of a rectangle and of an ellipse is drawn in.
@@ -489,11 +487,8 @@ fn styleOf(atoms : List(Foreign.Term)) : Style =
 
 let styles : List(Style) = [Solid, Blend, Antialiased]
 
-// The placement of a border within its shape, and the atom epx answers
-// beside it (design §8).
+// The placement of a border within its shape (design §8).
 let inside : Foreign.Term = Foreign.atom("inside")
-
-let center : Foreign.Term = Foreign.atom("center")
 
 // A color as epx answers it, `{A, R, G, B}`.
 fn colorOf(term : #(Int, Int, Int, Int)) : Epx.Color =
@@ -663,8 +658,7 @@ let stylesCross = Test.Case(name = "each style crosses as its atoms", run = fn()
         setLineStyle(context, style);
         setBorderStyle(context, style);
         #(read("line_style") == styleAtoms(style),
-          List.filter(read("border_style"), fn(atom) = atom != center)
-              == styleAtoms(style) <> [inside])
+          read("border_style") == styleAtoms(style) <> [inside])
     });
     setFillStyle(context, None);
     Test.equal(#(crossed,
@@ -847,6 +841,24 @@ let rectangles = Test.Case(name = "drawRectangle's border lies within it", run =
                 ["........", ".BBBBBB.", ".BBBBBB.", ".BBBBBB.", ".BBBBBB.", "........"]])
 })
 
+// design §9: a border wider than its rectangle's width and height writes
+// nothing outside the rectangle, with a fill and with none. A regression
+// test, written after the code; it does not cover a border wider than the
+// width alone or the height alone.
+let borderWider =
+    Test.Case(name = "a border wider than its rectangle stays within it", run = fn() = {
+        let drawn = fn(fill : Optional(Style)) : List(String) = {
+            let pixmap = blank(7, 7);
+            let context = create();
+            setFillStyle(context, fill);
+            setBorderWidth(context, 5);
+            Epx.drawRectangle(pixmap, context, 2, 2, 3, 3);
+            rows(pixmap)
+        };
+        let within = [".......", ".......", "..BBB..", "..BBB..", "..BBB..", ".......", "......."];
+        Test.equal(List.map([Some(Solid), None], drawn), [within, within])
+    })
+
 // design §9: an ellipse covers one more column and row than an even width
 // and height, draws nothing below a width or height of 2, and its border
 // is a ring the border's width and one across.
@@ -923,8 +935,9 @@ let drawingClipped = Test.Case(name = "the drawing functions write within the cl
                 ["....", ".RR.", ".R..", "...."]])
 })
 
-// design §10: the library refuses a coordinate, a width, an ellipse's
-// size and a channel past their bounds before epx is called.
+// design §10: the library refuses a coordinate, a width and a channel past
+// their bounds before epx is called. The ellipse's width among them is a
+// regression case, written after the code.
 let refused = Test.Case(name = "the drawing functions' and the context's faults", run = fn() = {
     let pixmap = blank(2, 2);
     let context = create();
@@ -942,8 +955,8 @@ let refused = Test.Case(name = "the drawing functions' and the context's faults"
                             extentCause),
                 Test.faults(fn() = Epx.drawEllipse(pixmap, context, -16777217, 0, 1, 1),
                             coordinateCause),
-                Test.faults(fn() = Epx.drawEllipse(pixmap, context, 0, 0, 131072, 1),
-                            "an ellipse's width or height is beyond 131071"),
+                Test.faults(fn() = Epx.drawEllipse(pixmap, context, 0, 0, 16777217, 1),
+                            extentCause),
                 Test.faults(fn() = setLineWidth(context, 16777217), extentCause),
                 Test.faults(fn() = setBorderWidth(context, 16777217), extentCause),
                 Test.faults(fn() = setFillColor(context, tooRed), channelCause),

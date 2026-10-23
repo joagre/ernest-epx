@@ -54,10 +54,8 @@
 /// stated: set the source's clip to the whole pixmap first.
 ///
 /// **Rectangles.** A rectangle that reaches outside what a function reads
-/// or writes is cut to the part within it. The exception is a source
-/// rectangle that begins left of or above the source's clip: it is cut to
-/// the clip and lands at the target's corner all the same, as `copyArea`
-/// shows.
+/// or writes is cut to the part within it, and each pixel that remains
+/// lands at its place.
 ///
 /// **Colors.** A `Color` is four channels from 0 to 255, alpha 255 being
 /// opaque. A function given a channel outside that range faults, with the
@@ -596,14 +594,10 @@ export foreign fn copyTo(source : Pixmap, target : Pixmap) : Unit =
 
 /// Copies the source's rectangle at `sourceX`, `sourceY` into the target at
 /// `targetX`, `targetY`, in the target's format, its alpha copied and not
-/// blended. A pixel outside the target's clip is left out. The source and
-/// the target may be one pixmap, the two rectangles overlapping.
-///
-/// A rectangle that begins left of or above the source's clip is cut to the
-/// clip, and what remains lands at `targetX`, `targetY` all the same, short
-/// of its place by what was cut: a row copied from `sourceX` -1 to
-/// `targetX` 1 puts the source's pixel 0 at the target's 1, where its place
-/// is 2. Begin the source's rectangle within its clip.
+/// blended. A pixel outside the target's clip is left out, and one outside
+/// the source's clip is not read, the rest landing at their places all the
+/// same. The source and the target may be one pixmap, the two rectangles
+/// overlapping.
 ///
 /// ### Errors
 ///
@@ -624,8 +618,8 @@ export foreign fn copyTo(source : Pixmap, target : Pixmap) : Unit =
 /// // => <<0, 0, 0, 1, 1, 1, 2, 2, 2>>
 /// ```
 ///
-/// A row that begins left of the source's clip, its pixel 0 landing at the
-/// target's 1 and not at its 2:
+/// A row that begins left of the source's clip, cut to it, the source's
+/// pixel 0 landing at its place, the target's 2:
 ///
 /// ```ernest
 /// {
@@ -635,7 +629,7 @@ export foreign fn copyTo(source : Pixmap, target : Pixmap) : Unit =
 ///     Epx.copyArea(source, target, -1, 0, 1, 0, 3, 1);
 ///     Epx.getPixels(target, 0, 0, 4, 1)
 /// }
-/// // => <<0, 0, 0, 1, 1, 1, 2, 2, 2, 0, 0, 0>>
+/// // => <<0, 0, 0, 0, 0, 0, 1, 1, 1, 2, 2, 2>>
 /// ```
 export fn copyArea(source : Pixmap,
                    target : Pixmap,
@@ -1044,10 +1038,9 @@ foreign fn rawDrawPoint(pixmap : Pixmap, context : Context, x : Int, y : Int) : 
 /// horizontal or vertical line wider than 1 is the rectangle that runs from
 /// one end of the line to the other and is the line's width across,
 /// `width / 2` of its rows or columns above or left of the line, rounded
-/// down. Any other line wider than 1 is a band beside the line, not
-/// centered on it, and which pixels it covers is not stated. `Antialiased`
-/// smooths a line of width 1 that is neither horizontal nor vertical, and
-/// no other.
+/// down. Any other line wider than 1 is a band centered on the line, and
+/// which pixels it covers is not stated. `Antialiased` smooths a line of
+/// width 1 that is neither horizontal nor vertical, and no other.
 ///
 /// ### Errors
 ///
@@ -1074,46 +1067,7 @@ export fn drawLine(pixmap : Pixmap,
                    y1 : Int,
                    x2 : Int,
                    y2 : Int) : Unit =
-    drawBetween(pixmap, context, coordinate(x1), coordinate(y1), coordinate(x2), coordinate(y2))
-
-// The line once its ends are known to be within the bounds. epx draws a
-// horizontal or vertical line wider than 1 from where its band is cut to
-// the clip and as wide as the line whatever the cut, past the clip and past
-// the pixmap, so such a line is the rectangle epx means, filled (design §9,
-// epx_bugs.md 9). Any other line is epx's own, which leaves out its first
-// pixel where it is 1 wide (design §9, epx_bugs.md 25).
-fn drawBetween(pixmap : Pixmap, context : Context, x1 : Int, y1 : Int, x2 : Int, y2 : Int) : Unit =
-    if x1 == x2 || y1 == y2 then
-        drawAxial(pixmap, context, x1, y1, x2, y2, rawGetWidth(context, Foreign.atom("line_width")))
-    else
-        rawDrawLine(pixmap, context, x1, y1, x2, y2)
-
-fn drawAxial(pixmap : Pixmap,
-             context : Context,
-             x1 : Int,
-             y1 : Int,
-             x2 : Int,
-             y2 : Int,
-             width : Int) : Unit =
-    if width <= 1 then
-        rawDrawLine(pixmap, context, x1, y1, x2, y2)
-    else if y1 == y2 then
-        fillBand(pixmap, context, Int.min(x1, x2), y1 - width / 2, Int.abs(x2 - x1) + 1, width)
-    else
-        fillBand(pixmap, context, x1 - width / 2, Int.min(y1, y2), width, Int.abs(y2 - y1) + 1)
-
-// The rectangle at `x`, `y` filled in the context's foreground, by its
-// line's style (design §9).
-fn fillBand(pixmap : Pixmap,
-            context : Context,
-            x : Int,
-            y : Int,
-            width : Int,
-            height : Int) : Unit = {
-    let color = rawGetColor(context, Foreign.atom("foreground_color"));
-    let style = rawGetStyle(context, Foreign.atom("line_style"));
-    rawStyledArea(pixmap, x, y, width, height, color, style)
-}
+    rawDrawLine(pixmap, context, coordinate(x1), coordinate(y1), coordinate(x2), coordinate(y2))
 
 foreign fn rawDrawLine(pixmap : Pixmap,
                        context : Context,
@@ -1123,24 +1077,6 @@ foreign fn rawDrawLine(pixmap : Pixmap,
                        y2 : Int) : Unit =
     "epx:pixmap_draw_line/6"
 
-foreign fn rawGetWidth(context : Context, key : Foreign.Term) : Int =
-    "epx:gc_get/2"
-
-foreign fn rawGetColor(context : Context, key : Foreign.Term) : #(Int, Int, Int, Int) =
-    "epx:gc_get/2"
-
-foreign fn rawGetStyle(context : Context, key : Foreign.Term) : List(Foreign.Term) =
-    "epx:gc_get/2"
-
-foreign fn rawStyledArea(pixmap : Pixmap,
-                         x : Int,
-                         y : Int,
-                         width : Int,
-                         height : Int,
-                         color : #(Int, Int, Int, Int),
-                         style : List(Foreign.Term)) : Unit =
-    "epx:pixmap_fill_area/7"
-
 /// Draws the rectangle at `x`, `y` within the clip: its border, the
 /// outermost pixels of the rectangle, as many on each side as the
 /// context's border's width, in its border's color by its border's style;
@@ -1149,10 +1085,10 @@ foreign fn rawStyledArea(pixmap : Pixmap,
 /// and width.
 ///
 /// With a fill, a border of width 0 is none. With no fill, the border alone
-/// is drawn, one pixel wide where its width is 0. Where the border is wider
-/// than the rectangle's width or height, which pixels it writes outside the
-/// rectangle is not stated. A width or a height below 0 is 0, and a
-/// rectangle with no pixels draws nothing.
+/// is drawn, one pixel wide where its width is 0. A border wider than the
+/// rectangle's width or height writes nothing outside the rectangle. A
+/// width or a height below 0 is 0, and a rectangle with no pixels draws
+/// nothing.
 ///
 /// ### Errors
 ///
@@ -1209,15 +1145,15 @@ foreign fn rawDrawRectangle(pixmap : Pixmap,
 /// fill, the ring alone is drawn, one pixel across where the border's width
 /// is 0. `Antialiased` smooths the edge of the fill.
 ///
-/// A ring may leave a pixel undrawn near the top and the bottom where the
-/// border's width is 1, and a ring drawn by `Blend` or `Antialiased` blends
-/// a few of its pixels twice.
+/// A ring is malformed near the top and the bottom where the border's width
+/// is 1 or 2, a pixel of it outside the ellipse and the fill showing
+/// through below it, and past a radius of 65535.
 ///
 /// ### Errors
 ///
 /// Faults on a coordinate outside -16777216 to 16777216, with the cause `a
-/// coordinate is beyond 16777216`, and on a width or a height above 131071,
-/// with the cause `an ellipse's width or height is beyond 131071`.
+/// coordinate is beyond 16777216`, and on a width or a height above
+/// 16777216, with the cause `a width or height is beyond 16777216`.
 ///
 /// ### Examples
 ///
@@ -1239,25 +1175,7 @@ export fn drawEllipse(pixmap : Pixmap,
                       y : Int,
                       width : Int,
                       height : Int) : Unit =
-    rawDrawEllipse(pixmap,
-                   context,
-                   coordinate(x),
-                   coordinate(y),
-                   ellipseExtent(width),
-                   ellipseExtent(height))
-
-// The farthest an ellipse's width or height goes: epx computes the square
-// of a radius in 32 bits, and a ring past a radius of 65535 is drawn wrong
-// or never ends (design §10, epx_bugs.md 12).
-let ellipseLimit : Int = 131071
-
-// An ellipse's width or height as epx takes it: one below 0 is 0, and one
-// past the ellipse's limit faults (design §10).
-fn ellipseExtent(value : Int) : Int =
-    if value > ellipseLimit then
-        fault("an ellipse's width or height is beyond 131071")
-    else
-        extent(value)
+    rawDrawEllipse(pixmap, context, coordinate(x), coordinate(y), extent(width), extent(height))
 
 foreign fn rawDrawEllipse(pixmap : Pixmap,
                           context : Context,
@@ -1790,9 +1708,8 @@ let partlyOutside = Test.Case(name = "getPixels answers the part within the pixm
 })
 
 // design §4: in an area function a source pixel lands where its place in
-// the rectangle puts it, a rectangle of `copyArea` overlapping itself
-// among them; one that begins outside the source's clip is cut and lands
-// as if it were not.
+// the rectangle puts it, in a rectangle that begins outside the source's
+// clip and is cut to it, and in one of `copyArea` that overlaps itself.
 let landed = Test.Case(name = "an area function's pixels land in their places", run = fn() = {
     let source = create(3, 1, Rgb);
     putPixels(source, 0, 0, 3, 1, Rgb, <<1, 1, 1, 2, 2, 2, 3, 3, 3>>);
@@ -1801,7 +1718,7 @@ let landed = Test.Case(name = "an area function's pixels land in their places", 
     let overlapped = copy(source);
     copyArea(overlapped, overlapped, 0, 0, 1, 0, 2, 1);
     Test.equal(#(getPixels(target, 0, 0, 5, 1), getPixels(overlapped, 0, 0, 3, 1)),
-               #(<<0, 0, 0, 1, 1, 1, 2, 2, 2, 0, 0, 0, 0, 0, 0>>, <<1, 1, 1, 1, 1, 1, 2, 2, 2>>))
+               #(<<0, 0, 0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 0, 0, 0>>, <<1, 1, 1, 1, 1, 1, 2, 2, 2>>))
 })
 
 // design §5: the library refuses a coordinate, a size and a pixmap's

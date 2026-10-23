@@ -58,10 +58,8 @@ what it writes from a source whose clip is not the whole pixmap is not
 stated: set the source's clip to the whole pixmap first.
 
 **Rectangles.** A rectangle that reaches outside what a function reads
-or writes is cut to the part within it. The exception is a source
-rectangle that begins left of or above the source's clip: it is cut to
-the clip and lands at the target's corner all the same, as `copyArea`
-shows.
+or writes is cut to the part within it, and each pixel that remains
+lands at its place.
 
 **Colors.** A `Color` is four channels from 0 to 255, alpha 255 being
 opaque. A function given a channel outside that range faults, with the
@@ -561,14 +559,10 @@ Epx.copyArea(source : Pixmap, target : Pixmap, sourceX : Int, sourceY : Int, tar
 
 Copies the source's rectangle at `sourceX`, `sourceY` into the target at
 `targetX`, `targetY`, in the target's format, its alpha copied and not
-blended. A pixel outside the target's clip is left out. The source and
-the target may be one pixmap, the two rectangles overlapping.
-
-A rectangle that begins left of or above the source's clip is cut to the
-clip, and what remains lands at `targetX`, `targetY` all the same, short
-of its place by what was cut: a row copied from `sourceX` -1 to
-`targetX` 1 puts the source's pixel 0 at the target's 1, where its place
-is 2. Begin the source's rectangle within its clip.
+blended. A pixel outside the target's clip is left out, and one outside
+the source's clip is not read, the rest landing at their places all the
+same. The source and the target may be one pixmap, the two rectangles
+overlapping.
 
 ### Errors
 
@@ -589,8 +583,8 @@ coordinate is beyond 16777216`, and on a width or a height above
 // => <<0, 0, 0, 1, 1, 1, 2, 2, 2>>
 ```
 
-A row that begins left of the source's clip, its pixel 0 landing at the
-target's 1 and not at its 2:
+A row that begins left of the source's clip, cut to it, the source's
+pixel 0 landing at its place, the target's 2:
 
 ```ernest
 {
@@ -600,7 +594,7 @@ target's 1 and not at its 2:
     Epx.copyArea(source, target, -1, 0, 1, 0, 3, 1);
     Epx.getPixels(target, 0, 0, 4, 1)
 }
-// => <<0, 0, 0, 1, 1, 1, 2, 2, 2, 0, 0, 0>>
+// => <<0, 0, 0, 0, 0, 0, 1, 1, 1, 2, 2, 2>>
 ```
 
 ## Epx.scale
@@ -882,13 +876,14 @@ foreground, by its line's style, as wide as its line's width, within the
 clip. It reads the context's foreground, line style and line width.
 
 A line of width 0 draws nothing, and one of width 1 every pixel from one
-end to the other, both ends among them. A horizontal or vertical line
-wider than 1 is the rectangle that runs from one end of the line to the
-other and is the line's width across, `width / 2` of its rows or columns
-above or left of the line, rounded down. Any other line wider than 1 is
-a band beside the line, not centered on it, and which pixels it covers
-is not stated. `Antialiased` smooths a line of width 1 that is neither
-horizontal nor vertical, and no other.
+end to the other, both ends among them where it is horizontal or
+vertical; one that is neither leaves out its first pixel, `x1`, `y1`. A
+horizontal or vertical line wider than 1 is the rectangle that runs from
+one end of the line to the other and is the line's width across,
+`width / 2` of its rows or columns above or left of the line, rounded
+down. Any other line wider than 1 is a band centered on the line, and
+which pixels it covers is not stated. `Antialiased` smooths a line of
+width 1 that is neither horizontal nor vertical, and no other.
 
 ### Errors
 
@@ -924,10 +919,10 @@ reads the context's fill style and color and its border style, color
 and width.
 
 With a fill, a border of width 0 is none. With no fill, the border alone
-is drawn, one pixel wide where its width is 0. Where the border is wider
-than the rectangle's width or height, which pixels it writes outside the
-rectangle is not stated. A width or a height below 0 is 0, and a
-rectangle with no pixels draws nothing.
+is drawn, one pixel wide where its width is 0. A border wider than the
+rectangle's width or height writes nothing outside the rectangle. A
+width or a height below 0 is 0, and a rectangle with no pixels draws
+nothing.
 
 ### Errors
 
@@ -975,15 +970,15 @@ by the fill's style. With a fill, a border of width 0 is none. With no
 fill, the ring alone is drawn, one pixel across where the border's width
 is 0. `Antialiased` smooths the edge of the fill.
 
-A ring may leave a pixel undrawn near the top and the bottom where the
-border's width is 1, and a ring drawn by `Blend` or `Antialiased` blends
-a few of its pixels twice.
+A ring is malformed near the top and the bottom where the border's width
+is 1 or 2, a pixel of it outside the ellipse and the fill showing
+through below it, and past a radius of 65535.
 
 ### Errors
 
 Faults on a coordinate outside -16777216 to 16777216, with the cause `a
-coordinate is beyond 16777216`, and on a width or a height above 131071,
-with the cause `an ellipse's width or height is beyond 131071`.
+coordinate is beyond 16777216`, and on a width or a height above
+16777216, with the cause `a width or height is beyond 16777216`.
 
 ### Examples
 

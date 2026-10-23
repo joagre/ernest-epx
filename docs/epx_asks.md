@@ -1,8 +1,6 @@
 # What the library asks of epx
 
-The reports of [`epx_bugs.md`](epx_bugs.md) still open after epx's fix commit 23a0ed2, each as an issue for epx's tracker, with what the commit fixed of it left out and the library's own sentences left off; the numbers are the bug file's. `epx_bugs.md` is the owner, and this file is cut from it for epx's author and goes when nothing here is open. Only 22 is asked for now; the rest is for whenever.
-
-**22. The build asks for `xdg-shell.xml`, which the repository does not ship.** With wayland-client, wayland-cursor and wayland-scanner installed, `c_src/Makefile` turns the Wayland backend on, and its rules for `xdg-shell-client-protocol.h` and `xdg-shell-protocol.c` name `xdg-shell.xml` as a bare prerequisite in `c_src/`. `make` stops with `No rule to make target 'xdg-shell.xml'`, and nothing builds, the X11 backend included. The file is wayland-protocols' own, `$(shell pkg-config --variable=pkgdatadir wayland-protocols)/stable/xdg-shell/xdg-shell.xml`, which the rules could name, or the repository could carry a copy.
+The reports of [`epx_bugs.md`](epx_bugs.md) still open at the commit the library pins, 02a0eaf, each as an issue for epx's tracker, with what is fixed of it left out and the library's own sentences left off; the numbers are the bug file's. `epx_bugs.md` is the owner, and this file is cut from it for epx's author and goes when nothing here is open. Nothing here is urgent: the library ships around each.
 
 **12, what remains. An ellipse's ring is malformed at its top and bottom.** With a border of 1 or 2, and past a radius of 65535: a lone pixel outside the ring, the fill showing through below it, and the ring thicker there than at the sides. A 20 by 20 ring's second row is one pixel where the filled circle's is seven. The overflow and the double blending are fixed.
 

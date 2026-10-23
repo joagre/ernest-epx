@@ -10,11 +10,11 @@ The library reads no event. It starts no process of its own, `open` starting epx
 
 `Epx` declares the types of §3, the context's type `Context` and the window's type `Window` among them, and the drawing functions (§9). `Epx.Gc` declares `Style` (§8) and the functions of §7's table, which name `Epx`'s `Context` and `Color`. `Epx.Window` declares the functions of §11's table, which name `Epx`'s `Window` and `Pixmap`. `Epx`'s code names nothing of `Epx.Gc`'s or `Epx.Window`'s; its doc examples may.
 
-Each function but `toPpm`, `drawLine` and the window's calls the epx functions its table names, each at most once: the table below for the pixmap's functions, §7's for the context's, §9's for the drawing functions. The window's call those §11's table names, as §11 says. Where one epx function does a function's work exactly, the function is a `foreign fn` over it, and where it differs, Ernest closes the difference around the call.
+Each function but `toPpm` and the window's calls the epx functions its table names, each at most once: the table below for the pixmap's functions, §7's for the context's, §9's for the drawing functions. The window's call those §11's table names, as §11 says. Where one epx function does a function's work exactly, the function is a `foreign fn` over it, and where it differs, Ernest closes the difference around the call.
 
 The differences closed are these, each stated where its rule is (§2 to §10): a `Color` crosses as the tuple epx takes, and a `Format`, an `Operation` or a `Style` as its atoms; epx's `ok` is `Unit`; a width or a height below 0 is 0; a precondition of §5, §10 or §12 is checked before the call. Each module checks with functions of its own, since Ernest has no function private to a library (report §4.2).
 
-Also closed: a new pixmap is filled; a new context's border lies within its shape; a horizontal or vertical line wider than 1 is drawn as a rectangle; and `getPixels` answers a rectangle of width and height 0 without epx, which answers its whole memory for one at `0`, `0`.
+Also closed: a new pixmap is filled; a new context's border lies within its shape; and `getPixels` answers a rectangle of width and height 0 without epx, which answers its whole memory for one at `0`, `0`.
 
 | Function | epx | What it does |
 |---|---|---|
@@ -93,7 +93,7 @@ The clip bounds what a function writes and what it reads:
 
 A rectangle that reaches outside what a function reads or writes is cut to the part within it, and one wholly outside is empty.
 
-In an area function the source's pixel at `sourceX + i`, `sourceY + j` goes to the target's at `targetX + i`, `targetY + j`, and a pixel outside the target's clip is left out. The exception is a source rectangle that begins left of or above the source's clip: it is cut to the clip and lands at `targetX`, `targetY` all the same, as epx has it (`epx_bugs.md` 6), so a program begins the source's rectangle within the clip.
+In an area function the source's pixel at `sourceX + i`, `sourceY + j` goes to the target's at `targetX + i`, `targetY + j`, and a pixel outside the target's clip is left out; one outside the source's clip is not read, and the rest land at their places all the same.
 
 The two rectangles of `copyArea` may overlap in one pixmap. Those of `blendArea`, `fadeArea`, `shadowArea` and `operationArea` must not, and what they write where they do is not stated.
 
@@ -155,7 +155,7 @@ A style says how a drawing function writes a pixel in a color. `Solid` writes th
 
 The fill's style is an `Optional(Style)`, and `None` is no fill. The line's style and the border's are a `Style`.
 
-A style crosses to epx as a list of atoms: `Solid` as `[solid]`, `Blend` as `[blend]` and `Antialiased` as `[blend, aalias]`. A border's style adds `inside`, which places the border within its shape (§9), and `create` sets the border's style so. A fill of `None` crosses as `[]`. A style read back is the one whose atoms epx answers, the border's `inside` and the `center` epx answers beside it left out; a list that is none of these faults (§10).
+A style crosses to epx as a list of atoms: `Solid` as `[solid]`, `Blend` as `[blend]` and `Antialiased` as `[blend, aalias]`. A border's style adds `inside`, which places the border within its shape (§9), and `create` sets the border's style so. A fill of `None` crosses as `[]`. A style read back is the one whose atoms epx answers, the border's `inside` left out; a list that is none of these faults (§10).
 
 ## 9. The drawing functions
 
@@ -164,7 +164,7 @@ A drawing function draws into a pixmap with a context, the pixmap first and the 
 | Function | epx | Keys read |
 |---|---|---|
 | `drawPoint(pixmap, context, x, y)` | `pixmap_draw_point/4` | the foreground, the line's style |
-| `drawLine(pixmap, context, x1, y1, x2, y2)` | `pixmap_draw_line/6`, or `gc_get/2` and `pixmap_fill_area/7` | the foreground, the line's style and width |
+| `drawLine(pixmap, context, x1, y1, x2, y2)` | `pixmap_draw_line/6` | the foreground, the line's style and width |
 | `drawRectangle(pixmap, context, x, y, width, height)` | `pixmap_draw_rectangle/6` | the fill's style and color, the border's style, color and width |
 | `drawEllipse(pixmap, context, x, y, width, height)` | `pixmap_draw_ellipse/6` | the fill's style and color, the border's style, color and width |
 | `drawTriangle(pixmap, context, x1, y1, x2, y2, x3, y3)` | `pixmap_draw_triangle/8` | the fill's style and color; with no fill, the foreground and the line's style and width |
@@ -173,29 +173,26 @@ A point is the pixel at `x`, `y`, in the foreground by the line's style.
 
 A line of width 0 draws nothing, and one of width 1 every pixel from `x1`, `y1` to `x2`, `y2`, both ends among them where it is horizontal or vertical; one that is neither leaves out its first pixel, `x1`, `y1` (`epx_bugs.md` 25). A line whose two ends are one pixel is a horizontal line of one pixel's length.
 
-A horizontal or vertical line wider than 1 is the rectangle that runs from one end of the line to the other and is the line's width across, `width / 2` of its rows or columns above or left of the line, rounded down. Any other line wider than 1 is a band beside the line, and which pixels it covers is not stated (`epx_bugs.md` 10).
+A horizontal or vertical line wider than 1 is the rectangle that runs from one end of the line to the other and is the line's width across, `width / 2` of its rows or columns above or left of the line, rounded down. Any other line wider than 1 is a band centered on the line, and which pixels it covers is not stated.
 
-`drawLine` reads the line's width for a horizontal or vertical line, and where it is above 1 reads the foreground and the line's style and fills that rectangle with `pixmap_fill_area/7`, where epx's own line writes past the clip and past the pixmap (`epx_bugs.md` 9).
-
-A rectangle is its border and its fill. The border is the outermost pixels of the rectangle, the border's width of them on each side, in the border's color by the border's style; the fill is the rest, in the fill's color by the fill's style. With a fill, a border of width 0 is none. With no fill, the border alone is drawn, one pixel wide where its width is 0. Where the border is wider than the rectangle's width or height, which pixels it writes outside the rectangle is not stated (`epx_bugs.md` 11).
+A rectangle is its border and its fill. The border is the outermost pixels of the rectangle, the border's width of them on each side, in the border's color by the border's style; the fill is the rest, in the fill's color by the fill's style. With a fill, a border of width 0 is none. With no fill, the border alone is drawn, one pixel wide where its width is 0. A border wider than the rectangle's width or height writes nothing outside the rectangle.
 
 An ellipse is centered at `x + width / 2`, `y + height / 2`, its radii `width / 2` and `height / 2`, each rounded down, so that it covers `2 * (width / 2) + 1` columns from `x` and `2 * (height / 2) + 1` rows from `y`: one more than an even width or height. An ellipse whose width or height is below 2 draws nothing.
 
 An ellipse's border is the ring from its edge to the edge of the ellipse the border's width inside it, both edges drawn, so that the ring is the border's width and one pixel across; its fill is within the ring. With a fill, a border of width 0 is none. With no fill, the ring alone is drawn, one pixel across where the border's width is 0.
 
-A ring may leave a pixel undrawn near the ellipse's top and bottom where the border's width is 1, and a ring drawn by `Blend` or `Antialiased` blends a few of its pixels twice (`epx_bugs.md` 12).
+A ring is malformed near the ellipse's top and bottom where the border's width is 1 or 2, a pixel of it outside the ellipse and the fill showing through below it, and past a radius of 65,535 (`epx_bugs.md` 12).
 
 A triangle with a fill is every pixel within its three corners, its edges among them, in the fill's color by the fill's style. With no fill it is its three edges, each a line from corner to corner in the foreground by the line's style, one pixel wide where the line's width is 0 or 1; where the width is above 1, which pixels the edges cover is not stated.
 
-A drawing function reads each key it needs as it runs. A key another process sets meanwhile is read before the change or after it, and `drawLine`, which reads three keys one after another, may read some before the change and some after (§2).
+A drawing function reads each key it needs as it runs. A key another process sets meanwhile is read before the change or after it (§2).
 
 ## 10. What the context and the drawing functions fault
 
 An argument the library refuses faults the calling process before epx is called (report §7.4), as §5's do:
 
 - a coordinate given to a drawing function outside −16,777,216 to 16,777,216: `Fault("a coordinate is beyond 16777216")`;
-- a width or a height given to `drawRectangle`, or a width given to `setLineWidth` or `setBorderWidth`, above 16,777,216: `Fault("a width or height is beyond 16777216")`;
-- a width or a height given to `drawEllipse` above 131,071: `Fault("an ellipse's width or height is beyond 131071")`;
+- a width or a height given to `drawRectangle` or `drawEllipse`, or a width given to `setLineWidth` or `setBorderWidth`, above 16,777,216: `Fault("a width or height is beyond 16777216")`;
 - a `Color` with a channel outside 0 to 255, given to `setFillColor`, `setBorderColor` or `setForeground`: `Fault("a channel of a Color is outside 0 to 255")`.
 
 A getter of a style faults with `Fault("the context's style is none of Style's")` on a style that foreign code set and that is none of `Style`'s (§8). Memory the host cannot allocate for a new context faults as a foreign function that raises does, with epx's function in the cause: `Fault("foreign function epx:gc_create/0 raised error:badarg")`, or `epx:gc_copy/1`'s. Nothing else faults.
@@ -213,7 +210,7 @@ A getter of a style faults with `Fault("the context's style is none of Style's")
 
 `open` starts epx's application with `epx:start/0`, which starts it where it is not running and answers at once where it is. It makes the window with no event flag and attaches it to epx's backend, which puts it on the screen. Its place is asked of the window manager, which may place it elsewhere. A coordinate given to `open` is from −32,767 to 32,767, and a width or a height from 1 to 32,767, one below 1 being 1 (§12). What a new window shows before a pixmap is shown in it is not stated.
 
-`showArea` reads the pixmap's format and whether it is attached to the backend with `pixmap_info_/2`, attaches it with `pixmap_attach/1` where it is not, and draws the rectangle with `pixmap_draw/8`. A pixmap is attached by the first `show` or `showArea` that shows it and stays attached while it lives.
+`showArea` reads whether the pixmap is attached to the backend with `pixmap_info_/2`, attaches it with `pixmap_attach/1` where it is not, and draws the rectangle with `pixmap_draw/8`. A pixmap is attached by the first `show` or `showArea` that shows it and stays attached while it lives.
 
 The rectangle `showArea` shows is cut to the pixmap's clip, the cut moving its place in the window with it, and to the first 32,767 columns and rows, beyond which no window reaches. The pixmap's pixel at `x + i`, `y + j` is drawn at the window's pixel at `x + i`, `y + j`, and a pixel outside the window is not drawn. `show` is `showArea` of the rectangle at `0`, `0` of the pixmap's width and height.
 
@@ -221,13 +218,13 @@ The rectangle `showArea` shows is cut to the pixmap's clip, the cut moving its p
 
 The backend draws each request into a copy of the window kept off the screen, `use_off_screen` as epx starts it, and copies the copy to the screen whole. A row shown at a time is so seen without flicker, and a window covered and uncovered keeps its picture.
 
-`close` takes the window off the screen, and nothing brings it back. A window closed is epx's until no process holds it: a `show` into it draws into it off the screen, where nothing is seen, and a second `close` does nothing. An `open` after a `close` makes a new window.
+`close` takes the window off the screen with `window_adjust/2` and not `window_detach/1`, since a `show` after a detach is taken or refused by whether the backend has taken the detach first, and nothing brings it back. A window closed is epx's until no process holds it: a `show` into it draws into it off the screen, where nothing is seen, and a second `close` does nothing. An `open` after a `close` makes a new window.
 
-No function sends the backend a sync, which epx answers with a message to the process that made the window. The window's close button is sent to that process all the same, as `{epx_event, Window, close}`, whatever the window's flags (`epx_bugs.md` 16), and the window stays on the screen.
+No function sends the backend a sync, which epx answers with a message to the process that made the window. The window's close button is sent to that process all the same, as `{epx_event, Window, close}`, whatever the window's flags, as epx's documentation says, and the window stays on the screen.
 
 The message is of no Ernest type: a `receive` whose patterns each name a constructor leaves it in the mailbox, and one whose pattern is a variable takes it as a message of the mailbox's type. A program opens a window in a process that receives nothing, or whose patterns each name a constructor.
 
-Where no display can be opened, `DISPLAY` unset or naming no X server, epx's application starts with no backend, and `open` faults (§12). Where `DISPLAY` is unset, epx tries the framebuffer, `/dev/fb0`, first, and what a window on the framebuffer shows is not stated.
+Where no display can be opened, `DISPLAY` unset or naming no X server, epx's application starts with no backend, writing a warning of its own on standard error, which the library does not stop, and `open` faults (§12). Where `DISPLAY` is unset, epx tries the framebuffer, `/dev/fb0`, first, and what a window on the framebuffer shows is not stated.
 
 The copy off the screen takes four bytes a pixel of the X server's memory, and a window whose copy the server cannot allocate shows nothing. Each request costs the backend a copy of the whole window to the screen and a round trip to the X server: requests made faster than the backend draws them wait in epx's queue, and are drawn after the program has gone on.
 
@@ -239,12 +236,11 @@ An argument the library refuses faults the calling process before epx is called 
 
 - a coordinate given to `open` outside −32,767 to 32,767: `Fault("a window's coordinate is beyond 32767")`;
 - a width or a height given to `open` above 32,767: `Fault("a window's width or height is beyond 32767")`;
-- a coordinate given to `showArea` outside −16,777,216 to 16,777,216: `Fault("a coordinate is beyond 16777216")`, and a width or a height above 16,777,216: `Fault("a width or height is beyond 16777216")`;
-- a pixmap in `Rgba` or `Abgr`, given to `show` or `showArea`: `Fault("a window shows no pixmap in Rgba or Abgr")` (`epx_bugs.md` 18).
+- a coordinate given to `showArea` outside −16,777,216 to 16,777,216: `Fault("a coordinate is beyond 16777216")`, and a width or a height above 16,777,216: `Fault("a width or height is beyond 16777216")`.
 
-`open` where no display can be opened faults with epx's cause, `Fault("foreign function epx:window_attach/1 raised error:badarg")` (`epx_bugs.md` 21), and where tree_db, which epx's application depends on, is not on the load path, with epx's cause from `epx:start/0`, a `badmatch` naming `tree_db.app`.
+`open` where no display can be opened faults with epx's cause, `Fault("foreign function epx:window_attach/1 raised error:{no_backend,default}")`, and where tree_db, which epx's application depends on, is not on the load path, with epx's cause from `epx:start/0`, a `badmatch` naming `tree_db.app`.
 
-Two processes that make the first `show` of one pixmap at once may each find it not attached, and the second to attach it faults with `Fault("foreign function epx:pixmap_attach/1 raised error:badarg")`; a program shows a pixmap from one process before others show it. `show` and `showArea` fault as `Epx.format` does on a pixmap that foreign code made in a format `Format` does not name (§5). Nothing else faults.
+Two processes that make the first `show` of one pixmap at once may each find it not attached, and the second to attach it faults with `Fault("foreign function epx:pixmap_attach/1 raised error:badarg")`; a program shows a pixmap from one process before others show it. Nothing else faults.
 
 ## Glossary
 

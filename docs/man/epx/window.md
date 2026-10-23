@@ -44,9 +44,7 @@ patterns each name a constructor, and closes it with `close`.
 
 **Bounds.** A window's coordinates are from -32767 to 32767, and its
 width and height from 1 to 32767, one below 1 being 1. The place is
-asked of the window manager, which may put the window elsewhere. A
-pixmap in `Rgba` or `Abgr` is not shown: `show` and `showArea` fault on
-it.
+asked of the window manager, which may put the window elsewhere.
 
 **A call's cost.** A call answers at once. The backend copies the whole
 window to the screen for each rectangle shown, and rectangles shown
@@ -115,9 +113,9 @@ window's coordinate is beyond 32767`, and on a width or a height above
 32767, with the cause `a window's width or height is beyond 32767`.
 Faults where no display can be opened, `DISPLAY` unset or naming no X
 server, with epx's cause: `foreign function epx:window_attach/1 raised
-error:badarg`. Faults where tree_db, which epx's application depends
-on, is not on the load path, with epx's cause from `epx:start/0`, a
-`badmatch` naming `tree_db.app`.
+error:{no_backend,default}`. Faults where tree_db, which epx's
+application depends on, is not on the load path, with epx's cause from
+`epx:start/0`, a `badmatch` naming `tree_db.app`.
 
 ### Examples
 
@@ -153,12 +151,9 @@ pixmap is on the screen.
 
 ### Errors
 
-Faults on a pixmap in `Rgba` or `Abgr`, with the cause `a window shows
-no pixmap in Rgba or Abgr`, and on one that foreign code made in a
-format `Epx.Format` does not name, with the cause `the pixmap's format is
-none of Format's`. Faults where two processes show one pixmap for its
-first time at once, in the one that comes second, with epx's cause:
-`foreign function epx:pixmap_attach/1 raised error:badarg`.
+Faults where two processes show one pixmap for its first time at once,
+in the one that comes second, with epx's cause: `foreign function
+epx:pixmap_attach/1 raised error:badarg`.
 
 ### Examples
 
@@ -190,12 +185,9 @@ height below 0 is 0. It answers before the rectangle is on the screen.
 Faults on a coordinate outside -16777216 to 16777216, with the cause `a
 coordinate is beyond 16777216`, and on a width or a height above
 16777216, with the cause `a width or height is beyond 16777216`. Faults
-on a pixmap in `Rgba` or `Abgr`, with the cause `a window shows no
-pixmap in Rgba or Abgr`, and on one that foreign code made in a format
-`Epx.Format` does not name, with the cause `the pixmap's format is none
-of Format's`. Faults where two processes show one pixmap for its first
-time at once, in the one that comes second, with epx's cause: `foreign
-function epx:pixmap_attach/1 raised error:badarg`.
+where two processes show one pixmap for its first time at once, in the
+one that comes second, with epx's cause: `foreign function
+epx:pixmap_attach/1 raised error:badarg`.
 
 ### Examples
 
