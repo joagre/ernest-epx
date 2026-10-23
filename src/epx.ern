@@ -1039,13 +1039,15 @@ foreign fn rawDrawPoint(pixmap : Pixmap, context : Context, x : Int, y : Int) : 
 /// clip. It reads the context's foreground, line style and line width.
 ///
 /// A line of width 0 draws nothing, and one of width 1 every pixel from one
-/// end to the other, both ends among them. A horizontal or vertical line
-/// wider than 1 is the rectangle that runs from one end of the line to the
-/// other and is the line's width across, `width / 2` of its rows or columns
-/// above or left of the line, rounded down. Any other line wider than 1 is
-/// a band beside the line, not centered on it, and which pixels it covers
-/// is not stated. `Antialiased` smooths a line of width 1 that is neither
-/// horizontal nor vertical, and no other.
+/// end to the other, both ends among them where it is horizontal or
+/// vertical; one that is neither leaves out its first pixel, `x1`, `y1`. A
+/// horizontal or vertical line wider than 1 is the rectangle that runs from
+/// one end of the line to the other and is the line's width across,
+/// `width / 2` of its rows or columns above or left of the line, rounded
+/// down. Any other line wider than 1 is a band beside the line, not
+/// centered on it, and which pixels it covers is not stated. `Antialiased`
+/// smooths a line of width 1 that is neither horizontal nor vertical, and
+/// no other.
 ///
 /// ### Errors
 ///
@@ -1078,7 +1080,8 @@ export fn drawLine(pixmap : Pixmap,
 // horizontal or vertical line wider than 1 from where its band is cut to
 // the clip and as wide as the line whatever the cut, past the clip and past
 // the pixmap, so such a line is the rectangle epx means, filled (design §9,
-// epx_bugs.md 9).
+// epx_bugs.md 9). Any other line is epx's own, which leaves out its first
+// pixel where it is 1 wide (design §9, epx_bugs.md 25).
 fn drawBetween(pixmap : Pixmap, context : Context, x1 : Int, y1 : Int, x2 : Int, y2 : Int) : Unit =
     if x1 == x2 || y1 == y2 then
         drawAxial(pixmap, context, x1, y1, x2, y2, rawGetWidth(context, Foreign.atom("line_width")))

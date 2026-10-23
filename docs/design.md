@@ -171,7 +171,7 @@ A drawing function draws into a pixmap with a context, the pixmap first and the 
 
 A point is the pixel at `x`, `y`, in the foreground by the line's style.
 
-A line of width 0 draws nothing, and one of width 1 every pixel from `x1`, `y1` to `x2`, `y2`, both ends among them. A line whose two ends are one pixel is a horizontal line of one pixel's length.
+A line of width 0 draws nothing, and one of width 1 every pixel from `x1`, `y1` to `x2`, `y2`, both ends among them where it is horizontal or vertical; one that is neither leaves out its first pixel, `x1`, `y1` (`epx_bugs.md` 25). A line whose two ends are one pixel is a horizontal line of one pixel's length.
 
 A horizontal or vertical line wider than 1 is the rectangle that runs from one end of the line to the other and is the line's width across, `width / 2` of its rows or columns above or left of the line, rounded down. Any other line wider than 1 is a band beside the line, and which pixels it covers is not stated (`epx_bugs.md` 10).
 

@@ -147,3 +147,11 @@ The reports keep their numbers, which the design, the plan, the doc blocks and t
 The same day the reports were filed with epx, and its author will fix them all, so the milestone's items wait on a release of epx with the fixes and on nothing else.
 
 **The same day, one release.** With every report to be fixed, the wait on epx has an end, which was the one argument against a single release; and a release is milestone 3b's business, not milestone 2's. So there is no 0.3.0: milestone 3b is the release 0.2.0 after Ernest 0.5.0 and epx's fixes both, `sub` and `scroll` in it, the readers run again over what they add, and it is the last. Principle 5 for the plan: one release, where two said nothing more.
+
+## The fixes verified
+
+*2026-10-23.* epx's author fixed the reports in one commit, 23a0ed2, with a regression test of his own for 1 to 15. It does not build where Wayland's libraries are installed, report 22, so the submodule stays at 1377959; the verification ran on a scratch copy built with epx's own `WAYLAND=No`, by the session that verified the reports the day before, each experiment again in a node of its own. Fifteen are fixed, six in part, and every crash and hang of the twenty-one and of the two found beside them is gone; what remains of 7, 8 and 19 lies beyond the library's bounds, 5's live binary the library never calls, and 12's ring is still malformed at its top and bottom where the library draws a bordered ellipse.
+
+Three older defects turned up beside the verification, 23 to 25, at the pinned commit and the new one alike. One contradicted the design: §9 said a line of width 1 draws both its ends, and a diagonal one leaves out its first pixel, which the pinned build shows. §9 says so now, with the report's number, and `drawLine`'s page follows it: a rule the host decides is stated as the host has it, principle 1. The other two were stated already, the even ellipse's extra pixel in §9 and the window's first picture as not stated in §11.
+
+The pin moves when the commit after 23a0ed2 builds plain, and that item checks two things 15 changed: the library sends every style as its atoms and never `[]`, and its readers take the new answers, `none` read back as `[]` and a placement as one atom.

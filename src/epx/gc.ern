@@ -785,6 +785,24 @@ let diagonalOfWidthZero =
         Test.equal(rows(pixmap), ["....", "....", "....", "...."])
     })
 
+// design §9: a line of width 1 that is neither horizontal nor vertical
+// leaves out its first pixel and keeps its last, and a horizontal one keeps
+// both ends. A regression test, written after the code; it does not cover
+// which pixels between its ends the diagonal sets.
+let diagonalOfWidthOne =
+    Test.Case(name = "a diagonal line of width 1 leaves out its first pixel", run = fn() = {
+        let context = create();
+        setLineWidth(context, 1);
+        let diagonal = blank(6, 4);
+        Epx.drawLine(diagonal, context, 0, 0, 5, 3);
+        let horizontal = blank(6, 4);
+        Epx.drawLine(horizontal, context, 0, 0, 5, 0);
+        Test.equal(#(letter(Epx.getPixel(diagonal, 0, 0)),
+                     letter(Epx.getPixel(diagonal, 5, 3)),
+                     row(horizontal, 0)),
+                   #(".", "L", "LLLLLL"))
+    })
+
 // design §9: a horizontal or vertical line wider than 1 is written within
 // the clip and within the pixmap, at the last row and column among them,
 // and one wholly outside writes nothing.

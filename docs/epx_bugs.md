@@ -2,59 +2,104 @@
 
 The defects the library met in epx, each written as a report for epx's tracker, found 2026-10-20 while the first cut was tried against the NIF (`docs/log.md`, *The first cut built*), 7 and 8 by the release review the same day, 9 to 15 while the second cut, the graphics context and the drawing functions, was tried the same evening, 16 to 21 while the window was tried against the X11 backend that night.
 
-Each stays until a release of epx the library builds has its fix. `sub` and `scroll` of the proposal wait on the first three. Report 22 was found 2026-10-23, building the commit that fixes the others.
+Each stays until a release of epx the library builds has its fix. `sub` and `scroll` of the proposal wait on the first three. Reports 22 to 25 were found 2026-10-23, building and verifying the commit that fixes the others, 23a0ed2 (`docs/log.md`, *The fixes verified*); each of 1 to 21 ends with what that commit leaves of it.
 
 Each was verified 2026-10-22 against the same checkout, one node for each, and the reports corrected where the verification found more or less (`docs/log.md`, *The reports verified*).
 
-Most serious first: 1, 9, 5, 2, 14, 17, 19, 3, 7, 12, 13 and 4 crash, corrupt memory or hang the VM on an input a public function accepts; 11, 10, 18, 6, 15, 20 and 8 draw or answer wrong where a program cannot tell; 21 raises an error with the wrong cause; 16 is a flag without effect; 22 stops the build wherever Wayland's libraries are installed, and comes before them all for epx's next commit.
+Most serious first: 1, 9, 5, 2, 14, 17, 19, 3, 7, 12, 13 and 4 crash, corrupt memory or hang the VM on an input a public function accepts; 11, 10, 18, 6, 15, 20 and 8 draw or answer wrong where a program cannot tell; 21 raises an error with the wrong cause; 16 is a flag without effect; 22 stops the build wherever Wayland's libraries are installed, and comes before them all for epx's next commit; 23 and 25 draw wrong where a program cannot tell, and 24 shows memory.
 
 For epx's tracker, 4, 14 and 19 each split into their separate defects, and the closing sentence of a report that names this library is left off.
 
 1. **A sub-pixmap has no transformation set.** `epx_pixmap_init_sub_pixmap` never sets `ltm` and `ctm`, so every coordinate operation on a pixmap `pixmap_sub_pixmap/5` made reads uninitialized memory: `epx:pixmap_get_pixel(epx:pixmap_sub_pixmap(P, -1, -1, 2, 2), 0, 0)` crashed the VM, and so did `pixmap_put_pixel` on a sub-pixmap wholly inside its source, `pixmap_sub_pixmap(P, 1, 1, 2, 2)`, in `get_coord(src->ctm)`. The initializer leaves `bytes_per_pixel` and `user` unset too, `pixmap_info` answering 0 or 5 for the first. The fix is `epx_t2d_identity(&dst->ltm); dst->ctm = &dst->ltm;` and the two fields set, in the initializer.
+
+    *Fixed at 23a0ed2, 2026-10-23: `bytes_per_pixel` set, and a sub-pixmap of a sub-pixmap and an empty one work.*
 2. **A scroll by more than the width is unbounded.** `epx_pixmap_scroll_left` and `epx_pixmap_scroll_right` take any `amount`, and one past the pixmap's width reads and writes outside it: `pixmap_scroll/6` of a pixmap 4 wide shifted by 5, 6 or 100 either way crashed the VM, where by 4 it did not, since `shift_area` computes `width -= amount` in an unsigned and wraps.
 
    A horizontal scroll with rotate between two pixmaps corrupts the heap at any amount, by 1 on a 4 by 3 `argb` pixmap aborting the VM: `shift_area_rotate`'s branch for two pixmaps multiplies `n` and `a` into byte counts and hands them to `epx_copy_row`, which counts pixels.
+
+    *Fixed at 23a0ed2: a shift past the width fills the pixmap, and the rotate between two pixmaps is right at every amount.*
 3. **A vertical scroll writes by the source's height.** `scroll_up` and `scroll_down` write into the target by the source's height, not the target's: a 4 by 100 pixmap scrolled down or up by 1 into a 4 by 2 one aborted the VM with its heap corrupted, the copy being `width` by `src->height - amount` rows. An in-place vertical scroll with rotate on rows that carry padding overflows its save buffer, `malloc(amount*width*bpp)` filled at a stride of `bytes_per_row`: a 3 by 100 `argb` pixmap scrolled by −50 aborted the VM, where a 4 by 100 one did not.
+
+    *Fixed at 23a0ed2: the scroll acts on the common height, and the in-place rotate over padded rows is right.*
 4. **`pixmap_put_pixels` reads past short data.** Given bytes short of `width` times `height` pixels by less than one pixel, 13 for a 2 by 2 `argb` pixmap, it reads past the binary's end, since its check, `src_end >= data + len`, tests the first byte of the last pixel alone; short by a pixel or more, 12 bytes, it writes nothing and answers `ok`. A format name that parses but has no unpack function, `r16`, `a16`, `l16`, `r4g4b4a4`, `r3g3b2`, `r2g3b2` or `r10g10b10a2`, crashes the VM in `epx_copy_area` on a null `unpack_src`, where `pixmap_create/3` refuses the same name with `badarg`.
+
+    *Fixed at 23a0ed2: short data and the seven format names raise `badarg` in both functions.*
 5. **An empty `pixmap_get_pixels` answers the pixmap's memory through the wrong resource, and crashes the VM.** `pixmap_get_pixels(P, 0, 0, 0, 0)` is the shortcut for every pixel with its alignment, as the C comment says, and answers a binary over the pixmap's own memory, 32 bytes for a 2 by 2 pixmap, uninitialized before the first fill and changing as the pixmap is written. It makes the binary with `enif_make_resource_binary(env, src, ...)`, handing the `malloc`ed `epx_pixmap_t` where the resource `src->res` is meant, so that ten such calls on new pixmaps crashed the VM.
+
+    *Fixed in part at 23a0ed2: the binary is made from `src->res` and the VM lives; the empty call still answers the live memory, padding included, which no documentation states.*
 6. **`epx_clip_both` cuts the source without moving the target.** An area operation whose source rectangle begins left of or above the source's clip has the rectangle cut to the clip, but the target's corner stays, so the pixels land where the cut-off part would have: `pixmap_copy_area(S, T, -1, 0, 0, 0, 3, 1)` puts the source's pixel 0 at the target's pixel 0 instead of 1. The library states where the pixels land and leaves it as epx has it.
+
+    *Fixed at 23a0ed2: the target moves with the cut, in every area function.*
 7. **A pixmap's bytes are counted in 32 bits, and a pixel's address in an `int`.** `epx_pixmap_init` computes `bytes_per_row*height` in `unsigned int`, so a pixmap of 4 GiB or more is allocated short: `pixmap_create(65536, 65536, argb)` allocated 15 bytes, so that a write at `0`, `0` landed inside them and one at `0`, `100` crashed the VM.
 
    `EPX_PIXEL_ADDR` computes `y*bytes_per_row + x*bytes_per_pixel` in `int`, so a pixel past the first 2 GiB is written outside the pixmap: a write to row 16384 of `pixmap_create(32768, 16385, argb)` crashed the VM, where row 16383 took it. The library refuses a pixmap of 2 GiB or more.
+
+    *Fixed in part at 23a0ed2: the bytes and the address are counted in 64 bits and a row wider than 4 GiB is refused; the area functions still take their row stride as an `int`, `epx_fill_area(uint8_t*, int dst_wb, ...)`, so `pixmap_create(600000000, 2, argb)` is taken and `pixmap_fill_area(P, 0, 0, 1, 2, C)` crashes the VM, beyond the library's bound of 16777216.*
 8. **A rectangle's right edge is computed in `int`.** `epx_rect_right` computes `x + width - 1` in `int`, so a rectangle whose edge passes 2^31 − 1 wraps and is taken as empty: `pixmap_fill_area(P, 1, 0, 2147483647, 1, Color)` wrote nothing on a pixmap three pixels wide, where it covers pixels 1 and 2. A coordinate and a size reach epx as a `float` through the pixmap's transform, exact to 2^24, and the library bounds both at 2^24, within which the edge stays an `int`.
+
+    *Fixed in part at 23a0ed2: the edge is computed in 64 bits and the reported widths fill; `get_dim` still converts with `(unsigned int) round(wf)`, so a width that rounds to 2^32 or more, `pixmap_fill_area(P, 1, 0, 4294967295, 1, C)`, writes nothing, beyond the library's bound.*
 9. **A horizontal or vertical line wider than 1 is drawn past the clip and past the pixmap.** `epx_draw_line_thick` clamps the start of the band to the clip but fills the whole line width from there, so a band that reaches past the clip's bottom or right side is written past it: `pixmap_draw_line(P, Gc, 0, 1, 3, 1)` with a line width of 9 on a pixmap 4 by 2 wrote seven rows past the pixmap's memory, and a vertical one at the last column wrapped into the next rows.
 
    A line wholly above, below, left or right of the clip is drawn along the clip's edge: one at `y` −100 of width 3 filled rows 0 to 2.
 
    The library draws such a line with `pixmap_fill_area/7` itself.
+
+    *Fixed at 23a0ed2: the band stays within the clip and the pixmap and is centered, a line wholly outside the clip draws nothing, and `epx_draw_line` goes through `epx_draw_line_thick`.*
 10. **A line wider than 1 that is neither horizontal nor vertical is not centered on itself.** The band `epx_draw_line_thick` draws lies beside the line, below one nearer the horizontal and right of one nearer the vertical, and reaches a pixel or two past its ends: `(2, 4)`–`(15, 9)` of width 5 covered rows 4 to 13. A short one goes astray: `(3, 3)`–`(4, 4)` of width 3 covered pixels at rows 1 to 3 and not the end `(4, 4)`.
 
     `epx_draw_line`, which the triangle and the polygon use for their edges, fills a band with `epx_pixmap_fill_area` and clips it, though from the line down or right and not centered on it either.
+
+    *Fixed at 23a0ed2: the band is centered and reaches both ends.*
 11. **A rectangle's border outside it moves the rectangle by a pixel.** A context from `gc_create` has a border style of no placement, which `epx_draw_rectangle` takes as outside, and the outside case moves the corner by `bw - 1` where the rectangle grows by `2 * bw`, so the fill lands at `x + 1`, `y + 1` and the border around it: a 6 by 4 rectangle at 6, 5 with a border of 1 was filled at 7..12 by 6..9. `epx_draw_roundrect` moves it by `bw`. The center placement is off the same way.
 
     Where the border is wider than the rectangle's height, `y + height - bw` lies above the rectangle and `height - 2 * bw` wraps as an `unsigned int`: a 1 by 1 rectangle with a border of 2 inside it wrote the pixels above and below it.
 
     `make_flags` reads the placement back by testing a two-bit field as a mask, so that inside reads as `[inside, center]` and outside as `[outside, center]`. The library places the border inside.
+
+    *Fixed at 23a0ed2: each placement lies where it says, and reads back as one atom, `[solid, inside]`.*
 12. **An ellipse's ring has gaps, blends twice, and overflows past a radius of 65535.** `epx_draw_ellipse_border` with a border of 1 leaves a pixel or two of the ring undrawn near the top and the bottom, a 20 by 20 ring's second row reading `BBBB.B.BBBB`, a stray inner pixel with gaps beside it, and with `blend` blends some pixels of the ring twice, blue 191 at the top shoulders against 127 elsewhere.
 
     It computes `a * a` in `unsigned int`, as its comment says, so a radius above 65535 draws a ring of the wrong width, and a radius that is a multiple of 65536 never ends: `pixmap_draw_ellipse(P, Gc, X, Y, 131072, 131072)` with a border held its scheduler until the VM was killed. The library bounds an ellipse's width and height at 131071.
+
+    *Fixed in part at 23a0ed2: the arithmetic is 64-bit, a radius past 65535 ends at once, and no pixel blends twice; the ring is still malformed at its top and bottom at a border of 1 or 2 and past that radius, a lone pixel outside it, the fill showing through below it, and the ring thicker there than at the sides, a 20 by 20 ring's second row one pixel where the filled circle's is seven.*
 13. **A rounded rectangle is drawn lopsided, and past its rectangle.** `epx_pixmap_draw_roundrect` with no border draws its bottom corners a row lower and narrower than its top ones; with a border, under each placement, it leaves rows of the border undrawn and pixels of it astray; and with a radius above half the width or height it draws far outside its rectangle.
 
     A rectangle 16777216 wide with a radius of a quarter of it and a border of 1 held its scheduler until the VM was killed, which is 12's ring past a radius of 65535, reached through `epx_draw_ellipse_border`; with no border it returned at once. The library leaves `pixmap_draw_roundrect` out.
+
+    *Fixed at 23a0ed2: the corners are symmetric, the rectangle stays within its bounds, each border placement is whole, and the wide one returns at once.*
 14. **A filled polygon is drawn in debugging colors, and an empty one crashes the VM.** `scan_edge` draws a horizontal edge in `epx_pixel_white` and a vertex at the top or the bottom of an edge in `epx_pixel_green` or `epx_pixel_yellow`, not in the fill's color: the square `[{3, 2}, {14, 2}, {14, 10}, {3, 10}]` filled red has its bottom row white, and a diamond has a yellow pixel at one vertex, a green one at another, its middle row unfilled and a pixel outside it at `0`, `6`.
 
     `pixmap_draw_poly(P, Gc, [])` crashed the VM with a segmentation fault, with a fill and without one, `epx_poly_draw` reading the first active edge where there is none. In `poly_set`, `enif_get_tuple(env, head, &arity, &pair) || (arity == 2)` reads `||` where `&&` is meant, so that `[{1}]` crashed the VM and `[{1, 2, 3}, {4, 5}]` was taken. The library leaves `pixmap_draw_poly` out.
+
+    *Fixed at 23a0ed2: the fill is in its color, an empty polygon answers `ok`, and a point that is no pair raises `badarg`.*
 15. **A style of `none` is refused for a border and drawn as `solid` for a line.** `gc_set(Gc, border_style, none)` raises `badarg` where `fill_style` and `line_style` take `none`, and a line style of `none`, `[]`, draws a point and a line as `solid` does.
+
+    *Fixed at 23a0ed2, with a change of meaning: `none` and `[none]` are taken for a border and a line of style `none` draws nothing; `[]` now means none for a line and a border where it meant solid, `none` reads back as `[]`, and `[none, blend]` as `[blend]`.*
 16. **A window is sent `close` whatever its flags.** Every backend's `FilterEvent`, `epx_backend_x11.c`'s with xcb's, cocoa's and macos's, passes `EPX_EVENT_CLOSE` before it reads the window's mask, so the window manager's close, `WM_DELETE_WINDOW`, reaches the window's maker as `{epx_event, Window, close}` whatever its flags: a window made by `window_create/4`, and one made by `window_create/5` with `[]`, whose `event_mask` reads `[]`, were each sent it, and stayed on the screen. `close` is one of the flags `window_create/5` takes and has no effect: either the flag gates the event, as the others gate theirs, or the documentation says the event is always sent.
+
+    *Answered at 23a0ed2 as documentation: `epx.erl` says `close` is always sent and the flag has no effect, in a `%%` comment the generated documentation does not carry.*
 17. **A draw sent before a detach is taken crashes the VM.** `window_detach` hands the backend's thread a detach and returns, and the thread clears the window's `user` and `backend` when it takes it. A `pixmap_draw` made in between passes the NIF's check of `user`, and when the thread takes it after the detach, `x11_draw_end` reads `window->backend`, `NULL` by then: `window_detach(W)` followed at once by `pixmap_draw(P, W, ...)`, from the same process or from another, crashed the VM with a segmentation fault. A draw made once the detach is taken raises `badarg`.
 
     A window the host collects is safe, since the destructor clears `owner`, which the thread reads before a draw, before it sends the detach. The library takes a window off the screen with `window_adjust` and `show` false, and leaves the detach to the host's collection.
+
+    *Fixed at 23a0ed2: a draw after a detach answers `ok` or raises `badarg`, and never crashes.*
 18. **A pixmap in `rgba` or `abgr` is shown with its channels in the wrong places.** `x11_pixmap_attach` gives the image the channel masks `0xFF0000`, `0xFF00` and `0xFF` whatever the pixmap's format and varies only the byte order, which cannot place the channels of those two. On a display of depth 24, a pixmap filled with `{255, 200, 100, 50}` was shown as red 200, green 100 and blue 50 from `argb`, `bgra`, `rgb` and `bgr`, as 100, 50 and 255 from `rgba`, and as 50, 100 and 200 from `abgr`. The library refuses to show a pixmap in either.
+
+    *Fixed at 23a0ed2: all six formats show their channels in place.*
 19. **A window of width or height 0 hangs the backend.** `x11_window_attach` maps the window and waits for its `MapNotify` with `XIfEvent`, which never comes where `XCreateWindow` failed: after `window_create(0, 0, 0, 0)`, `window_create(0, 0, 100, 0)` or `window_create(0, 0, 16777216, 10)` and `window_attach`, the thread waited for good, so that no later window was shown and no `window_sync` was answered.
 
     A width or height from 32768 to 65535 makes the window but not its copy off the screen, `BadAlloc`, and nothing drawn into it is shown. A width of 70000 drew `BadValue` and a window all the same. The X server's errors are written to standard error, `X11 error: BadValue (integer parameter out of range for operation)`, and are not raised. The library bounds a window's width and height to 1 to 32767, and its coordinates, which the X protocol holds in 16 bits, to 32767 either side of 0.
+
+    *Fixed in part at 23a0ed2: a width or height of 0 raises `badarg` in `window_create`, and no size hangs; a width past what X takes, 40000, 70000 or 16777216, is refused silently, `window_attach`, `window_sync`, `pixmap_draw` and `window_detach` each answering `ok` with no window on the screen and `window_info` reporting the width asked.*
 20. **A draw's place past 65535 wraps into the window.** `pixmap_draw` hands its place to `XPutImage`, whose request holds it in 16 bits: drawing rows 65536 to 65545 of a pixmap 65546 rows tall at the same place in a window 101 rows tall showed them in the window's rows 0 to 9. The library cuts a rectangle it shows to the first 32767 columns and rows, beyond which no window reaches.
+
+    *Fixed at 23a0ed2: a place past 65535 draws nothing in the window.*
 21. **With no display, `epx:start()` answers `ok`, and an attach raises `badarg` from `ets`.** Where no backend opens, `DISPLAY` unset or naming no X server, `epx_backend` logs `backend_open no default backend, failed badarg` and stores no default backend, and `window_attach/1` and `pixmap_attach/1` then raise `badarg` from `ets:lookup_element(epx_backend_table, default, 2)`, which names no display. Where `DISPLAY` is unset on Linux, `assumed_backend` tries the framebuffer, `/dev/fb0`, first.
+
+    *Fixed at 23a0ed2: an attach with no backend raises `{no_backend, default}`, and before `epx:start()` `epx_not_started`.*
 22. **The build asks for `xdg-shell.xml`, which the repository does not ship.** `c_src/Makefile` turns the Wayland backend on by itself where `pkg-config` finds `wayland-client` and `wayland-cursor` and `wayland-scanner` is on the path, and its rules for `xdg-shell-client-protocol.h` and `xdg-shell-protocol.c` name `xdg-shell.xml` as a bare prerequisite in `c_src/`, where no such file is tracked: on a machine with Wayland's libraries, `make` stops with `No rule to make target 'xdg-shell.xml'`, and nothing of epx builds, the X11 backend among it.
 
     The file is wayland-protocols' own, `$(pkg-config --variable=pkgdatadir wayland-protocols)/stable/xdg-shell/xdg-shell.xml`, which the rules should name, or the repository should carry a copy; `WAYLAND=No` on the command line is the override the Makefile documents. Found at commit 23a0ed2. The library's `make lib` runs epx's `make` plain, and the submodule stays at 1377959 until the commit after this builds so.
+23. **An ellipse of even width or height is one pixel larger.** `epx_ellipse.c` takes `x + 2*a` as the right edge, so an ellipse 20 wide at `x` 1 covers columns 1 to 21, as one 21 wide does, and the same for its height. The library states the size as epx draws it (`design.md` §9). Found 2026-10-23, at 1377959 and 23a0ed2 alike.
+24. **A window's copy off the screen is never cleared.** After a draw, the parts of the window not drawn into show what the X server's memory held, `17, 2, 19` where the background was white. The library states nothing of what a new window shows (`design.md` §11). Found 2026-10-23, at 1377959 and 23a0ed2 alike.
+25. **A diagonal line of width 1 leaves out its first pixel.** `pixmap_draw_line(P, Gc, 0, 0, 5, 3)` draws `1, 1`, `2, 1`, `3, 2`, `4, 2` and `5, 3` and not `0, 0`, whatever the line's style, where a horizontal or vertical line keeps both ends; `nfirst` and `nlast` change nothing for a single line. The library states it (`design.md` §9). Found 2026-10-23, at 1377959 and 23a0ed2 alike.
