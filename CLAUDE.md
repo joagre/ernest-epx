@@ -47,7 +47,11 @@ A `scratch/` directory inside a proposal's own directory, untracked, is the user
 - **The design changes first.** An anomaly found while building changes `docs/design.md`, then the log, then the code. Name the design's section a module implements before writing it.
 - **A design is discussed in its proposal until the user says it is ready.** Until then bring nothing of it to the plan, the log or the design. At a pause offer another reading back or a harder question: the principles, a real program written against it, the operator's day.
 - **State a change to the design or the plan and make it; do not ask.** Give the change and its argument, make it, report it under *Design conformance*. Stop and wait only where the answer decides what gets built and a guess would throw the work away: a design question, discussed one at a time, in prose, the argument before the verdict, with a recommendation. Smaller decisions come together, as one numbered list with a recommendation each.
+
+  A session opened to discuss alone writes nothing until the user asks. Then each write to the plan or the log is named in one line before it is made, a "go" covers the piece just discussed and not the topic, and where more rounds are coming the writes are gathered into one commit at the pause.
+
 - **Where a step looks wrong, say so once, hard**: the verdict, the principle that decides, the argument. If the user insists, build it whole, and the log entry records the decision with the argument against it. The code carries no trace of the dissent.
+- **A finding is argued only after the log and the program.** The log is searched for the decision a finding may sharpen, and the program that shows it is run in the session; a verdict recommended on a reader's probe alone says so.
 - **Leave no decision pending.** A question a step raises is decided in the same turn and recorded in the plan and the log. One that needs the user stands in the plan meanwhile as a named decision in a named milestone, never as "open".
 
 ## Design
@@ -59,11 +63,12 @@ A `scratch/` directory inside a proposal's own directory, untracked, is the user
 - **A measurement ends when its number stops deciding anything.** A number that confirms the plain form goes to the log once, and its item closes; following it further is an item of its own, planned with the decision it would change.
 - **No fixed sleep, in the code or in a test.** A process waits on what it means: a message, a monitor, a port that answers, a process's end, or a deadline the design states.
 - **The program is Ernest.** `foreign` is only what the host alone can do, and nothing is written in Erlang meanwhile: a function the library lacks is written in Ernest or waits, as *Defects and gaps* says.
+- **A shim is written with the host's page open.** Where the program wraps a host library, an operation a host function does exactly is a `foreign fn` over it, and where one almost does, Ernest closes the difference around the call; the function's arguments, edge cases and errors are carried into the Ernest contract, and what its page leaves unsaid is tried against the host before the design states it. The prose is the program's own; nothing is copied.
 
 ## Defects and gaps
 
 - **No warts.** Never leave an approximation, a silent deviation from the design, or an unstated semantic choice in the code.
-- **Fix a known defect when found.** A gap too large to fix now goes in the plan with a date, never in a comment.
+- **Fix a known defect when found.** A gap too large to fix now, or a defect not yet diagnosed, goes in the plan with a date and the shape of its fix, never in a comment.
 - **Memory that no collection reclaims is a defect, fixed at its cause.** Never fix it by capping a list, a table or a cache.
 - **Nothing routes around a defect or a gap of Ernest's.** Where writing Ernest feels against a principle, a workaround, a second way, something invisible, a function the library lacks or a defect of the toolchain, say so at once, add the line to `language_feedback.md` for the user to carry to Ernest, and discuss it before any code goes around it; what needed it says that it waits, in the plan. The program does not fork Ernest and does not work around it.
 - **A published specification or a general-purpose engine is a library's work**: a pattern language, a data format, a protocol, dates and times. Where the program finds itself writing one, stop; whether it becomes a library of the program's own, a dependency, or an ask of Ernest is decided with the user first.
@@ -86,6 +91,7 @@ A `scratch/` directory inside a proposal's own directory, untracked, is the user
 ## Done
 
 - **Read the result back before reporting it**, as a reader who knows Ernest would, against the principles and the design, and say what surprised. Decide every surprise: act on it in the same item or leave it with its reason, recorded where its owner keeps it.
+- **A step forward sweeps what it leaves behind.** A sentence, a file or a directory that a step makes redundant, a done item's paragraph, which one line naming its log entry replaces until the milestone's row takes it, a built proposal, a decided finding, a citation of what went, goes in the step's own commit, never left for a review to find.
 - **Commit only after the checks pass**, never chained after them with `;`. Push only when the user says so, a proposal's pause excepted.
 - **Every message that reports code work ends with a "Design conformance" section**: the sections of the design applied; every place the design was silent and what was done, or "none"; every deliberate omission, with the plan item that lifts it; and every line added to `language_feedback.md`, or "none".
 - **Stop after each plan item.** Finish it whole, report it, and wait.
@@ -97,7 +103,7 @@ A `scratch/` directory inside a proposal's own directory, untracked, is the user
 3. Every section the item built cited by a test, and a test written after the code called a regression test.
 4. A new name in `docs/design.md`'s glossary, used as the glossary has it.
 5. The result read back, and every surprise decided.
-6. `make test` green; the conformance section written; the same commit removes every sentence elsewhere that says the item still waits; then a commit that names its paths.
+6. `make test` green; the conformance section written; the same commit removes every sentence elsewhere that says the item still waits and sweeps what the item made redundant; then a commit that names its paths.
 7. The report to the user, ending with *Design conformance*, then a stop until the user's word.
 
 ## Style
