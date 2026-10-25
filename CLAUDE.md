@@ -19,6 +19,7 @@ Each fact has one owner. Every other document points at the owner and does not r
 | [`docs/plan.md`](docs/plan.md) | the roadmap and where we are; a finished milestone is a row of its table, naming the log entries that argue it |
 | [`docs/log.md`](docs/log.md) | the rationale: why the design and the plan say what they say. Never normative |
 | [`docs/release.md`](docs/release.md) | what a release runs to be ready |
+| `examples/README.md`, where `examples/` exists | the example programs, by topic, with what each shows and how each is run |
 | Ernest's `guide/style.md`, installed as `share/doc/ernest/guide/style.md` beside `ern` | the rules an Ernest program is written by, Ernest's own, read from the installation and not copied here |
 | the code and its tests | what is built |
 | `language_feedback.md`, under `docs/` from its first line | what writing Ernest felt against the principles, a line each, in the shape of Ernest's file of that name, a queue: a line is carried there by copy, the log here cites Ernest's number, and the line then goes; the file goes when it is empty |
@@ -57,16 +58,15 @@ A `scratch/` directory inside a proposal's own directory, untracked, is the user
 - **The program is beautiful, inside and out.** Keep no code only to make it go faster; measure first, and where the plain form is fast enough it stays plain.
 - **A measurement ends when its number stops deciding anything.** A number that confirms the plain form goes to the log once, and its item closes; following it further is an item of its own, planned with the decision it would change.
 - **No fixed sleep, in the code or in a test.** A process waits on what it means: a message, a monitor, a port that answers, a process's end, or a deadline the design states.
-- **The program is Ernest.** `foreign` is only what the host alone can do. A function the library lacks is not written in Erlang meanwhile: it goes to `language_feedback.md`, and the program waits or writes it in Ernest.
+- **The program is Ernest.** `foreign` is only what the host alone can do, and nothing is written in Erlang meanwhile: a function the library lacks is written in Ernest or waits, as *Defects and gaps* says.
 
 ## Defects and gaps
 
 - **No warts.** Never leave an approximation, a silent deviation from the design, or an unstated semantic choice in the code.
 - **Fix a known defect when found.** A gap too large to fix now goes in the plan with a date, never in a comment.
 - **Memory that no collection reclaims is a defect, fixed at its cause.** Never fix it by capping a list, a table or a cache.
-- **Nothing routes around a defect or a gap of Ernest's.** A defect of the toolchain, a missing function or a feature the language lacks goes to `language_feedback.md` for the user to carry to Ernest, and what needed it says that it waits, in the plan. The program does not fork Ernest and does not work around it.
+- **Nothing routes around a defect or a gap of Ernest's.** Where writing Ernest feels against a principle, a workaround, a second way, something invisible, a function the library lacks or a defect of the toolchain, say so at once, add the line to `language_feedback.md` for the user to carry to Ernest, and discuss it before any code goes around it; what needed it says that it waits, in the plan. The program does not fork Ernest and does not work around it.
 - **A published specification or a general-purpose engine is a library's work**: a pattern language, a data format, a protocol, dates and times. Where the program finds itself writing one, stop; whether it becomes a library of the program's own, a dependency, or an ask of Ernest is decided with the user first.
-- **Writing Ernest tests the language.** Where it feels against a principle, a workaround, a second way, something invisible, a function the library lacks, say so at once, add the line to `language_feedback.md`, and discuss it with the user before any code goes around it.
 - **Where the design is silent, add the sentence to the design or reject the input with an error.** Never accept it silently, and state the choice to the user.
 
 ## Tests
@@ -93,7 +93,7 @@ A `scratch/` directory inside a proposal's own directory, untracked, is the user
 **Closing an item.** Each line names a rule above.
 
 1. The design changed first, and every question decided, every gap and needed decision in the plan with its log entry.
-2. What writing Ernest felt against a principle in `language_feedback.md`.
+2. What writing Ernest felt against a principle in `language_feedback.md`, said at once and discussed before any code went around it.
 3. Every section the item built cited by a test, and a test written after the code called a regression test.
 4. A new name in `docs/design.md`'s glossary, used as the glossary has it.
 5. The result read back, and every surprise decided.
@@ -102,7 +102,5 @@ A `scratch/` directory inside a proposal's own directory, untracked, is the user
 
 ## Style
 
-Ernest's `guide/style.md` holds the rules an Ernest program is written by: what `ern format` writes, what the report asks of a library's names, what the standard library does, and the names every program shares. It is installed as `share/doc/ernest/guide/style.md` beside `ern`, two directories up from the `ern` on `PATH` (Ernest 0.5.0 and later; a checkout has it as `guide/style.md`).
-
-Read it before writing Ernest in a session; it is not copied here. The glossary of this program's own names is `docs/design.md`'s and is living: a name that comes to recur across modules goes in it in the commit that writes it, and is used as it stands.
+Ernest's `guide/style.md`, the owner table's, is read before writing Ernest in a session, from the installation beside `ern` or a checkout's `guide/`. This program's own names are `docs/design.md`'s glossary, living: a name that comes to recur across modules goes in it in the commit that writes it, and is used as it stands.
 
