@@ -9,9 +9,10 @@
 /// program writes with `Fs.write`.
 ///
 /// A program puts the library's build on its load path when it is compiled
-/// and when it is run, and epx's `ebin` directory when it is run; epx finds
-/// its NIF in the `priv` directory beside its `ebin`. Run without epx's
-/// `ebin`, a call faults with a cause such as `foreign function
+/// and when it is run, and epx's `ebin` directory when it is run, with
+/// tree_db's beside it where it opens a window (`Epx.Window`); epx finds its
+/// NIF in the `priv` directory beside its `ebin`. Run without epx's `ebin`,
+/// a call faults with a cause such as `foreign function
 /// epx:pixmap_create/3 raised error:undef`.
 ///
 /// **A pixmap's life.** A pixmap lives while a process holds it, and the
@@ -26,8 +27,7 @@
 /// writes of two processes but the order in which they run, and epx takes
 /// no lock: two calls on one pixmap from two processes may interleave pixel
 /// by pixel, and a read may see a write half done. `copy` makes a pixmap
-/// that shares nothing with the first, and `sub` one over a rectangle of
-/// the first's pixels, which the two share both ways.
+/// that shares nothing with the first.
 ///
 /// **Coordinates.** A pixel is at `x`, `y`, where `0`, `0` is the top left
 /// pixel, `x` grows to the right and `y` downward. A rectangle is its top
@@ -39,13 +39,16 @@
 /// height at most 16777216. A function given a coordinate outside that
 /// range faults, with the cause `a coordinate is beyond 16777216`, and one
 /// given a larger width or height with `a width or height is beyond
-/// 16777216`. A pixmap's bytes are its row's bytes times its height, a
+/// 16777216`; a scroll's amount and a rounded rectangle's radius have the
+/// same bounds and causes of their own, `a scroll's amount is beyond
+/// 16777216` and `a radius is beyond 16777216`. A pixmap's bytes are its
+/// row's bytes times its height, a
 /// row's bytes being its width times its format's bytes a pixel, rounded up
 /// to a multiple of 16; `create` faults on a pixmap whose bytes reach 2
 /// GiB, with the cause `the pixmap's bytes reach 2 GiB`.
 ///
 /// **The clip.** Each pixmap has a clip, a rectangle within it, which is
-/// the whole pixmap until `setClip` sets another; a sub's clip is its own.
+/// the whole pixmap until `setClip` sets another.
 /// `putPixel`, `putPixels`, `fillArea`, `scale`, `copyArea` and the blends,
 /// `blendArea`, `fadeArea`, `shadowArea` and `operationArea`, write only
 /// within the target's clip; `copyArea` and the blends read only within
@@ -268,9 +271,9 @@ export type Operation =
 /// ```
 ///
 /// since 0.2.0
-export type Uncovered =
+export type Backfill =
     /// The pixels shifted out of the other side, the shift taken modulo the
-    /// width and the height.
+    /// common area's width and height.
     Wrapped
   /// The color, in the part uncovered, which is the whole area where the
   /// shift reaches its width or its height.
@@ -374,50 +377,6 @@ foreign fn rawCreate(width : Int, height : Int, format : Foreign.Term) : Pixmap 
 /// ```
 export foreign fn copy(pixmap : Pixmap) : Pixmap =
     "epx:pixmap_copy/1"
-
-/// A pixmap over the pixels of the rectangle at `x`, `y` of the pixmap, its
-/// parent, the two sharing those pixels both ways: what is written into
-/// either is read in the other, as a pixmap is shared by two processes.
-/// The rectangle is cut to the parent, and the sub's pixel at `0`, `0` is
-/// the parent's at the cut rectangle's top left; its width and height are
-/// the cut rectangle's, and its format the parent's. A rectangle wholly
-/// outside the parent, or of width or height 0, makes a sub of width and
-/// height 0. A sub of a sub is a sub of the first, over the rectangle
-/// within the rectangle.
-///
-/// A sub's clip is its own, the whole sub when it is made: the parent's
-/// clip does not reach the sub, nor the sub's the parent. The parent's
-/// pixels live while a sub lives, whether the parent is held or not, and
-/// `copy` of a sub is a new pixmap of the sub's size that shares nothing.
-///
-/// ### Errors
-///
-/// Faults on a coordinate outside -16777216 to 16777216, with the cause `a
-/// coordinate is beyond 16777216`, and on a width or a height above
-/// 16777216, with the cause `a width or height is beyond 16777216`. Faults
-/// where the host cannot allocate the sub, with epx's cause: `foreign
-/// function epx:pixmap_sub_pixmap/5 raised error:badarg`.
-///
-/// ### Examples
-///
-/// The rectangle cut to the parent, and the sub's fill seen in the parent:
-///
-/// ```ernest
-/// {
-///     let pixmap = Epx.create(3, 2, Epx.Rgb);
-///     let sub = Epx.sub(pixmap, 1, 1, 5, 5);
-///     Epx.fill(sub, Epx.rgb(255, 255, 255));
-///     #(Epx.width(sub), Epx.height(sub), Epx.getPixels(pixmap, 0, 1, 3, 1))
-/// }
-/// // => #(2, 1, <<0, 0, 0, 255, 255, 255, 255, 255, 255>>)
-/// ```
-///
-/// since 0.2.0
-export fn sub(pixmap : Pixmap, x : Int, y : Int, width : Int, height : Int) : Pixmap =
-    rawSub(pixmap, coordinate(x), coordinate(y), extent(width), extent(height))
-
-foreign fn rawSub(pixmap : Pixmap, x : Int, y : Int, width : Int, height : Int) : Pixmap =
-    "epx:pixmap_sub_pixmap/5"
 
 /// The pixmap's width, in pixels.
 export fn width(pixmap : Pixmap) : Int =
@@ -642,8 +601,8 @@ foreign fn rawPutPixels(pixmap : Pixmap,
 //
 
 /// Copies the source's pixels into the target, in the target's format: the
-/// rectangle at the top left of both, as wide as the narrower and as high
-/// as the lower. Neither clip is read.
+/// rectangle at the top left of both, as wide as the smaller width and as
+/// high as the smaller height. Neither clip is read.
 ///
 /// ### Examples
 ///
@@ -773,28 +732,30 @@ foreign fn rawScale(source : Pixmap, target : Pixmap, width : Int, height : Int)
 export foreign fn flip(pixmap : Pixmap) : Unit =
     "epx:pixmap_flip/1"
 
-/// Writes the source's pixels into the target shifted `horizontal` columns
-/// to the right, or to the left where it is below 0, and `vertical` rows
-/// down, or up where it is below 0, within the common area of the two: the
-/// narrower width by the lower height, from the top left of each. The
-/// target outside it is left as it was, and a pixel is written in the
-/// target's format. Neither clip is read.
+/// Writes the source's pixels into the target shifted `right` columns to
+/// the right, or to the left where it is below 0, and `down` rows down, or
+/// up where it is below 0, within the common area of the two: the smaller
+/// width by the smaller height, from the top left of each. The target
+/// outside it is left as it was, and a pixel is written in the target's
+/// format. Neither clip is read.
 ///
-/// The part of the common area the shift uncovers is as `uncovered` says.
+/// The part of the common area the shift uncovers is as `backfill` says.
 /// `Wrapped` writes there the pixels shifted out of the other side, the
-/// shift taken modulo the width and the height, so that a shift by a whole
-/// width or height copies the source as it is. `Filled(color)` fills it
-/// with the color, the whole area where the shift reaches its width or
-/// height.
+/// shift taken modulo the common area's width and height, so that a shift
+/// by a whole width or height copies the source as it is. A wrapped scroll
+/// keeps the wrapped columns or rows in memory of their size meanwhile, and
+/// where the host cannot allocate that memory it writes nothing.
+/// `Filled(color)` fills the uncovered part with the color, the whole area
+/// where the shift reaches its width or height.
 ///
 /// The source and the target may be one pixmap. A scroll by 0 and 0 writes
 /// nothing, into another pixmap too, and what a scroll between two pixmaps
-/// by both a horizontal and a vertical amount writes is not stated.
+/// by both amounts writes is not stated.
 ///
 /// ### Errors
 ///
 /// Faults on an amount outside -16777216 to 16777216, with the cause `a
-/// coordinate is beyond 16777216`, and on a color of `Filled` with a
+/// scroll's amount is beyond 16777216`, and on a color of `Filled` with a
 /// channel outside 0 to 255, with the cause `a channel of a Color is
 /// outside 0 to 255`.
 ///
@@ -829,17 +790,17 @@ export foreign fn flip(pixmap : Pixmap) : Unit =
 /// since 0.2.0
 export fn scroll(source : Pixmap,
                  target : Pixmap,
-                 horizontal : Int,
-                 vertical : Int,
-                 uncovered : Uncovered) : Unit = {
-    let right = coordinate(horizontal);
-    // epx moves the pixels up by a vertical amount above 0, where `y` grows
-    // downward (design §1, §4).
-    let up = -coordinate(vertical);
-    match uncovered {
+                 right : Int,
+                 down : Int,
+                 backfill : Backfill) : Unit = {
+    let horizontal = scrollAmount(right);
+    // epx's vertical amount moves the pixels up where `down` moves them
+    // down, `y` growing downward (design §1, §4).
+    let vertical = -scrollAmount(down);
+    match backfill {
         // epx reads no color where it wraps (design §3).
-        Wrapped -> rawScroll(source, target, right, up, true, #(0, 0, 0, 0))
-      | Filled(color) -> rawScroll(source, target, right, up, false, channels(color))
+        Wrapped -> rawScroll(source, target, horizontal, vertical, true, #(0, 0, 0, 0))
+      | Filled(color) -> rawScroll(source, target, horizontal, vertical, false, channels(color))
     }
 }
 
@@ -1293,7 +1254,7 @@ foreign fn rawDrawRectangle(pixmap : Pixmap,
 ///
 /// A ring is malformed near the top and the bottom where the border's width
 /// is 1 or 2, a pixel of it outside the ellipse and the fill showing
-/// through below it, and past a radius of 65535.
+/// through below it, and at any border's width past a radius of 65535.
 ///
 /// ### Errors
 ///
@@ -1332,23 +1293,25 @@ foreign fn rawDrawEllipse(pixmap : Pixmap,
     "epx:pixmap_draw_ellipse/6"
 
 /// Draws the rectangle at `x`, `y` with rounded corners, within the clip:
-/// each corner a quarter of an ellipse of radii `radiusX` and `radiusY`, a
-/// radius above `(width - 1) / 2` or `(height - 1) / 2`, rounded down,
-/// being that, so that with both radii 0 the corners are square. It reads
-/// the context's fill style and color and its border style, color and
-/// width.
+/// each corner a quarter of an ellipse of radii `radiusX` and `radiusY`,
+/// `radiusX` above `(width - 1) / 2`, rounded down, being that, and
+/// `radiusY` above `(height - 1) / 2` likewise; with both radii 0 the
+/// corners are square. It reads the context's fill style and color and its
+/// border style, color and width.
 ///
 /// Its border and its fill are a rectangle's, as `drawRectangle` draws
 /// them, the border within the shape, except that the border is a row
 /// thicker at the top and at the bottom than at the sides. A width, a
 /// height or a radius below 0 is 0. A rounded rectangle of width or height
-/// 0 draws nothing, and one of width or height 1 is a line of pixels.
+/// 0 draws nothing, and one of width or height 1 is a line of pixels in the
+/// border's color, or in the fill's where there is a fill and no border.
 ///
 /// ### Errors
 ///
 /// Faults on a coordinate outside -16777216 to 16777216, with the cause `a
-/// coordinate is beyond 16777216`, and on a width, a height or a radius
-/// above 16777216, with the cause `a width or height is beyond 16777216`.
+/// coordinate is beyond 16777216`, on a width or a height above 16777216,
+/// with the cause `a width or height is beyond 16777216`, and on a radius
+/// above 16777216, with the cause `a radius is beyond 16777216`.
 ///
 /// ### Examples
 ///
@@ -1378,8 +1341,8 @@ export fn drawRoundedRectangle(pixmap : Pixmap,
                             coordinate(y),
                             extent(width),
                             extent(height),
-                            extent(radiusX),
-                            extent(radiusY))
+                            radius(radiusX),
+                            radius(radiusY))
 
 foreign fn rawDrawRoundedRectangle(pixmap : Pixmap,
                                    context : Context,
@@ -1457,10 +1420,13 @@ foreign fn rawDrawTriangle(pixmap : Pixmap,
 /// horizontal nor vertical leaves out its upper end, the point of the
 /// smaller `y`, whichever end the list names first.
 ///
-/// A polygon of no points draws nothing, of one point a line of no length,
-/// that pixel where the line's width is at most 1, and of two the line
-/// between them. A filled polygon costs its height in rows, within the clip
-/// or not.
+/// A polygon of no points draws nothing. With a fill, one point is that
+/// pixel and two points the line between them, both ends among them, in
+/// the fill's color and one pixel wide whatever the line's width. With no
+/// fill, one point is a line of no length, that pixel where the line's
+/// width is at most 1, and two points the line between them, drawn as an
+/// edge is. A filled polygon costs its height in rows, within the clip or
+/// not.
 ///
 /// ### Errors
 ///
@@ -1560,6 +1526,17 @@ fn extent(value : Int) : Int =
         0
     else
         value
+
+// A scroll's amount as epx takes it, once it is within the limit; past it
+// the amount faults with a cause of its own (design §5).
+fn scrollAmount(value : Int) : Int =
+    if value < -limit || value > limit then fault("a scroll's amount is beyond 16777216") else value
+
+// A rounded rectangle's radius as epx takes it: one below 0 is 0, as a
+// width is, and one past the limit faults, with a cause of its own (design
+// §9, §10).
+fn radius(value : Int) : Int =
+    if value > limit then fault("a radius is beyond 16777216") else if value < 0 then 0 else value
 
 // A color as epx takes it, `{A, R, G, B}`, once each channel is known to
 // be in range: epx takes a channel outside 0 to 255 as the nearer end
@@ -1753,77 +1730,6 @@ let shared = Test.Case(name = "a pixmap is shared and a copy is not", run = fn()
             Test.equal(#(down.reason, getPixel(pixmap, 0, 0), getPixel(copied, 0, 0)),
                        #(Returned, white, transparent))
     }
-})
-
-// design §2: a sub is the parent's rectangle cut to it, at either end, its
-// pixel at 0, 0 the parent's at the cut rectangle's corner and its format
-// the parent's; the two share the pixels both ways, and a copy of the sub
-// shares nothing. A regression test, written after the code; it does not
-// cover a format other than Rgb.
-let subShared = Test.Case(name = "a sub shares its parent's cut rectangle", run = fn() = {
-    let parent = numbered(4, 3);
-    let corner = sub(parent, 1, 1, 9, 9);
-    let overhanging = sub(parent, -1, -1, 3, 2);
-    let copied = copy(corner);
-    putPixel(corner, 0, 0, white);
-    putPixel(parent, 3, 2, rgb(1, 2, 3));
-    Test.equal(#(width(corner),
-                 height(corner),
-                 format(corner),
-                 getPixel(parent, 1, 1),
-                 getPixel(corner, 2, 1),
-                 reds(overhanging),
-                 width(copied),
-                 height(copied),
-                 reds(copied)),
-               #(3, 2, Rgb, white, rgb(1, 2, 3), [1, 2], 3, 2, [6, 7, 8, 10, 11, 12]))
-})
-
-// design §2: a sub of a sub is a sub of the first over the rectangle within
-// the rectangle, cut to the first sub and not to the parent. A regression
-// test, written after the code.
-let subOfSub = Test.Case(name = "a sub of a sub is over the rectangle within", run = fn() = {
-    let parent = numbered(4, 3);
-    let middle = sub(parent, 1, 1, 2, 1);
-    let inner = sub(middle, 1, 0, 5, 5);
-    putPixel(inner, 0, 0, white);
-    Test.equal(#(width(inner), height(inner), reds(middle), getPixel(parent, 2, 1)),
-               #(1, 1, [6, 255], white))
-})
-
-// design §2: a sub of a rectangle wholly outside its parent, or of width or
-// height 0, has width and height 0 and no pixels. A regression test,
-// written after the code.
-let subEmpty = Test.Case(name = "a sub outside its parent has no pixels", run = fn() = {
-    let parent = numbered(2, 2);
-    let empties =
-        [sub(parent, 5, 0, 2, 2),
-         sub(parent, -3, -3, 2, 2),
-         sub(parent, 0, 0, 0, 2),
-         sub(parent, 0, 0, 2, -1)];
-    Test.equal(List.map(empties,
-                        fn(empty) = #(width(empty), height(empty), getPixels(empty, 0, 0, 1, 1))),
-               List.repeat(#(0, 0, <<>>), 4))
-})
-
-// design §2: the parent's pixels live while a sub lives, once no process
-// holds the parent. A regression test, written after the code; it does not
-// cover when epx frees the parent's pixels, which no test sees.
-let subOutlives = Test.Case(name = "a sub's pixels outlive its parent", run = fn() = {
-    let test = self();
-    let _ = spawnMonitored(fn() = {
-                               let parent = create(2, 1, Rgb);
-                               fill(parent, white);
-                               send(test, Left(sub(parent, 1, 0, 1, 1)))
-                           },
-                           fn(down) = Right(down));
-    let held = receive {
-        Left(pixmap) -> pixmap
-    };
-    let reason = receive {
-        Right(down) -> down.reason
-    };
-    Test.equal(#(reason, getPixel(held, 0, 0)), #(Returned, white))
 })
 
 // design §3: a pixmap is equal to itself and to no other, its copy among
@@ -2057,44 +1963,29 @@ let landed = Test.Case(name = "an area function's pixels land in their places", 
                #(<<0, 0, 0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 0, 0, 0>>, <<1, 1, 1, 1, 1, 1, 2, 2, 2>>))
 })
 
-// design §4: a sub's clip is its own, the whole sub when it is made: the
-// parent's clip does not reach the sub, nor the sub's the parent. A
-// regression test, written after the code.
-let subClip = Test.Case(name = "a sub's clip is its own", run = fn() = {
-    let parent = create(3, 1, Rgb);
-    setClip(parent, 0, 0, 1, 1);
-    let right = sub(parent, 1, 0, 2, 1);
-    fillArea(right, 0, 0, 2, 1, white);
-    let throughSub = getPixels(parent, 0, 0, 3, 1);
-    setClip(parent, 0, 0, 3, 1);
-    setClip(right, 0, 0, 1, 1);
-    fillArea(parent, 0, 0, 3, 1, rgb(1, 2, 3));
-    Test.equal(#(throughSub, getPixels(parent, 0, 0, 3, 1)),
-               #(<<0, 0, 0, 255, 255, 255, 255, 255, 255>>, <<1, 2, 3, 1, 2, 3, 1, 2, 3>>))
-})
-
 // design §4: `scroll` shifts the source into the target to the right by a
-// horizontal amount above 0 and down by a vertical one, to the left and up
-// by one below 0, and `Filled` fills what the shift uncovers. A regression
-// test, written after the code; it does not cover amounts at their bounds.
+// `right` above 0 and down by a `down` above 0, to the left and up by one
+// below 0, and `Filled` fills what the shift uncovers. A regression test,
+// written after the code; it does not cover amounts at their bounds.
 let scrolled = Test.Case(name = "scroll shifts right and down above 0", run = fn() = {
-    let shifted = fn(horizontal : Int, vertical : Int) : List(Int) = {
+    let shifted = fn(right : Int, down : Int) : List(Int) = {
         let target = create(3, 2, Rgb);
-        scroll(numbered(3, 2), target, horizontal, vertical, Filled(rgb(9, 0, 0)));
+        scroll(numbered(3, 2), target, right, down, Filled(rgb(9, 0, 0)));
         reds(target)
     };
     Test.equal([shifted(1, 0), shifted(-1, 0), shifted(0, 1), shifted(0, -1)],
                [[9, 1, 2, 9, 4, 5], [2, 3, 9, 5, 6, 9], [9, 9, 9, 1, 2, 3], [4, 5, 6, 9, 9, 9]])
 })
 
-// design §4: `Wrapped` takes the shift modulo the width and the height, so
-// that a shift by a whole width copies the source as it is, and `Filled`
-// fills the whole area where the shift reaches its width or height. A
-// regression test, written after the code.
+// design §4: `Wrapped` takes the shift modulo the common area's width and
+// height, so that a shift by a whole width copies the source as it is, and
+// `Filled` fills the whole area where the shift reaches its width or
+// height. A regression test, written after the code; it does not cover a
+// common area smaller than either pixmap, nor a shift by both amounts.
 let scrollWrapped = Test.Case(name = "scroll wraps modulo the size or fills", run = fn() = {
-    let shifted = fn(horizontal : Int, vertical : Int, uncovered : Uncovered) : List(Int) = {
+    let shifted = fn(right : Int, down : Int, backfill : Backfill) : List(Int) = {
         let target = create(3, 3, Rgb);
-        scroll(numbered(3, 3), target, horizontal, vertical, uncovered);
+        scroll(numbered(3, 3), target, right, down, backfill);
         reds(target)
     };
     let filled = Filled(rgb(99, 0, 0));
@@ -2131,22 +2022,42 @@ let scrollCommon = Test.Case(name = "scroll writes within the common area", run 
 })
 
 // design §4: the source and the target may be one pixmap, which a scroll by
-// both a horizontal and a vertical amount shifts by both. A regression
-// test, written after the code.
+// both amounts shifts by both. A regression test, written after the code;
+// it does not cover amounts below 0, nor a shift past the width or height.
 let scrollInPlace = Test.Case(name = "scroll shifts one pixmap in place", run = fn() = {
-    let shifted = fn(uncovered : Uncovered) : List(Int) = {
+    let shifted = fn(backfill : Backfill) : List(Int) = {
         let pixmap = numbered(3, 3);
-        scroll(pixmap, pixmap, 1, 1, uncovered);
+        scroll(pixmap, pixmap, 1, 1, backfill);
         reds(pixmap)
     };
     Test.equal(#(shifted(Wrapped), shifted(Filled(rgb(99, 0, 0)))),
                #([9, 7, 8, 3, 1, 2, 6, 4, 5], [99, 99, 99, 99, 1, 2, 99, 4, 5]))
 })
 
+// design §4: `scroll` reads neither the source's clip nor the target's, and
+// writes the whole common area, the part its shift uncovers among it. A
+// regression test, written after the code; it does not cover a clip on one
+// pixmap scrolled in place.
+let scrollUnclipped = Test.Case(name = "scroll reads neither clip", run = fn() = {
+    let shifted = fn(backfill : Backfill) : List(Int) = {
+        let source = numbered(3, 2);
+        let target = create(3, 2, Rgb);
+        setClip(source, 0, 0, 1, 1);
+        setClip(target, 2, 1, 1, 1);
+        scroll(source, target, 1, 0, backfill);
+        // `reds` reads with `getPixel`, which answers black outside the clip.
+        setClip(target, 0, 0, 3, 2);
+        reds(target)
+    };
+    Test.equal(#(shifted(Wrapped), shifted(Filled(rgb(9, 0, 0)))),
+               #([3, 1, 2, 6, 4, 5], [9, 1, 2, 9, 4, 5]))
+})
+
 // design §5: the library refuses a coordinate, a size, a scroll's amount
 // and a pixmap's bytes past their bounds, a channel, an alpha and a fade
 // outside 0 to 255, and bytes of another size, before epx is called. The
-// cases of `sub` and `scroll` are regression cases, written after the code.
+// cases of `scroll` are regression cases, written after the code; they do
+// not cover an amount at its bound, which is taken.
 let refused = Test.Case(name = "the library's own faults", run = fn() = {
     let pixmap = create(2, 1, Argb);
     let tooRed = Color(alpha = 255, red = 256, green = 0, blue = 0);
@@ -2154,6 +2065,7 @@ let refused = Test.Case(name = "the library's own faults", run = fn() = {
     let coordinateCause = "a coordinate is beyond 16777216";
     let extentCause = "a width or height is beyond 16777216";
     let channelCause = "a channel of a Color is outside 0 to 255";
+    let amountCause = "a scroll's amount is beyond 16777216";
     Test.equal([Test.faults(fn() = fillArea(pixmap, -16777217, 0, 1, 1, white), coordinateCause),
                 Test.faults(fn() = putPixel(pixmap, 0, 16777217, white), coordinateCause),
                 Test.faults(fn() = setClip(pixmap, 0, 0, 16777217, 1), extentCause),
@@ -2168,12 +2080,10 @@ let refused = Test.Case(name = "the library's own faults", run = fn() = {
                             "the fade is outside 0 to 255"),
                 Test.faults(fn() = putPixels(pixmap, 0, 0, 2, 1, Rgb, <<1, 2, 3, 4, 5>>),
                             "the bytes are not width times height pixels in the format"),
-                Test.faults(fn() = sub(pixmap, -16777217, 0, 1, 1), coordinateCause),
-                Test.faults(fn() = sub(pixmap, 0, 0, 1, 16777217), extentCause),
-                Test.faults(fn() = scroll(pixmap, pixmap, 16777217, 0, Wrapped), coordinateCause),
-                Test.faults(fn() = scroll(pixmap, pixmap, 0, -16777217, Wrapped), coordinateCause),
+                Test.faults(fn() = scroll(pixmap, pixmap, 16777217, 0, Wrapped), amountCause),
+                Test.faults(fn() = scroll(pixmap, pixmap, 0, -16777217, Wrapped), amountCause),
                 Test.faults(fn() = scroll(pixmap, pixmap, 1, 0, Filled(tooRed)), channelCause)],
-               List.repeat(Test.Passed, 16))
+               List.repeat(Test.Passed, 14))
 })
 
 // design §5: `format` faults on a pixmap that foreign code made in a

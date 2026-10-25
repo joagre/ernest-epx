@@ -837,6 +837,24 @@ let linesClipped = Test.Case(name = "a wide line stays within the clip", run = f
                  [".....", ".....", ".LLL.", ".LLL.", "....."]))
 })
 
+// design §9: a line wider than 1 that is neither horizontal nor vertical
+// is a band centered on the line, at a width of 5 from two rows above its
+// upper end to two below its lower, both ends among its pixels. A
+// regression test, written after the code; it does not cover which pixels
+// of those rows the band covers, which the design leaves unstated, nor an
+// even width.
+let wideDiagonal = Test.Case(name = "a wide diagonal line is a band centered on it", run = fn() = {
+    let pixmap = blank(18, 14);
+    let context = create();
+    setLineWidth(context, 5);
+    Epx.drawLine(pixmap, context, 2, 4, 15, 9);
+    let covered = List.map(rows(pixmap), fn(text) = String.contains(text, "L"));
+    let ends = [letter(Epx.getPixel(pixmap, 2, 4)), letter(Epx.getPixel(pixmap, 15, 9))];
+    Test.equal(#(covered, ends),
+               #(List.repeat(false, 2) <> List.repeat(true, 10) <> List.repeat(false, 2),
+                 ["L", "L"]))
+})
+
 // design §9: a rectangle's border lies within it and its fill within the
 // border; with no fill the border alone is drawn, one pixel wide where its
 // width is 0; with a fill a border of width 0 is none.
@@ -907,12 +925,28 @@ let ellipses = Test.Case(name = "drawEllipse covers its radii and its ring", run
                 empty])
 })
 
+// design §9: an ellipse far past a radius of 65535 is drawn as any other
+// is, and returns: one 1048576 wide and 4 high fills its left end, the row
+// of its center, and one 1048576 by 1048576 at the origin leaves the corner
+// outside it as it was. A regression test, written after the code; it does
+// not cover its ring, which the design states malformed there, nor what
+// such an ellipse costs.
+let largeEllipses = Test.Case(name = "an ellipse past a radius of 65535 is drawn", run = fn() = {
+    let pixmap = blank(4, 5);
+    let context = create();
+    Epx.drawEllipse(pixmap, context, 0, 0, 1048576, 1048576);
+    Epx.drawEllipse(pixmap, context, 0, 0, 1048576, 4);
+    Test.equal(rows(pixmap), ["....", "....", "RRRR", "....", "...."])
+})
+
 // design §9: a rounded rectangle with both radii 0 has square corners, its
-// border a row thicker at the top and the bottom than at the sides; a
-// radius above (width - 1) / 2 or (height - 1) / 2 is that, and one below
-// 0 is 0; and one of width or height 0 draws nothing, of width or height 1
-// a line of pixels. A regression test, written after the code; it does not
-// cover which pixels a corner covers but at radii 3 on 7 by 7.
+// border a row thicker at the top and the bottom than at the sides;
+// `radiusX` above (width - 1) / 2 is that, `radiusY` above (height - 1) / 2
+// likewise, and one below 0 is 0; and one of width or height 0 draws
+// nothing, of width or height 1 a line of pixels in the fill's color where
+// there is a fill and no border. A regression test, written after the
+// code; it does not cover which pixels a corner covers but at radii 3 on 7
+// by 7, nor a line of width or height 1 in the border's color.
 let roundedRectangles =
     Test.Case(name = "drawRoundedRectangle's corners and its radii", run = fn() = {
         let drawn =
@@ -1033,6 +1067,26 @@ let polygonOutlines =
                     [".......", ".......", "...L...", "...L...", "...L...", ".......", "......."]])
     })
 
+// design §9: with a fill, a polygon of one point is that pixel and of two
+// points the line between them, both ends among them, in the fill's color
+// and one pixel wide at a line's width of 3. A regression test, written
+// after the code; it does not cover a line's width other than 3, nor a
+// fill's style other than Solid.
+let filledFewPoints =
+    Test.Case(name = "a filled polygon of one or two points is one pixel wide", run = fn() = {
+        let drawn = fn(points : List(#(Int, Int))) : List(String) = {
+            let pixmap = blank(5, 5);
+            let context = create();
+            setLineWidth(context, 3);
+            Epx.drawPolygon(pixmap, context, points);
+            rows(pixmap)
+        };
+        Test.equal([drawn([#(2, 2)]), drawn([#(0, 2), #(4, 2)]), drawn([#(0, 0), #(4, 4)])],
+                   [[".....", ".....", "..R..", ".....", "....."],
+                    [".....", ".....", "RRRRR", ".....", "....."],
+                    ["R....", ".R...", "..R..", "...R.", "....R"]])
+    })
+
 // design §9: a triangle with a fill covers its corners and edges, and with
 // no fill is its edges in the foreground, one pixel wide where the line's
 // width is 0 or 1.
@@ -1052,7 +1106,8 @@ let triangles = Test.Case(name = "drawTriangle fills or draws its edges", run = 
 
 // design §9: every drawing function writes only within the clip. The
 // rounded rectangle's and the polygon's cases are regression cases, written
-// after the code.
+// after the code; they do not cover a rounded corner or a polygon with no
+// fill at the clip's edge.
 let drawingClipped = Test.Case(name = "the drawing functions write within the clip", run = fn() = {
     let context = create();
     let written = fn(draw : (Epx.Pixmap) -> Unit) : List(String) = {
@@ -1085,7 +1140,8 @@ let drawingClipped = Test.Case(name = "the drawing functions write within the cl
 // design §10: the library refuses a coordinate, a polygon's among them, a
 // width, a radius and a channel past their bounds before epx is called.
 // The ellipse's width, the rounded rectangle's and the polygon's cases
-// among them are regression cases, written after the code.
+// among them are regression cases, written after the code; they do not
+// cover a value at its bound, which is taken.
 let refused = Test.Case(name = "the drawing functions' and the context's faults", run = fn() = {
     let pixmap = blank(2, 2);
     let context = create();
@@ -1094,6 +1150,7 @@ let refused = Test.Case(name = "the drawing functions' and the context's faults"
     let coordinateCause = "a coordinate is beyond 16777216";
     let extentCause = "a width or height is beyond 16777216";
     let channelCause = "a channel of a Color is outside 0 to 255";
+    let radiusCause = "a radius is beyond 16777216";
     let rounded =
         fn(x : Int, width : Int, radiusX : Int, radiusY : Int) : Unit =
             Epx.drawRoundedRectangle(pixmap, context, x, 0, width, 1, radiusX, radiusY);
@@ -1115,8 +1172,8 @@ let refused = Test.Case(name = "the drawing functions' and the context's faults"
                 Test.faults(fn() = setForeground(context, tooRed), channelCause),
                 Test.faults(fn() = rounded(16777217, 1, 0, 0), coordinateCause),
                 Test.faults(fn() = rounded(0, 16777217, 0, 0), extentCause),
-                Test.faults(fn() = rounded(0, 1, 16777217, 0), extentCause),
-                Test.faults(fn() = rounded(0, 1, 0, 16777217), extentCause),
+                Test.faults(fn() = rounded(0, 1, 16777217, 0), radiusCause),
+                Test.faults(fn() = rounded(0, 1, 0, 16777217), radiusCause),
                 Test.faults(fn() = Epx.drawPolygon(pixmap, context, [#(0, 0), #(16777217, 0)]),
                             coordinateCause),
                 Test.faults(fn() = Epx.drawPolygon(pixmap, context, [#(0, -16777217)]),

@@ -4,7 +4,9 @@ How the program is arranged, stated as rules: its processes and what each owns, 
 
 ## 1. What the library does
 
-The library is three modules over epx, the pixel library for Erlang. `Epx`, over epx's pixmaps, makes a pixmap, fills, reads and writes it pixel by pixel and in rectangles, takes a rectangle of one as a pixmap of its own, copies, scales, scrolls and blends one into another, draws points, lines, rectangles, rounded rectangles, ellipses, triangles and polygons into it with a graphics context, and writes one as a PPM file. `Epx.Gc`, over epx's graphics context, makes a context and sets and reads its keys (§7). `Epx.Window`, over epx's windows, opens a window on the screen and shows a pixmap in it (§11).
+The library is three modules over epx, the pixel library for Erlang. `Epx`, over epx's pixmaps, makes a pixmap, fills, reads and writes it pixel by pixel and in rectangles, copies, scales, scrolls and blends one into another, draws points, lines, rectangles, rounded rectangles, ellipses, triangles and polygons into it with a graphics context, and writes one as a PPM file.
+
+`Epx.Gc`, over epx's graphics context, makes a context and sets and reads its keys (§7). `Epx.Window`, over epx's windows, opens a window on the screen and shows a pixmap in it (§11).
 
 The library reads no event. It starts no process of its own, `open` starting epx's application (§11), and holds no Erlang of its own.
 
@@ -12,7 +14,7 @@ The library reads no event. It starts no process of its own, `open` starting epx
 
 Each function but `toPpm` and the window's calls the epx functions its table names, each at most once: the table below for the pixmap's functions, §7's for the context's, §9's for the drawing functions. The window's call those §11's table names, as §11 says. Where one epx function does a function's work exactly, the function is a `foreign fn` over it, and where it differs, Ernest closes the difference around the call.
 
-The differences closed are these, each stated where its rule is (§2 to §10): a `Color` crosses as the tuple epx takes, and a `Format`, an `Operation` or a `Style` as its atoms; epx's `ok` is `Unit`; a width or a height below 0 is 0; a precondition of §5, §10 or §12 is checked before the call; `scroll`'s vertical amount moves the pixels down where epx's moves them up, so that it goes with `y`. Each module checks with functions of its own, since Ernest has no function private to a library (report §4.2).
+The differences closed are these, each stated where its rule is (§2 to §10): a `Color` crosses as the tuple epx takes, and a `Format`, an `Operation` or a `Style` as its atoms; epx's `ok` is `Unit`; a width or a height below 0 is 0; a precondition of §5, §10 or §12 is checked before the call; `scroll`'s `down` moves the pixels down where epx's vertical amount moves them up. Each module checks with functions of its own, since Ernest has no function private to a library (report §4.2).
 
 Also closed: a new pixmap is filled; a new context's border lies within its shape; and `getPixels` answers a rectangle of width and height 0 without epx, which answers its whole memory for one at `0`, `0`.
 
@@ -20,7 +22,6 @@ Also closed: a new pixmap is filled; a new context's border lies within its shap
 |---|---|---|
 | `create(width, height, format)` | `pixmap_create/3`, `pixmap_fill/2` | a new pixmap, every pixel 0 in every channel |
 | `copy(pixmap)` | `pixmap_copy/1` | a new pixmap with the same size, format and pixels |
-| `sub(pixmap, x, y, width, height)` | `pixmap_sub_pixmap/5` | a pixmap over the rectangle's pixels of the first, shared (§2) |
 | `width(pixmap)`, `height(pixmap)`, `format(pixmap)` | `pixmap_info_/2` | what the pixmap is |
 | `fill(pixmap, color)` | `pixmap_fill/2` | every pixel the color |
 | `fillArea(pixmap, x, y, width, height, color)` | `pixmap_fill_area/6` | the rectangle the color |
@@ -32,7 +33,7 @@ Also closed: a new pixmap is filled; a new context's border lies within its shap
 | `copyArea(source, target, sourceX, sourceY, targetX, targetY, width, height)` | `pixmap_copy_area/8` | a rectangle of the source into the target |
 | `scale(source, target, width, height)` | `pixmap_scale/4` | the source scaled into the target |
 | `flip(pixmap)` | `pixmap_flip/1` | the rows in reverse order |
-| `scroll(source, target, horizontal, vertical, uncovered)` | `pixmap_scroll/6` | the source's pixels shifted into the target, the uncovered part wrapped or filled (§4) |
+| `scroll(source, target, right, down, backfill)` | `pixmap_scroll/6` | the source's pixels shifted into the target, the uncovered part wrapped or filled (§4) |
 | `blendArea(source, target, alpha, sourceX, sourceY, targetX, targetY, width, height)` | `pixmap_alpha_area/9` | a rectangle of the source blended into the target by `alpha` |
 | `fadeArea(source, target, fade, sourceX, sourceY, targetX, targetY, width, height)` | `pixmap_fade_area/9` | a rectangle of the source blended into the target by its own alpha, scaled by `fade` |
 | `shadowArea(source, target, sourceX, sourceY, targetX, targetY, width, height)` | `pixmap_shadow_area/8` | the target darkened by the luminance of a rectangle of the source |
@@ -49,10 +50,6 @@ A pixmap is not a value. A function that writes it changes it in place, and ever
 
 A pixmap lives while a process holds it, and the host frees it once none does; there is no `close`. A pixmap is bound to the node that made it (report §3.8, §3.11).
 
-`sub` makes a pixmap over the pixels of a rectangle of another, its parent: the rectangle cut to the parent (§4), the sub's pixel at `0`, `0` the parent's at the cut rectangle's corner, its width and height the cut rectangle's, and its format the parent's. The two share the pixels both ways, as a pixmap is shared by two processes; a sub of a sub is a sub of the first, over the rectangle within the rectangle.
-
-A sub of a rectangle that is wholly outside its parent, or of width or height 0, has width and height 0 and no pixels. The parent's pixels live while a sub lives, whether the parent is held or not; nothing asks a pixmap for its parent (`epx_bugs.md` 26). `copy` of a sub is a new pixmap of the sub's size that shares nothing.
-
 The library starts no process of its own, and no function receives or names a mailbox (report Appendix E.0 shape rule 5).
 
 ## 3. The types
@@ -67,7 +64,7 @@ export type Color = Color(alpha : Int, red : Int, green : Int, blue : Int)
 export type Operation = Clear | Src | Dst | SrcOver | DstOver | SrcIn | DstIn | SrcOut | DstOut
                       | SrcAtop | DstAtop | Xor | Copy | Add | Sub | SrcBlend | DstBlend
 
-export type Uncovered = Wrapped | Filled(Color)
+export type Backfill = Wrapped | Filled(Color)
 
 export foreign type Context
 
@@ -82,7 +79,7 @@ A `Color` is four channels, each from 0 to 255, alpha 255 being opaque and 0 tra
 
 An `Operation` is one of epx's seventeen ways of combining a pixel of the source with a pixel of the target, crossing as the atom of its name in lower case with `_` between its words, `src_over`. What each does is its constructor's doc block.
 
-An `Uncovered` says what `scroll` leaves in the part of the target its shift uncovers (§4): `Wrapped`, the pixels shifted out of the other side, which crosses as epx's rotate `true` and a color it does not read, or `Filled(color)`, that color, crossing as `false` and the color's tuple.
+A `Backfill` says what `scroll` leaves in the part of the target its shift uncovers (§4): `Wrapped`, the pixels shifted out of the other side, which crosses as epx's rotate `true` and a color it does not read, or `Filled(color)`, that color, crossing as `false` and the color's tuple.
 
 ## 4. Coordinates and the clip
 
@@ -92,7 +89,7 @@ A coordinate is from −16,777,216 to 16,777,216, and a width or a height at mos
 
 A pixmap's bytes are its row's bytes times its height, and a row's bytes are its width times its format's bytes a pixel, rounded up to a multiple of 16. A pixmap's bytes are below 2,147,483,648, 2 GiB (§5).
 
-Each pixmap has a clip, a rectangle within it, which is the whole pixmap when the pixmap is made, copied or taken by `sub`. `setClip` sets the clip to the part of its rectangle within the pixmap, which may be empty. A sub's clip is its own: the parent's clip does not reach the sub, nor the sub's the parent.
+Each pixmap has a clip, a rectangle within it, which is the whole pixmap when the pixmap is made or copied. `setClip` sets the clip to the part of its rectangle within the pixmap, which may be empty.
 
 The clip bounds what a function writes and what it reads:
 
@@ -109,11 +106,11 @@ The two rectangles of `copyArea` may overlap in one pixmap. Those of `blendArea`
 
 `getPixels` answers the bytes of the part of its rectangle within the pixmap, row by row from the top, and no bytes for a rectangle that has no pixels.
 
-`scroll` writes the source's pixels into the target shifted by `horizontal` columns to the right, or to the left where it is below 0, and `vertical` rows down, or up where it is below 0, within the common area of the two, the smaller width by the smaller height from `0`, `0` of each; the target outside it is left as it was, and a pixel crosses into the target's format.
+`scroll` writes the source's pixels into the target shifted by `right` columns to the right, or to the left where it is below 0, and `down` rows down, or up where it is below 0, within the common area of the two, the smaller width by the smaller height from `0`, `0` of each; the target outside it is left as it was, and a pixel crosses into the target's format.
 
-The part of the common area the shift uncovers is as the `Uncovered` says (§3): `Wrapped` takes the shift modulo the width and the height, so a shift by a whole width or height copies the source as it is; `Filled(color)` fills the uncovered part with the color, the whole area where the shift reaches its width or height.
+The part of the common area the shift uncovers is as the `Backfill` says (§3): `Wrapped` takes the shift modulo the common area's width and height, so a shift by a whole width or height copies the source as it is, and keeps the wrapped columns or rows in memory of their size meanwhile, writing nothing where the host cannot allocate it (`epx_bugs.md` 38); `Filled(color)` fills the uncovered part with the color, the whole area where the shift reaches its width or height.
 
-The source and the target may be one pixmap. A scroll by 0 and 0 writes nothing, into another pixmap too (`epx_bugs.md` 28), and what a scroll between two pixmaps by both a horizontal and a vertical amount writes is not stated (`epx_bugs.md` 27).
+The source and the target may be one pixmap. A scroll by 0 and 0 writes nothing, into another pixmap too (`epx_bugs.md` 28), and what a scroll between two pixmaps by both amounts writes is not stated (`epx_bugs.md` 27).
 
 ## 5. What faults
 
@@ -122,13 +119,13 @@ An argument the library refuses faults the calling process before epx is called 
 - a coordinate outside −16,777,216 to 16,777,216: `Fault("a coordinate is beyond 16777216")`;
 - a width or a height above 16,777,216: `Fault("a width or height is beyond 16777216")`;
 - a width, a height and a format given to `create` whose pixmap's bytes reach 2 GiB (§4): `Fault("the pixmap's bytes reach 2 GiB")`;
-- a horizontal or vertical amount given to `scroll` outside −16,777,216 to 16,777,216: `Fault("a coordinate is beyond 16777216")`;
+- an amount given to `scroll` outside −16,777,216 to 16,777,216: `Fault("a scroll's amount is beyond 16777216")`;
 - a `Color` with a channel outside 0 to 255, given to `fill`, `fillArea`, `putPixel` or `scroll`'s `Filled`: `Fault("a channel of a Color is outside 0 to 255")`;
 - an `alpha` outside 0 to 255, given to `blendArea`: `Fault("the alpha is outside 0 to 255")`;
 - a `fade` outside 0 to 255, given to `fadeArea`: `Fault("the fade is outside 0 to 255")`;
 - bytes given to `putPixels` that are not `width` times `height` pixels in the format, a width or a height below 0 being 0: `Fault("the bytes are not width times height pixels in the format")`.
 
-Memory the host cannot allocate faults as a foreign function that raises does, with epx's function in the cause (report §7.4): a new pixmap's pixels, in `create`, `copy`, `sub` and `toPpm`, with `Fault("foreign function epx:pixmap_create/3 raised error:badarg")`, `epx:pixmap_copy/1`'s or `epx:pixmap_sub_pixmap/5`'s, and the bytes `getPixels` answers, in `getPixels` and `toPpm`, with `epx:pixmap_get_pixels/5`'s. `format` faults with `Fault("the pixmap's format is none of Format's")` on a pixmap that foreign code made in another format.
+Memory the host cannot allocate faults as a foreign function that raises does, with epx's function in the cause (report §7.4): a new pixmap's pixels, in `create`, `copy` and `toPpm`, with `Fault("foreign function epx:pixmap_create/3 raised error:badarg")` or `epx:pixmap_copy/1`'s, and the bytes `getPixels` answers, in `getPixels` and `toPpm`, with `epx:pixmap_get_pixels/5`'s. `format` faults with `Fault("the pixmap's format is none of Format's")` on a pixmap that foreign code made in another format.
 
 Nothing else faults but what §10 lists. A read outside the pixmap or its clip answers as §4 says, and a write outside the clip writes nothing.
 
@@ -200,17 +197,17 @@ An ellipse is centered at `x + width / 2`, `y + height / 2`, its radii `width / 
 
 An ellipse's border is the ring from its edge to the edge of the ellipse the border's width inside it, both edges drawn, so that the ring is the border's width and one pixel across; its fill is within the ring. With a fill, a border of width 0 is none. With no fill, the ring alone is drawn, one pixel across where the border's width is 0.
 
-A ring is malformed near the ellipse's top and bottom where the border's width is 1 or 2, a pixel of it outside the ellipse and the fill showing through below it, and past a radius of 65,535 (`epx_bugs.md` 12).
+A ring is malformed near the ellipse's top and bottom where the border's width is 1 or 2, a pixel of it outside the ellipse and the fill showing through below it, and at any border's width past a radius of 65,535 (`epx_bugs.md` 12).
 
-A rounded rectangle is the rectangle at `x`, `y` of `width` and `height` with each corner a quarter of an ellipse of radii `radiusX` and `radiusY`, a radius above `(width - 1) / 2` or `(height - 1) / 2`, rounded down, being that, and one below 0 being 0 as a width or a height is (§4); with both radii 0 its corners are square.
+A rounded rectangle is the rectangle at `x`, `y` of `width` and `height` with each corner a quarter of an ellipse of radii `radiusX` and `radiusY`, `radiusX` above `(width - 1) / 2`, rounded down, being that, `radiusY` above `(height - 1) / 2` likewise, and one below 0 being 0 as a width or a height is (§4); with both radii 0 its corners are square.
 
-Its border and its fill are the rectangle's above, the border within the shape, and its border is a row thicker at the top and the bottom than at the sides (`epx_bugs.md` 31). One whose width or height is 0 draws nothing, and one of width or height 1 is a line of pixels.
+Its border and its fill are the rectangle's above, the border within the shape, and its border is a row thicker at the top and the bottom than at the sides (`epx_bugs.md` 31). One whose width or height is 0 draws nothing, and one of width or height 1 is a line of pixels in the border's color, or in the fill's where there is a fill and no border.
 
 A polygon is the closed figure of its points, each joined to the next and the last to the first. With a fill it is every pixel within the figure by the even-odd rule, the edges among them, in the fill's color by the fill's style.
 
 With no fill it is its edges, each a line from point to point in the foreground by the line's style and width, one pixel wide where the width is 0 or 1 as a triangle's edges are; an edge that is neither horizontal nor vertical leaves out its upper end, the point of the smaller `y`, whichever end the list names first (`epx_bugs.md` 35).
 
-A polygon of no points draws nothing, of one point a line of no length, that pixel where the line's width is at most 1, and of two the line between them. A filled polygon costs its height in rows, within the clip or not (`epx_bugs.md` 30).
+A polygon of no points draws nothing. With a fill, one point is that pixel and two points the line between them, both ends among them, in the fill's color and one pixel wide whatever the line's width; with no fill, one point is a line of no length, that pixel where the line's width is at most 1, and two points the line between them, drawn as an edge is. A filled polygon costs its height in rows, within the clip or not (`epx_bugs.md` 30).
 
 A triangle with a fill is every pixel within its three corners, its edges among them, in the fill's color by the fill's style. With no fill it is its three edges, each a line from corner to corner in the foreground by the line's style, one pixel wide where the line's width is 0 or 1; where the width is above 1, which pixels the edges cover is not stated.
 
@@ -221,7 +218,8 @@ A drawing function reads each key it needs as it runs. A key another process set
 An argument the library refuses faults the calling process before epx is called (report §7.4), as §5's do:
 
 - a coordinate given to a drawing function outside −16,777,216 to 16,777,216, a polygon's points among them: `Fault("a coordinate is beyond 16777216")`;
-- a width, a height or a radius given to `drawRectangle`, `drawEllipse` or `drawRoundedRectangle`, or a width given to `setLineWidth` or `setBorderWidth`, above 16,777,216: `Fault("a width or height is beyond 16777216")`;
+- a width or a height given to `drawRectangle`, `drawEllipse` or `drawRoundedRectangle`, or a width given to `setLineWidth` or `setBorderWidth`, above 16,777,216: `Fault("a width or height is beyond 16777216")`;
+- a radius given to `drawRoundedRectangle` above 16,777,216: `Fault("a radius is beyond 16777216")`;
 - a `Color` with a channel outside 0 to 255, given to `setFillColor`, `setBorderColor` or `setForeground`: `Fault("a channel of a Color is outside 0 to 255")`.
 
 A getter of a style faults with `Fault("the context's style is none of Style's")` on a style that foreign code set and that is none of `Style`'s (§8). Memory the host cannot allocate for a new context faults as a foreign function that raises does, with epx's function in the cause: `Fault("foreign function epx:gc_create/0 raised error:badarg")`, or `epx:gc_copy/1`'s. Nothing else faults.
@@ -247,7 +245,7 @@ The rectangle `showArea` shows is cut to the pixmap's clip, the cut moving its p
 
 The backend draws each request into a copy of the window kept off the screen, `use_off_screen` as epx starts it, and copies the copy to the screen whole. A row shown at a time is so seen without flicker, and a window covered and uncovered keeps its picture.
 
-`close` takes the window off the screen with `window_adjust/2` and not `window_detach/1`, since a `show` after a detach is taken or refused by whether the backend has taken the detach first, and nothing brings it back. A window closed is epx's until no process holds it: a `show` into it draws into it off the screen, where nothing is seen, and a second `close` does nothing. An `open` after a `close` makes a new window.
+`close` takes the window off the screen with `window_adjust/2` and not `window_detach/1`, and nothing brings it back. A window closed is epx's until no process holds it: a `show` into it draws into it off the screen, where nothing is seen, and a second `close` does nothing. An `open` after a `close` makes a new window.
 
 No function sends the backend a sync, which epx answers with a message to the process that made the window. The window's close button is sent to that process all the same, as `{epx_event, Window, close}`, whatever the window's flags, as epx's documentation says, and the window stays on the screen.
 
@@ -257,7 +255,7 @@ Where no display can be opened, `DISPLAY` unset or naming no X server, epx's app
 
 The copy off the screen takes four bytes a pixel of the X server's memory, and a window whose copy the server cannot allocate shows nothing. Each request costs the backend a copy of the whole window to the screen and a round trip to the X server: requests made faster than the backend draws them wait in epx's queue, and are drawn after the program has gone on.
 
-`make test` runs with or without a display, and no test opens a window. §12's refusals come before epx is called and are tested, those of `show` and `showArea` on a window `window_create/4` makes with no display; the rest of this section and of §12 is tried by hand before a release (`release.md`).
+`make test` runs with or without a display, and no test opens a window. §12's refusals come before epx is called and are tested, those of `showArea` on a window `window_create/4` makes with no display; the rest of this section and of §12 is tried by hand before a release (`release.md`).
 
 ## 12. What the window functions fault
 
@@ -279,13 +277,13 @@ The names that recur across modules, one for each concept, in every module. A na
 - **color**: a `Color`, four channels (§3). Not `pixel` for the value, nor `c`, `col`.
 - **channel**: one of a color's four values, `alpha`, `red`, `green` or `blue`, from 0 to 255 (§3). Not `component`.
 - **format**: a `Format`, the order of a pixel's bytes (§3). Not `pixelFormat`, `fmt`.
-- **sub, parent**: a pixmap `sub` makes over a rectangle of another, and that other (§2). Not `view`, `child`, `region`.
+- **backfill**: a `Backfill`, what a scroll leaves in the part it uncovers (§3). Not `fill`, `mode`, `wrap`.
 - **source, target**: the pixmap a function of two reads and the one it writes; their rectangles' corners are `sourceX`, `sourceY`, `targetX` and `targetY`. Not `src`, `dst`, `destination`.
 - **clip**: a pixmap's clip (§4). Not `clipRect`.
 - **function, operation**: one of the library's functions, `fill` or `copyArea` (§1), and an `Operation`, one of epx's ways of combining two pixels (§3). Not `operation` for a function.
 - **context**: epx's graphics context, a `Context` (§7), which `Epx.Gc` makes, sets and reads; many are `contexts`. Not `gc`, `graphicsContext`: `Gc` is the module's name alone.
 - **style**: a `Style`, how a drawing function writes a pixel in a color (§8). Not `flags`, `mode`.
-- **fill**: what a rectangle, an ellipse or a triangle holds within its border or its edges, and the two keys it is drawn by, the fill's style and color (§9). Not `interior`, `body`.
-- **border**: the edge of a rectangle or an ellipse, within it, and the three keys it is drawn by, the border's style, color and width (§9). Not `outline`, `stroke`, `frame`.
-- **line**: what `drawLine` draws, and the two keys a line, a point and a triangle's edges are drawn by beside the foreground, the line's style and width (§9). Not `stroke`, `pen`.
+- **fill**: what a rectangle, a rounded rectangle, an ellipse, a triangle or a polygon holds within its border or its edges, and the two keys it is drawn by, the fill's style and color (§9). Not `interior`, `body`.
+- **border**: the edge of a rectangle, a rounded rectangle or an ellipse, within it, and the three keys it is drawn by, the border's style, color and width (§9). Not `outline`, `stroke`, `frame`.
+- **line**: what `drawLine` draws, and the two keys a line, a point and a triangle's or a polygon's edges are drawn by beside the foreground, the line's style and width (§9). Not `stroke`, `pen`.
 - **window**: a window on the screen, of type `Window` in `Epx`, in which a pixmap is shown, and `Epx.Window`, the module of its functions, one name for the two (§11); many are `windows`. Not `win`, `view`, `frame`, `display`, `screen`.

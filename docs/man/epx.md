@@ -13,9 +13,10 @@ answers, or the bytes of a PPM file that `toPpm` answers, which a
 program writes with `Fs.write`.
 
 A program puts the library's build on its load path when it is compiled
-and when it is run, and epx's `ebin` directory when it is run; epx finds
-its NIF in the `priv` directory beside its `ebin`. Run without epx's
-`ebin`, a call faults with a cause such as `foreign function
+and when it is run, and epx's `ebin` directory when it is run, with
+tree_db's beside it where it opens a window (`Epx.Window`); epx finds its
+NIF in the `priv` directory beside its `ebin`. Run without epx's `ebin`,
+a call faults with a cause such as `foreign function
 epx:pixmap_create/3 raised error:undef`.
 
 **A pixmap's life.** A pixmap lives while a process holds it, and the
@@ -30,8 +31,7 @@ by a spawned function, is the same pixmap there. Nothing orders the
 writes of two processes but the order in which they run, and epx takes
 no lock: two calls on one pixmap from two processes may interleave pixel
 by pixel, and a read may see a write half done. `copy` makes a pixmap
-that shares nothing with the first, and `sub` one over a rectangle of
-the first's pixels, which the two share both ways.
+that shares nothing with the first.
 
 **Coordinates.** A pixel is at `x`, `y`, where `0`, `0` is the top left
 pixel, `x` grows to the right and `y` downward. A rectangle is its top
@@ -43,13 +43,16 @@ reads and writes nothing of it.
 height at most 16777216. A function given a coordinate outside that
 range faults, with the cause `a coordinate is beyond 16777216`, and one
 given a larger width or height with `a width or height is beyond
-16777216`. A pixmap's bytes are its row's bytes times its height, a
+16777216`; a scroll's amount and a rounded rectangle's radius have the
+same bounds and causes of their own, `a scroll's amount is beyond
+16777216` and `a radius is beyond 16777216`. A pixmap's bytes are its
+row's bytes times its height, a
 row's bytes being its width times its format's bytes a pixel, rounded up
 to a multiple of 16; `create` faults on a pixmap whose bytes reach 2
 GiB, with the cause `the pixmap's bytes reach 2 GiB`.
 
 **The clip.** Each pixmap has a clip, a rectangle within it, which is
-the whole pixmap until `setClip` sets another; a sub's clip is its own.
+the whole pixmap until `setClip` sets another.
 `putPixel`, `putPixels`, `fillArea`, `scale`, `copyArea` and the blends,
 `blendArea`, `fadeArea`, `shadowArea` and `operationArea`, write only
 within the target's clip; `copyArea` and the blends read only within
@@ -270,10 +273,10 @@ the channels blended.
 - `DstBlend`: The target blended into the source by the target's alpha, as
 `SrcBlend` with the two swapped.
 
-## Epx.Uncovered
+## Epx.Backfill
 
 ```ernest
-type Uncovered = Wrapped | Filled(Color)
+type Backfill = Wrapped | Filled(Color)
 ```
 
 *Since 0.2.0.*
@@ -288,7 +291,7 @@ Epx.Filled(Epx.rgb(0, 0, 0))
 ```
 
 - `Wrapped`: The pixels shifted out of the other side, the shift taken modulo the
-width and the height.
+common area's width and height.
 - `Filled`: The color, in the part uncovered, which is the whole area where the
 shift reaches its width or its height.
 
@@ -383,51 +386,6 @@ epx's cause: `foreign function epx:pixmap_copy/1 raised error:badarg`.
     Epx.getPixel(copied, 0, 0)
 }
 // => Color(alpha = 0, red = 0, green = 0, blue = 0)
-```
-
-## Epx.sub
-
-```ernest
-Epx.sub(pixmap : Pixmap, x : Int, y : Int, width : Int, height : Int) : Pixmap
-```
-
-*Since 0.2.0.*
-
-A pixmap over the pixels of the rectangle at `x`, `y` of the pixmap, its
-parent, the two sharing those pixels both ways: what is written into
-either is read in the other, as a pixmap is shared by two processes.
-The rectangle is cut to the parent, and the sub's pixel at `0`, `0` is
-the parent's at the cut rectangle's top left; its width and height are
-the cut rectangle's, and its format the parent's. A rectangle wholly
-outside the parent, or of width or height 0, makes a sub of width and
-height 0. A sub of a sub is a sub of the first, over the rectangle
-within the rectangle.
-
-A sub's clip is its own, the whole sub when it is made: the parent's
-clip does not reach the sub, nor the sub's the parent. The parent's
-pixels live while a sub lives, whether the parent is held or not, and
-`copy` of a sub is a new pixmap of the sub's size that shares nothing.
-
-### Errors
-
-Faults on a coordinate outside -16777216 to 16777216, with the cause `a
-coordinate is beyond 16777216`, and on a width or a height above
-16777216, with the cause `a width or height is beyond 16777216`. Faults
-where the host cannot allocate the sub, with epx's cause: `foreign
-function epx:pixmap_sub_pixmap/5 raised error:badarg`.
-
-### Examples
-
-The rectangle cut to the parent, and the sub's fill seen in the parent:
-
-```ernest
-{
-    let pixmap = Epx.create(3, 2, Epx.Rgb);
-    let sub = Epx.sub(pixmap, 1, 1, 5, 5);
-    Epx.fill(sub, Epx.rgb(255, 255, 255));
-    #(Epx.width(sub), Epx.height(sub), Epx.getPixels(pixmap, 0, 1, 3, 1))
-}
-// => #(2, 1, <<0, 0, 0, 255, 255, 255, 255, 255, 255>>)
 ```
 
 ## Epx.width
@@ -608,8 +566,8 @@ Epx.copyTo(source : Pixmap, target : Pixmap) : Unit
 ```
 
 Copies the source's pixels into the target, in the target's format: the
-rectangle at the top left of both, as wide as the narrower and as high
-as the lower. Neither clip is read.
+rectangle at the top left of both, as wide as the smaller width and as
+high as the smaller height. Neither clip is read.
 
 ### Examples
 
@@ -725,33 +683,35 @@ the bottom one. The clip is not read.
 ## Epx.scroll
 
 ```ernest
-Epx.scroll(source : Pixmap, target : Pixmap, horizontal : Int, vertical : Int, uncovered : Uncovered) : Unit
+Epx.scroll(source : Pixmap, target : Pixmap, right : Int, down : Int, backfill : Backfill) : Unit
 ```
 
 *Since 0.2.0.*
 
-Writes the source's pixels into the target shifted `horizontal` columns
-to the right, or to the left where it is below 0, and `vertical` rows
-down, or up where it is below 0, within the common area of the two: the
-narrower width by the lower height, from the top left of each. The
-target outside it is left as it was, and a pixel is written in the
-target's format. Neither clip is read.
+Writes the source's pixels into the target shifted `right` columns to
+the right, or to the left where it is below 0, and `down` rows down, or
+up where it is below 0, within the common area of the two: the smaller
+width by the smaller height, from the top left of each. The target
+outside it is left as it was, and a pixel is written in the target's
+format. Neither clip is read.
 
-The part of the common area the shift uncovers is as `uncovered` says.
+The part of the common area the shift uncovers is as `backfill` says.
 `Wrapped` writes there the pixels shifted out of the other side, the
-shift taken modulo the width and the height, so that a shift by a whole
-width or height copies the source as it is. `Filled(color)` fills it
-with the color, the whole area where the shift reaches its width or
-height.
+shift taken modulo the common area's width and height, so that a shift
+by a whole width or height copies the source as it is. A wrapped scroll
+keeps the wrapped columns or rows in memory of their size meanwhile, and
+where the host cannot allocate that memory it writes nothing.
+`Filled(color)` fills the uncovered part with the color, the whole area
+where the shift reaches its width or height.
 
 The source and the target may be one pixmap. A scroll by 0 and 0 writes
 nothing, into another pixmap too, and what a scroll between two pixmaps
-by both a horizontal and a vertical amount writes is not stated.
+by both amounts writes is not stated.
 
 ### Errors
 
 Faults on an amount outside -16777216 to 16777216, with the cause `a
-coordinate is beyond 16777216`, and on a color of `Filled` with a
+scroll's amount is beyond 16777216`, and on a color of `Filled` with a
 channel outside 0 to 255, with the cause `a channel of a Color is
 outside 0 to 255`.
 
@@ -1106,7 +1066,7 @@ is 0. `Antialiased` smooths the edge of the fill.
 
 A ring is malformed near the top and the bottom where the border's width
 is 1 or 2, a pixel of it outside the ellipse and the fill showing
-through below it, and past a radius of 65535.
+through below it, and at any border's width past a radius of 65535.
 
 ### Errors
 
@@ -1136,23 +1096,25 @@ Epx.drawRoundedRectangle(pixmap : Pixmap, context : Context, x : Int, y : Int, w
 *Since 0.2.0.*
 
 Draws the rectangle at `x`, `y` with rounded corners, within the clip:
-each corner a quarter of an ellipse of radii `radiusX` and `radiusY`, a
-radius above `(width - 1) / 2` or `(height - 1) / 2`, rounded down,
-being that, so that with both radii 0 the corners are square. It reads
-the context's fill style and color and its border style, color and
-width.
+each corner a quarter of an ellipse of radii `radiusX` and `radiusY`,
+`radiusX` above `(width - 1) / 2`, rounded down, being that, and
+`radiusY` above `(height - 1) / 2` likewise; with both radii 0 the
+corners are square. It reads the context's fill style and color and its
+border style, color and width.
 
 Its border and its fill are a rectangle's, as `drawRectangle` draws
 them, the border within the shape, except that the border is a row
 thicker at the top and at the bottom than at the sides. A width, a
 height or a radius below 0 is 0. A rounded rectangle of width or height
-0 draws nothing, and one of width or height 1 is a line of pixels.
+0 draws nothing, and one of width or height 1 is a line of pixels in the
+border's color, or in the fill's where there is a fill and no border.
 
 ### Errors
 
 Faults on a coordinate outside -16777216 to 16777216, with the cause `a
-coordinate is beyond 16777216`, and on a width, a height or a radius
-above 16777216, with the cause `a width or height is beyond 16777216`.
+coordinate is beyond 16777216`, on a width or a height above 16777216,
+with the cause `a width or height is beyond 16777216`, and on a radius
+above 16777216, with the cause `a radius is beyond 16777216`.
 
 ### Examples
 
@@ -1221,10 +1183,13 @@ the width is 0 or 1, as a triangle's edges are. An edge that is neither
 horizontal nor vertical leaves out its upper end, the point of the
 smaller `y`, whichever end the list names first.
 
-A polygon of no points draws nothing, of one point a line of no length,
-that pixel where the line's width is at most 1, and of two the line
-between them. A filled polygon costs its height in rows, within the clip
-or not.
+A polygon of no points draws nothing. With a fill, one point is that
+pixel and two points the line between them, both ends among them, in
+the fill's color and one pixel wide whatever the line's width. With no
+fill, one point is a line of no length, that pixel where the line's
+width is at most 1, and two points the line between them, drawn as an
+edge is. A filled polygon costs its height in rows, within the clip or
+not.
 
 ### Errors
 
@@ -1287,4 +1252,4 @@ Epx.toPpm(Epx.create(1, 1, Epx.Rgb)) == String.toUtf8("P6\n1 1\n255\n") <> <<0, 
 
 ---
 
-Generated by ern 0.4.0 from epx.ern.
+Generated by ern 0.5.0 from src/epx.ern.

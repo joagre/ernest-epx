@@ -29,14 +29,16 @@
 /// row at a time does not flicker, and a window covered and uncovered keeps
 /// its picture.
 ///
-/// **The close button.** The process that opens a window must not
-/// `receive` with a variable pattern. A window reads no key and no button.
-/// Its close button does not close it: epx sends the process that opened
-/// the window a message no Ernest type names. A `receive` whose patterns
-/// each name a constructor leaves that message in the mailbox, and one
-/// whose pattern is a variable takes it as a message of the mailbox's type,
-/// so a program opens a window in a process that receives nothing, or whose
-/// patterns each name a constructor, and closes it with `close`.
+/// **The close button.** A window reads no key and no button, and its close
+/// button does not close it: epx sends the process that opened the window a
+/// message no Ernest type names, whatever the window's flags. A `receive`
+/// whose patterns each name a constructor leaves that message in the
+/// mailbox, where it stays; one whose pattern is a variable takes it as a
+/// message of the mailbox's type, and the program then holds a value that is
+/// none of that type's. So the process that opens a window must not
+/// `receive` with a variable pattern: a program opens a window in a process
+/// that receives nothing, or whose patterns each name a constructor, and
+/// closes it with `close`.
 ///
 /// **Bounds.** A window's coordinates are from -32767 to 32767, and its
 /// width and height from 1 to 32767, one below 1 being 1. The place is
@@ -333,7 +335,7 @@ let openRefused = Test.Case(name = "open's own faults", run = fn() = {
 // design §12: `showArea` refuses a coordinate and a width or a height past
 // 16777216 before epx is called; the window is one `window_create/4` makes
 // with no display.
-let showRefused = Test.Case(name = "showArea's own faults", run = fn() = {
+let showAreaRefused = Test.Case(name = "showArea's own faults", run = fn() = {
     let window = rawCreate(0, 0, 1, 1);
     let pixmap = Epx.create(1, 1, Epx.Rgb);
     let coordinateCause = "a coordinate is beyond 16777216";

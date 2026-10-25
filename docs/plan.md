@@ -10,7 +10,9 @@ The first cut is built and released as 0.1.0, 2026-10-20: `Epx` with twenty func
 
 The second cut is built, 2026-10-20, and the window that shows, 2026-10-21: `Epx.Gc`, five drawing functions, the clock face, `Epx.Window`, and the word `show` on every example. Whitted's spheres, the slow tracer, is built, 2026-10-21, the fifth example, and the collage of the five pictures heads the README, 2026-10-21.
 
-What waited on Ernest's MVP 3.28 is taken, 2026-10-22, milestone 6. epx's fixes are in the pin, 2026-10-23, the library follows them, and `sub`, `scroll`, the rounded rectangle and the polygon are built the same day, milestone 2 done. Ernest 0.5.0 is tagged 2026-10-25 and the floor is 0.5. What is left: the release 0.2.0, milestone 3b, made with the released `ern`; then milestone 9, what epx has not fixed, each defect going as epx fixes it. With that the library is done: a 2-D library of pixmaps, pixels and the drawing functions, with its five examples, and nothing more is planned.
+What waited on Ernest's MVP 3.28 is taken, 2026-10-22, milestone 6. epx's fixes are in the pin, 2026-10-23, the library follows them, and `sub`, `scroll`, the rounded rectangle and the polygon are built the same day, milestone 2 done; `sub` is held back from 0.2.0, since epx's `flip` and `copyTo` corrupt memory through one (milestone 9). Ernest 0.5.0 is tagged 2026-10-25 and the floor is 0.5.
+
+What is left: the release 0.2.0, milestone 3b, made with the released `ern`; then milestone 9, what epx has not fixed, each defect going as epx fixes it. With that the library is done: a 2-D library of pixmaps, pixels and the drawing functions, with its five examples, and nothing more is planned.
 
 ## Milestones
 
@@ -26,7 +28,7 @@ What waited on Ernest's MVP 3.28 is taken, 2026-10-22, milestone 6. epx's fixes 
 
 ## Milestone 3b: the release 0.2.0
 
-After milestone 6 and milestone 2: Ernest 0.5.0 is tagged 2026-10-25 and the floor is 0.5 since, `ERN_VERSION` in the Makefile as the template's; the release carries `sub`, `scroll`, the rounded rectangle and the polygon, the readers run again over the pages they changed, and `make release` runs with the released `ern`, since it refuses a development build. Decided 2026-10-22 and 2026-10-23 (the log's *What MVP 3.28 brought*, *The last milestone*, *The release waits on Ernest alone*).
+After milestone 6 and milestone 2: Ernest 0.5.0 is tagged 2026-10-25 and the floor is 0.5 since, `ERN_VERSION` in the Makefile as the template's; the release carries `scroll`, the rounded rectangle and the polygon, `sub` held back (milestone 9), the readers run again over the pages they changed, and `make release` runs with the released `ern`, since it refuses a development build. Decided 2026-10-22 and 2026-10-23 (the log's *What MVP 3.28 brought*, *The last milestone*, *The release waits on Ernest alone*).
 
 The release as [`release.md`](release.md) says: the two readers ran 2026-10-22 over the second cut's and the window's pages (the log's *The release review of 0.2.0*) and run again over what milestone 2 added since, `sub`, `scroll`, the rounded rectangle and the polygon; `make man` with the three pages, the tag `v0.2.0` and the archive with `THIRD_PARTY_LICENSES`, its notes naming epx's commit and the platform the NIF was built on. Decided 2026-10-20 with the user.
 
@@ -39,4 +41,6 @@ The window was tried by hand on a screen 2026-10-22, every example with the word
 
 The defects of `epx_bugs.md` that epx's fix commit leaves, which the library documents around and ships 0.2.0 with: 12's ring at its top and bottom, 23's extra pixel on an even ellipse, 25's first pixel of a diagonal line, 24's first picture of a window, 5, 7, 8 and 19 beyond the library's bounds, and 26 to 35, found trying the edges of `sub`, `scroll`, the rounded rectangle and the polygon, which the design states as epx has them.
 
-Each goes as a commit of epx's fixes it and the pin moves; a fix that changes what the design states changes the design first, §9 or §11, then the page and the test. Nothing is asked of epx's author for them. Decided 2026-10-23 (the log's *The release waits on Ernest alone*).
+`sub` returns as `subPixmap`, its design as the log's *The four functions* has it and its code in the history before the release 0.2.0, once epx's `pixmap_flip` and `pixmap_copy_to` take a sub's width, `epx_bugs.md` 36 and 37, and the pin moves; decided 2026-10-25 (the log's *The release 0.2.0*).
+
+Each other defect goes as a commit of epx's fixes it and the pin moves; a fix that changes what the design states changes the design first, §9 or §11, then the page and the test. Nothing is asked of epx's author for them. Decided 2026-10-23 (the log's *The release waits on Ernest alone*).

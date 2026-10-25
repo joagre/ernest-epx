@@ -20,7 +20,7 @@ The word `show` opens a window of the picture's size before the program draws, s
 
 Each file begins with a comment that says what the program does, what to look at in it, and how to run it; what is named beside each is on the page of `Epx`, of `Epx.Gc` or of `Epx.Window`, a heading of its first part or a function.
 
-The commands run from the repository's root once `make` has built the library, with `ern` on your `PATH`. `make test` builds every program here and runs each, writing its picture under `build/examples/`, and fails where one ends with a status other than 0.
+`make test` builds every program here and runs each, writing its picture under `build/examples/`, and fails where one ends with a status other than 0.
 
 | Program | What it is | What it shows | On the page |
 |---|---|---|---|
