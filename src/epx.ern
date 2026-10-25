@@ -40,12 +40,13 @@
 /// range faults, with the cause `a coordinate is beyond 16777216`, and one
 /// given a larger width or height with `a width or height is beyond
 /// 16777216`; a scroll's amount and a rounded rectangle's radius have the
-/// same bounds and causes of their own, `a scroll's amount is beyond
-/// 16777216` and `a radius is beyond 16777216`. A pixmap's bytes are its
-/// row's bytes times its height, a
-/// row's bytes being its width times its format's bytes a pixel, rounded up
-/// to a multiple of 16; `create` faults on a pixmap whose bytes reach 2
-/// GiB, with the cause `the pixmap's bytes reach 2 GiB`.
+/// same bounds, each with a cause of its own, `a scroll's amount is beyond
+/// 16777216` and `a radius is beyond 16777216`.
+///
+/// A pixmap's bytes are its row's bytes times its height, a row's bytes
+/// being its width times its format's bytes a pixel, rounded up to a
+/// multiple of 16; `create` faults on a pixmap whose bytes reach 2 GiB,
+/// with the cause `the pixmap's bytes reach 2 GiB`.
 ///
 /// **The clip.** Each pixmap has a clip, a rectangle within it, which is
 /// the whole pixmap until `setClip` sets another.

@@ -245,7 +245,7 @@ The rectangle `showArea` shows is cut to the pixmap's clip, the cut moving its p
 
 The backend draws each request into a copy of the window kept off the screen, `use_off_screen` as epx starts it, and copies the copy to the screen whole. A row shown at a time is so seen without flicker, and a window covered and uncovered keeps its picture.
 
-`close` takes the window off the screen with `window_adjust/2` and not `window_detach/1`, and nothing brings it back. A window closed is epx's until no process holds it: a `show` into it draws into it off the screen, where nothing is seen, and a second `close` does nothing. An `open` after a `close` makes a new window.
+`close` takes the window off the screen with `window_adjust/2` and not `window_detach/1`, and a closed window is not brought back. A window closed is epx's until no process holds it: a `show` into it draws into it off the screen, where nothing is seen, and a second `close` does nothing. An `open` after a `close` makes a new window.
 
 No function sends the backend a sync, which epx answers with a message to the process that made the window. The window's close button is sent to that process all the same, as `{epx_event, Window, close}`, whatever the window's flags, as epx's documentation says, and the window stays on the screen.
 
