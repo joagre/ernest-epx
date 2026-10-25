@@ -21,7 +21,7 @@ The archive `make release` writes, built on Linux x86-64 with the NIF compiled t
 
 ## Building
 
-It needs [Ernest](https://github.com/joagre/ernest) on your `PATH`, the floor the Makefile names, `ern 0.4`, and until Ernest 0.5.0 is released its `main`, whose development build passes the floor's check, where the released 0.4.0 passes it and does not build the library; `make` says so where another floor is found, and where none is. `ERN=path/to/ern make` names another `ern`. `make release` waits for Ernest 0.5.0 ([`docs/plan.md`](docs/plan.md), milestone 3b).
+It needs [Ernest](https://github.com/joagre/ernest) on your `PATH`, the floor the Makefile names, `ern 0.5`; `make` says so where another floor is found, and where none is. `ERN=path/to/ern make` names another `ern`.
 
 ```
 make            builds: lib/ filled, epx and then the library compiled
