@@ -19,7 +19,7 @@
 #   make clean    removes what the build and make lib wrote
 
 NAME        = epx
-ERN_VERSION = 0.5
+ERN_VERSION = 0.6
 DEPS        =
 ERL_DEPS    = tree_db epx
 # What each program of examples/ writes, named by make test: the suffix of
