@@ -89,7 +89,7 @@ A `scratch/` directory inside a proposal's own directory, untracked, is the user
 ## Writing
 
 - **`docs/design.md` is tight, in a Wirth language report's register.** State the rule; no rationale, no restating. Clear before short. The plan, the log, a proposal and a commit message are plain and short: one point to a sentence, in the order a reader needs it.
-- **A paragraph is one turn of the text**, in every document and in a message to the user. A paragraph past about a hundred words, which `make test` lists, is read again for a turn it may hide, and left whole where it holds one thing.
+- **A paragraph is one turn of the text**, in every document and in a message to the user. A paragraph past about a hundred words is read again for a turn it may hide, and left whole where it holds one thing; one past 150 no reader takes in whole, so `make test` refuses it, and the writer splits it at its turn.
 - **An edit to a set a document names reads the whole page first**, a list, a count or the sections that restate it, and changes every place that enumerates the set, the README's and the plan's among them, in the same commit.
 - **The spelling is American English**, in every document, name and message.
 - **No document or message names who proposed an idea**, or that person's role; it states the argument.
@@ -99,7 +99,7 @@ A `scratch/` directory inside a proposal's own directory, untracked, is the user
 - **Read the result back before reporting it**, as a reader who knows Ernest would, against the principles and the design, and say what surprised. Decide every surprise: act on it in the same item or leave it with its reason, recorded where its owner keeps it.
 - **A step forward sweeps what it leaves behind.** A sentence, a file or a directory that a step makes redundant, a done item's paragraph, which one line naming its log entry replaces until the milestone's row takes it, a built proposal, a decided finding, a citation of what went, goes in the step's own commit, never left for a review to find.
 - **Commit only after the checks pass**, on make's own exit status read in a call of its own, never chained after them with `;` and never on a pipe's, which a `grep` of the output would give. A deletion of tracked files is committed by path at once, or stays staged until the test has run. Push only when the user says so, a proposal's pause excepted.
-- **Every message that reports code work ends with a "Design conformance" section**: the sections of the design applied; every place the design was silent and what was done, or "none"; every deliberate omission, with the plan item that lifts it; and every line added to `language_feedback.md`, or "none".
+- **Every message that reports an item that touched the design, the plan or an error's text ends with a "Design conformance" section**, and a report of any other item says in one line that the design was not touched: the sections of the design applied; every place the design was silent and what was done, or "none"; every deliberate omission, with the plan item that lifts it; and every line added to `language_feedback.md`, or "none".
 - **Stop after each plan item.** Finish it whole, report it, and wait.
 
 **Closing an item.** Each line names a rule above.
@@ -110,7 +110,7 @@ A `scratch/` directory inside a proposal's own directory, untracked, is the user
 4. A new name in `docs/design.md`'s glossary, used as the glossary has it.
 5. The result read back, and every surprise decided.
 6. `make test` green; the conformance section written; the same commit removes every sentence elsewhere that says the item still waits and sweeps what the item made redundant; then a commit that names its paths.
-7. The report to the user, ending with *Design conformance*, then a stop until the user's word.
+7. The report to the user, ending with *Design conformance* where it is due, then a stop until the user's word.
 
 ## Style
 

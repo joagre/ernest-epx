@@ -5,10 +5,11 @@
 // of the repository names something that is there, or the program says
 // which does not, on standard error, and ends with status 1; the plan and
 // the findings are left out, and so is a path under docs/man/, which make
-// man writes at a release. Every prose paragraph past about a hundred words
-// is listed on standard output for its writer to read again, a list and not
-// a limit (CLAUDE.md, *Writing*); the log, the proposals and the manual
-// pages are left out. Fenced code is read as neither.
+// man writes at a release. Every prose paragraph past 150 words, which no
+// reader takes in whole, is listed on standard error for its writer to split
+// at its turn, and the program ends with status 1 (CLAUDE.md, *Writing*);
+// the log, the proposals and the manual pages are left out. Fenced code is
+// read as neither.
 //
 // The design's sections are held both ways, as CLAUDE.md's *Tests* asks. A
 // section is a heading of docs/design.md, `## n. Title`; a citation is a
@@ -50,10 +51,10 @@ type Citation = Citation(line : Int, section : Int)
 
 let design : String = "docs/design.md"
 
-let measure : Int = 100
+let measure : Int = 150
 
 let notice : String =
-    "paragraphs past about a hundred words, to read again for a turn they may hide:"
+    "paragraphs past 150 words, which no reader takes in whole; split each at its turn:"
 
 export fn main() : Unit = {
     let files = tracked("*.md");
@@ -62,14 +63,14 @@ export fn main() : Unit = {
     if List.isEmpty(long) then
         Unit
     else {
-        Io.println(notice);
-        List.forEach(long, fn(paragraph) = Io.println(shown(paragraph)))
+        Io.printlnError(notice);
+        List.forEach(long, fn(paragraph) = Io.printlnError(shown(paragraph)))
     };
     let missing =
         List.unique(List.flatMap(List.filter(files, isChecked), fn(file) = missingIn(file, tops)));
     let failures = missing <> uncited(files);
     List.forEach(failures, Io.printlnError);
-    if List.isEmpty(failures) then Unit else Os.exit(1)
+    if List.isEmpty(failures) && List.isEmpty(long) then Unit else Os.exit(1)
 }
 
 //
@@ -457,15 +458,15 @@ fn cited(text : String) : Optional(Int) =
 // Tests
 //
 
-let hundredAndOne : String = String.trim(String.repeat("word ", 101))
+let pastMeasure : String = String.trim(String.repeat("word ", 151))
 
 /// A paragraph past the measure is listed at its line; one at the measure is not.
 let listsThePastMeasure = Test.Case(name = "lists a paragraph past the measure", run = fn() = {
     let text =
-        "# Title\n\nshort\n\n" <> hundredAndOne <> "\n\n" <> String.trim(String.repeat("w ", 100));
+        "# Title\n\nshort\n\n" <> pastMeasure <> "\n\n" <> String.trim(String.repeat("w ", 150));
     Test.equal(List.map(paragraphsOf("f.md", text),
                         fn(paragraph) = #(paragraph.line, paragraph.words)),
-               [#(5, 101)])
+               [#(5, 151)])
 })
 
 /// A heading, a table row, a tag and fenced code are not measured.
@@ -473,13 +474,13 @@ let leavesUnmeasured =
     Test.Case(name = "leaves a heading, a table, a tag and a fence unmeasured", run = fn() = {
         let text =
             "# "
-                <> hundredAndOne
+                <> pastMeasure
                 <> "\n\n| "
-                <> hundredAndOne
+                <> pastMeasure
                 <> "\n\n<"
-                <> hundredAndOne
+                <> pastMeasure
                 <> "\n\n```\n"
-                <> hundredAndOne
+                <> pastMeasure
                 <> "\n```\n";
         Test.equal(paragraphsOf("f.md", text), [])
     })
@@ -487,7 +488,7 @@ let leavesUnmeasured =
 /// A list item is a paragraph of its own, which ends at the next item and
 /// where its lines stop being indented past it.
 let readsItems = Test.Case(name = "reads a list item as a paragraph", run = fn() = {
-    let text = "- " <> hundredAndOne <> "\n- short\n  " <> hundredAndOne <> "\nplain after\n";
+    let text = "- " <> pastMeasure <> "\n- short\n  " <> pastMeasure <> "\nplain after\n";
     Test.equal(List.map(paragraphsOf("f.md", text), fn(paragraph) = paragraph.line), [1, 2])
 })
 
