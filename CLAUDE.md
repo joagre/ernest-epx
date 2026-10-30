@@ -19,6 +19,7 @@ Each fact has one owner. Every other document points at the owner and does not r
 | [`docs/plan.md`](docs/plan.md) | the roadmap and where we are; a finished milestone is a row of its table, naming the log entries that argue it |
 | [`docs/log.md`](docs/log.md) | the rationale: why the design and the plan say what they say. Never normative |
 | [`docs/release.md`](docs/release.md) | what a release runs to be ready |
+| [`CHANGES.md`](CHANGES.md) | each release's note, newest first, from the release after 0.1.0 on: what the release is and one line a change naming where it is read, restating nothing; the release step writes it and copies it to the release on GitHub |
 | `examples/README.md`, where `examples/` exists | the example programs, by topic, with what each shows and how each is run |
 | Ernest's `guide/style.md`, installed as `share/doc/ernest/guide/style.md` beside `ern` | the rules an Ernest program is written by, Ernest's own, read from the installation and not copied here |
 | the code and its tests | what is built |
@@ -39,13 +40,16 @@ A `scratch/` directory inside a proposal's own directory, untracked, is the user
 
 - The program is Ernest, written for one floor of `ern`, which the Makefile names. `make` builds; `make test` tests; `make run` runs; [`README.md`](README.md)'s *Building* names the rest. Everything the program loads beyond Ernest's own, the standard library and its libraries, stands under `lib/`, which `make lib` fills: each dependency as its release archive unpacks, and each Erlang application the program stands on, a read-only git submodule under `erl/`, pinned and never copied, built by its own `make`.
 - Work in the main checkout, on `main`. No worktree and no branch of a session's own: the user reads and edits this checkout.
-- A coding job of many steps goes to an agent, so that the discussion with the user goes on while it runs. The agent follows this file, and its report comes back to the user. Where the work changes kind, between design or prose on one side and a build from a settled brief on the other, say in one line which model the next piece wants before starting it.
+- A coding job of many steps goes to an agent, so that the discussion with the user goes on while it runs. The agent follows this file, and its report comes back to the user. An untracked file is the user's: `git status --short` is read before agents start and compared after they end, untracked files among it, and an agent is told in one line to leave them. An agent that dies leaves its processes running: they are looked for and killed by their process numbers, never by a pattern.
+- The session runs on the user's default model. An agent is given its model and its effort when it is started, on the session's own judgment: the stronger effort for a build from a settled brief whose correctness a test and a diff show, the lesser for a mechanical job. The user is asked to raise the session's model only where one pass must be right with nobody reading along, in one line saying why and when to come back down.
 - A commit names its paths, `git commit -F message -- path...`, never a bare `git commit` after `git add`. Read `git status --short` first for entries that are not yours, and leave the index as the user left it. The message says what changed in one or two sentences and points to the log or the plan for why.
 
 ## Before code
 
 - **The design changes first.** An anomaly found while building changes `docs/design.md`, then the log, then the code. Name the design's section a module implements before writing it.
 - **A design is discussed in its proposal until the user says it is ready.** Until then bring nothing of it to the plan, the log or the design. At a pause offer another reading back or a harder question: the principles, a real program written against it, the operator's day.
+
+  A proposal, or a plan section written over one, is reported ready only after it has been read against every owner it touches, unasked: the design's sections it changes or cites, each proposal it meets at a seam, read from both sides so that what one requires the other provides and no fact stands twice, and the plan's items for it; the report names the owners read.
 - **State a change to the design or the plan and make it; do not ask.** Give the change and its argument, make it, report it under *Design conformance*. Stop and wait only where the answer decides what gets built and a guess would throw the work away: a design question, discussed one at a time, in prose, the argument before the verdict, with a recommendation. Smaller decisions come together, as one numbered list with a recommendation each.
 
   A session opened to discuss alone writes nothing until the user asks. Then each write to the plan or the log is named in one line before it is made, a "go" covers the piece just discussed and not the topic, and where more rounds are coming the writes are gathered into one commit at the pause.
@@ -56,7 +60,7 @@ A `scratch/` directory inside a proposal's own directory, untracked, is the user
 
 ## Design
 
-- **Prefer minimal, direct implementations** over speculative abstraction. A feature enters or stays out by the five principles, and the log names the principle that decided; how many uses ask for it decides nothing.
+- **Prefer minimal, direct implementations** over speculative abstraction. A feature enters or stays out by the five principles, and the log names the principle that decided (§0, principle 5).
 - **Bring options, not defenses.** When a simplification seems to conflict with a principle, first check whether the principle is being applied too dogmatically.
 - **The tools are fast.** A test or a tool that costs more than its work is a defect: measure it, and fix it at its cause or plan it with a date. Every run is timed against its work, and one that costs more is named to the user in the same message.
 - **The program is beautiful, inside and out.** Keep no code only to make it go faster; measure first, and where the plain form is fast enough it stays plain.
@@ -86,6 +90,7 @@ A `scratch/` directory inside a proposal's own directory, untracked, is the user
 
 - **`docs/design.md` is tight, in a Wirth language report's register.** State the rule; no rationale, no restating. Clear before short. The plan, the log, a proposal and a commit message are plain and short: one point to a sentence, in the order a reader needs it.
 - **A paragraph is one turn of the text**, in every document and in a message to the user. A paragraph past about a hundred words, which `make test` lists, is read again for a turn it may hide, and left whole where it holds one thing.
+- **An edit to a set a document names reads the whole page first**, a list, a count or the sections that restate it, and changes every place that enumerates the set, the README's and the plan's among them, in the same commit.
 - **The spelling is American English**, in every document, name and message.
 - **No document or message names who proposed an idea**, or that person's role; it states the argument.
 
@@ -93,7 +98,7 @@ A `scratch/` directory inside a proposal's own directory, untracked, is the user
 
 - **Read the result back before reporting it**, as a reader who knows Ernest would, against the principles and the design, and say what surprised. Decide every surprise: act on it in the same item or leave it with its reason, recorded where its owner keeps it.
 - **A step forward sweeps what it leaves behind.** A sentence, a file or a directory that a step makes redundant, a done item's paragraph, which one line naming its log entry replaces until the milestone's row takes it, a built proposal, a decided finding, a citation of what went, goes in the step's own commit, never left for a review to find.
-- **Commit only after the checks pass**, never chained after them with `;`. Push only when the user says so, a proposal's pause excepted.
+- **Commit only after the checks pass**, on make's own exit status read in a call of its own, never chained after them with `;` and never on a pipe's, which a `grep` of the output would give. A deletion of tracked files is committed by path at once, or stays staged until the test has run. Push only when the user says so, a proposal's pause excepted.
 - **Every message that reports code work ends with a "Design conformance" section**: the sections of the design applied; every place the design was silent and what was done, or "none"; every deliberate omission, with the plan item that lifts it; and every line added to `language_feedback.md`, or "none".
 - **Stop after each plan item.** Finish it whole, report it, and wait.
 
