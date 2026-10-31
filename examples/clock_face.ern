@@ -16,7 +16,9 @@
 // size before it draws, shows the face in it once drawn, writes the file,
 // and leaves the window on the screen until Enter is pressed. The window's
 // close button does nothing. Without the word it opens no window, which is
-// how `make test` runs it.
+// how `make test` runs it. With the word `live` it opens the window and
+// draws the face again at every whole second until Enter is pressed, then
+// writes the last face to the file.
 //
 // What to look at:
 //
@@ -39,6 +41,12 @@
 // - `Epx.Window.show` shows the pixmap in a window (`Epx.Window`'s page),
 //   and `closeOnEnter` waits for a line on standard input before it closes
 //   the window, a wait on what the program means.
+// - `live` draws each face into the pixmap the backend is not reading, two
+//   pixmaps shown in turn, since a write after `show` answered may be shown
+//   with it (`Epx.Window`'s *Shown later*); and it waits in a `receive` for
+//   the `Enter` a reader process sends, or until the next whole second, a
+//   delay derived from the clock (`untilNextSecond`) and no fixed sleep: the
+//   wait is written as any wait is, on what it waits for.
 //
 // Run it from the repository's root once `make` has built the library,
 // and with the word `show` on a machine with a screen:
@@ -49,6 +57,8 @@
 //         build/clock_face.ppm
 //     ern run --load-path build --libs-dir lib examples/build/clock_face.erc \
 //         build/clock_face.ppm show
+//     ern run --load-path build --libs-dir lib examples/build/clock_face.erc \
+//         build/clock_face.ppm live
 //
 
 // The picture's width and height in pixels, the dial's center, and its
@@ -68,7 +78,10 @@ let ink : Epx.Color = Epx.rgb(32, 32, 40)
 
 let second : Epx.Color = Epx.rgb(200, 30, 30)
 
-export fn main() : Unit =
+// What the reader process sends when Enter is pressed.
+type Msg = Enter
+
+export fn main() : Unit receiving Msg =
     match Os.arguments {
         [name] ->
             write(name, picture(Clock.now()))
@@ -79,8 +92,15 @@ export fn main() : Unit =
             write(name, pixmap);
             closeOnEnter(window)
         }
+      | [name, "live"] -> {
+            let window = Epx.Window.open(0, 0, size, size);
+            let me = self();
+            let _ = spawn(fn() = reader(me));
+            Io.println("press Enter to close");
+            live(window, name, Epx.create(size, size, Epx.Rgb), Epx.create(size, size, Epx.Rgb))
+        }
       | _ -> {
-            Io.printlnError("usage: clock_face file.ppm [show]");
+            Io.printlnError("usage: clock_face file.ppm [show | live]");
             Os.exit(2)
         }
     }
@@ -88,9 +108,14 @@ export fn main() : Unit =
 // The face at the time drawn into a new pixmap.
 fn picture(time : Int) : Epx.Pixmap = {
     let pixmap = Epx.create(size, size, Epx.Rgb);
-    Epx.fill(pixmap, paper);
-    face(pixmap, Epx.Gc.create(), time);
+    draw(pixmap, time);
     pixmap
+}
+
+// The face at the time drawn over the pixmap.
+fn draw(pixmap : Epx.Pixmap, time : Int) : Unit = {
+    Epx.fill(pixmap, paper);
+    face(pixmap, Epx.Gc.create(), time)
 }
 
 // The face written to the file, or why it could not be, on standard error.
@@ -110,6 +135,35 @@ fn closeOnEnter(window : Epx.Window) : Unit = {
     Io.println("press Enter to close");
     let _ = Io.readLine();
     Epx.Window.close(window)
+}
+
+// The face drawn into `back` and shown, again at every whole second with
+// the two pixmaps swapped, until `Enter` comes; then the last face is
+// written to the file and the window closed.
+fn live(window : Epx.Window,
+        name : String,
+        front : Epx.Pixmap,
+        back : Epx.Pixmap) : Unit receiving Msg = {
+    draw(back, Clock.now());
+    Epx.Window.show(window, back);
+    receive {
+        Enter -> {
+            write(name, back);
+            Epx.Window.close(window)
+        }
+      | after untilNextSecond(Clock.now()) ->
+            live(window, name, back, front)
+    }
+}
+
+// The milliseconds from the time to the next whole second.
+fn untilNextSecond(time : Int) : Int =
+    1000 - time % 1000
+
+// A line, or the end of standard input, read and told to the clock.
+fn reader(to : Address(Msg)) : Unit = {
+    let _ = Io.readLine();
+    send(to, Enter)
 }
 
 // The dial, its ticks and its hands at the time, drawn with one context.
