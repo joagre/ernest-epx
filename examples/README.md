@@ -1,6 +1,6 @@
 # Examples
 
-Complete programs that use the library, each larger than a doc block's example can hold. They are listed by topic: a picture computed pixel by pixel, a figure drawn by recursion, a scene traced by several processes into one pixmap, a picture drawn with a graphics context, and a richer scene traced slowly enough to watch.
+Complete programs that use the library, each larger than a doc block's example can hold. They are listed by topic: a picture computed pixel by pixel, a figure drawn by recursion, a scene traced by several processes into one pixmap, a picture drawn with a graphics context and redrawn live every second, and a richer scene traced slowly enough to watch.
 
 ## Seeing them
 
@@ -11,12 +11,13 @@ ern run --load-path build --libs-dir lib examples/build/mandelbrot.erc build/man
 ern run --load-path build --libs-dir lib examples/build/sierpinski.erc build/sierpinski.ppm show
 ern run --load-path build --libs-dir lib examples/build/raytracer.erc build/raytracer.ppm 8 show
 ern run --load-path build --libs-dir lib examples/build/clock_face.erc build/clock_face.ppm show
+ern run --load-path build --libs-dir lib examples/build/clock_face.erc build/clock_face.ppm live
 ern run --load-path build --libs-dir lib examples/build/whitted.erc build/whitted.ppm 8 4 show
 ```
 
 The ray tracers take a count of workers, 8 above, and Whitted's spheres a count of samples after it: 4 fills the window in well under a minute on eight workers, and 16, the picture at the top of the README, takes about five minutes, each row appearing as a worker finishes it.
 
-The word `show` opens a window of the picture's size before the program draws, shows the picture in it as the program's comment says, writes the file all the same, and leaves the window until Enter is pressed (`Epx.Window`); without the word nothing of the window happens, which is how `make test` runs them.
+The word `show` opens a window of the picture's size before the program draws, shows the picture in it as the program's comment says, writes the file all the same, and leaves the window until Enter is pressed (`Epx.Window`); without the word nothing of the window happens, which is how `make test` runs them. The clock's word `live` opens the window the same way and draws the face again at every whole second until Enter is pressed, writing the last face to the file.
 
 Each file begins with a comment that says what the program does, what to look at in it, and how to run it; what is named beside each is on the page of `Epx`, of `Epx.Gc` or of `Epx.Window`, a heading of its first part or a function.
 
