@@ -1,9 +1,10 @@
 //
-// Clock face: the time of day on a clock's dial, drawn into a pixmap and
-// written as PPM
+// Clock face: the time of day on a clock's dial, drawn into a pixmap,
+// written as PPM or shown live in a window
 //
 // A dial with a border, sixty ticks around its edge, the twelve of the
-// hours longer and thicker, and three hands at the time the program runs:
+// hours longer and thicker, and three hands at the time the program runs,
+// or at every second where it runs live:
 // the hour's and the minute's long triangles of two widths, and the
 // second's a thin line, smoothed by the style `Antialiased`. The time is
 // UTC, read from `Clock.now`, since the standard library reads no time
@@ -34,8 +35,8 @@
 //   (`Epx.drawTriangle`) and a line, one width from end to end, does not.
 // - `hours`, `minutes` and `seconds` take the time apart, and `pointAt`
 //   places a point on the dial: pure arithmetic beside the parts that act,
-//   `main`, `picture`, `write`, `face`, `drawTick`, `drawHand`,
-//   `drawSecondHand` and `closeOnEnter`.
+//   `main`, `picture`, `draw`, `write`, `face`, `drawTick`, `drawHand`,
+//   `drawSecondHand`, `closeOnEnter`, `live` and `reader`.
 // - `Epx.toPpm` makes the bytes of the file, and `Fs.write` writes them,
 //   its failure a value (report Appendix E.17).
 // - `Epx.Window.show` shows the pixmap in a window (`Epx.Window`'s page),
@@ -49,7 +50,7 @@
 //   wait is written as any wait is, on what it waits for.
 //
 // Run it from the repository's root once `make` has built the library,
-// and with the word `show` on a machine with a screen:
+// and with the word `show` or `live` on a machine with a screen:
 //
 //     ern build --source-root examples --build-root examples/build --load-path build \
 //         examples/clock_face.ern
