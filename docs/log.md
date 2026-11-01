@@ -197,3 +197,7 @@ The round, the checklist's new step, read the diff the review's own fixes wrote,
 ## The floor is 0.6
 
 *2026-10-27.* Ernest 0.6.0 was tagged the night of 2026-10-25, and the checkout's `ern` reports `0.6.0-dev`, which the floor 0.5 refused, so the floor moved to 0.6 in the template and here. The release 0.2.0 stands on 0.5 as it was built.
+
+## The floor is 0.8
+
+*2026-11-01.* Ernest's checkout works toward 0.8.0 and writes the pun, `=f` for `f = f`, which 0.7 refuses. The library, the examples and the checker write it now, 31 fields swept by Ernest's tool, so the floor moved to 0.8 in the template and here. The pictures the tracers draw are the same, pixel for pixel. The release 0.2.0 stands on the floor it was built on.
