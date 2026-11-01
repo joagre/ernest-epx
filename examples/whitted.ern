@@ -289,7 +289,7 @@ fn commandLine(arguments : List(String)) : Optional(Command) =
 fn counted(name : String, workers : String, samples : String, shown : Bool) : Optional(Command) =
     match #(parsedCount(workers), parsedCount(samples)) {
         #(Some(workerCount), Some(sampleCount)) ->
-            Some(Command(name = name, workers = workerCount, samples = sampleCount, shown = shown))
+            Some(Command(=name, workers = workerCount, samples = sampleCount, =shown))
       | _ ->
             None
     }
@@ -343,7 +343,7 @@ fn awaitWorkers(count : Int) : Unit receiving Down =
     else receive {
         Down(reason = Returned) ->
             awaitWorkers(count - 1)
-      | Down(reason = reason) -> {
+      | Down(=reason) -> {
             Io.printlnError("whitted: a worker ended: " <> Io.show(reason));
             Os.exit(1)
         }
@@ -439,14 +439,10 @@ fn trace(ray : Ray, depth : Int, samples : Int, seed : Random.Seed) : #(Color, R
     if depth == 0 then
         #(black, seed)
     else match nearest(ray) {
-        Some(Glass(distance = distance)) ->
-            glassColor(ray, along(ray, distance), depth, samples, seed)
-      | Some(Mirror(distance = distance)) ->
-            mirrorColor(ray, along(ray, distance), depth, samples, seed)
-      | Some(Floor(distance = distance)) ->
-            floorColor(ray, along(ray, distance), depth, samples, seed)
-      | None ->
-            #(sky, seed)
+        Some(Glass(=distance)) -> glassColor(ray, along(ray, distance), depth, samples, seed)
+      | Some(Mirror(=distance)) -> mirrorColor(ray, along(ray, distance), depth, samples, seed)
+      | Some(Floor(=distance)) -> floorColor(ray, along(ray, distance), depth, samples, seed)
+      | None -> #(sky, seed)
     }
 
 // The glass sphere's color where the ray meets it at the point: its white
@@ -550,11 +546,9 @@ fn glossy(direction : Vector,
 // The nearest of the glass sphere, the mirror sphere and the floor along
 // the ray, or `None` where it meets none.
 fn nearest(ray : Ray) : Optional(Hit) = {
-    let glass =
-        Optional.map(hitSphere(ray, glassCenter), fn(distance) = Glass(distance = distance));
-    let mirror =
-        Optional.map(hitSphere(ray, mirrorCenter), fn(distance) = Mirror(distance = distance));
-    let floor = Optional.map(hitFloor(ray), fn(distance) = Floor(distance = distance));
+    let glass = Optional.map(hitSphere(ray, glassCenter), fn(distance) = Glass(=distance));
+    let mirror = Optional.map(hitSphere(ray, mirrorCenter), fn(distance) = Mirror(=distance));
+    let floor = Optional.map(hitFloor(ray), fn(distance) = Floor(=distance));
     nearer(nearer(glass, mirror), floor)
 }
 

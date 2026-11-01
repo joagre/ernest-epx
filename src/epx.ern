@@ -485,7 +485,7 @@ foreign fn rawFillArea(pixmap : Pixmap,
 /// ```
 export fn getPixel(pixmap : Pixmap, x : Int, y : Int) : Color =
     match rawGetPixel(pixmap, coordinate(x), coordinate(y)) {
-        #(alpha, red, green, blue) -> Color(alpha = alpha, red = red, green = green, blue = blue)
+        #(alpha, red, green, blue) -> Color(=alpha, =red, =green, =blue)
     }
 
 foreign fn rawGetPixel(pixmap : Pixmap, x : Int, y : Int) : #(Int, Int, Int, Int) =
@@ -1468,7 +1468,7 @@ foreign fn rawDrawPolygon(pixmap : Pixmap, context : Context, points : List(#(In
 /// // => Color(alpha = 255, red = 255, green = 128, blue = 0)
 /// ```
 export fn rgb(red : Int, green : Int, blue : Int) : Color =
-    Color(alpha = 255, red = red, green = green, blue = blue)
+    Color(alpha = 255, =red, =green, =blue)
 
 /// The pixmap as a PPM file in its binary form, `P6`: the text `P6`, a line
 /// feed, the width and the height in decimal with a space between them, a

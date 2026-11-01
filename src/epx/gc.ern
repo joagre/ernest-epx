@@ -508,8 +508,7 @@ let inside : Foreign.Term = Foreign.atom("inside")
 // A color as epx answers it, `{A, R, G, B}`.
 fn colorOf(term : #(Int, Int, Int, Int)) : Epx.Color =
     match term {
-        #(alpha, red, green, blue) ->
-            Epx.Color(alpha = alpha, red = red, green = green, blue = blue)
+        #(alpha, red, green, blue) -> Epx.Color(=alpha, =red, =green, =blue)
     }
 
 //
