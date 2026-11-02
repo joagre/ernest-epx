@@ -8,14 +8,7 @@ Its modules are `Epx`, over pixmaps and the drawing functions, `Epx.Gc`, over th
 
 ![Five pictures the examples draw: Whitted's glass and mirror spheres, the Boing ball above a mirror floor, a clock face, the Mandelbrot set, and the Sierpinski gasket](assets/collage.png)
 
-The five pictures are what [`examples/`](examples/README.md) draws, each a program of a page or two; [`assets/README.md`](assets/README.md) says how a picture is made from a program's output. Once `make` has built the library, two lines from the repository's root build every example and run each, `ern` on your `PATH`:
-
-```
-ern build --source-root examples --build-root examples/build --load-path build examples
-for p in examples/build/*.erc; do ern run --load-path build --libs-dir lib $p build/$(basename $p .erc).ppm; done
-```
-
-Each writes its picture to the file named, `build/mandelbrot.ppm` and so on, which an image viewer opens. On a machine with a screen the word `show` after the file opens a window of the picture while it is drawn, and the ray tracers take a count of workers first; [`examples/README.md`](examples/README.md) gives that line for each.
+The five pictures are what [`examples/`](examples/README.md) draws, each a program of a page or two; [`assets/README.md`](assets/README.md) says how a picture is made from a program's output. `make examples` builds the library and every example and runs each, writing its picture under `build/examples/`, `build/examples/mandelbrot.ppm` and so on, which an image viewer opens. On a machine with a screen the word `show` after the file opens a window of the picture while it is drawn, and the ray tracers take a count of workers first; [`examples/README.md`](examples/README.md) gives that line for each.
 
 ## Using it
 
@@ -37,7 +30,8 @@ It needs [Ernest](https://github.com/joagre/ernest) on your `PATH`, the floor th
 ```
 make            builds: lib/ filled, epx and then the library compiled
 make test       the source's layout, ern format --check, the modules' tests, the documents,
-                listing without failing any paragraph past about a hundred words, and examples/
+                listing without failing any paragraph past about a hundred words, and make examples
+make examples   every program of examples/ built and run, its picture under build/examples/
 make release    the archive, build/epx-VERSION.tar.gz
 ```
 
@@ -56,7 +50,7 @@ Clone with `--recursive`: epx and tree_db are git submodules under `erl/`, which
 - [`THIRD_PARTY_LICENSES`](THIRD_PARTY_LICENSES): epx's license and tree_db's standing, which the release archive carries with their compiled code.
 - [`ACKNOWLEDGMENTS.md`](ACKNOWLEDGMENTS.md): the people this library stands on, by name alone.
 
-The tests live in the modules they test, which `make test` runs; `tools/` holds the checker of the documents, and [`examples/`](examples/README.md) programs that use the library, which `make test` builds and runs too.
+The tests live in the modules they test, which `make test` runs; `tools/` holds the checker of the documents, and [`examples/`](examples/README.md) programs that use the library, which `make examples` builds and runs, and `make test` after its own checks.
 
 ## License
 

@@ -13,7 +13,7 @@
 // size before it draws, shows the picture in it once drawn, writes the
 // file, and leaves the window on the screen until Enter is pressed. The
 // window's close button does nothing. Without the word it opens no window,
-// which is how `make test` runs it.
+// which is how `make examples` runs it.
 //
 // What to look at:
 //

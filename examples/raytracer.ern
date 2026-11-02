@@ -26,7 +26,7 @@
 // seen filling the picture as the workers trace them. It then writes the
 // file and leaves the window on the screen until Enter is pressed. The
 // window's close button does nothing. Without the word it opens no window,
-// which is how `make test` runs it.
+// which is how `make examples` runs it.
 //
 // What to look at:
 //

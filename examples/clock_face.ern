@@ -17,7 +17,7 @@
 // size before it draws, shows the face in it once drawn, writes the file,
 // and leaves the window on the screen until Enter is pressed. The window's
 // close button does nothing. Without the word it opens no window, which is
-// how `make test` runs it. With the word `live` it opens the window and
+// how `make examples` runs it. With the word `live` it opens the window and
 // draws the face again at every whole second until Enter is pressed, then
 // writes the last face to the file.
 //

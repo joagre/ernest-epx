@@ -5,8 +5,10 @@
 #   make          builds: the floor checked, lib/ filled, each dependency and
 #                 then the program compiled
 #   make test     the layout, the tests of every module, the documents and
-#                 the design's citations, test/ where it exists, and each
-#                 program of examples/ where it exists, built and run
+#                 the design's citations, test/ where it exists, and make
+#                 examples where there is a program to build
+#   make examples each program of examples/ built and run, what it writes
+#                 under build/examples/
 #   make run      runs the program through its launcher
 #   make lib      fills lib/: each dependency fetched and unpacked where it is
 #                 not there, and each Erlang application under erl/ built by
@@ -22,7 +24,7 @@ NAME        = epx
 ERN_VERSION = 0.9
 DEPS        =
 ERL_DEPS    = tree_db epx
-# What each program of examples/ writes, named by make test: the suffix of
+# What each program of examples/ writes, named by make examples: the suffix of
 # the one path it is given.
 EXAMPLE_SUFFIX = .ppm
 
@@ -38,9 +40,11 @@ ERN        ?= ern
 LOAD_PATH     = $(addprefix --load-path ,$(shell ls -d lib/*/build 2>/dev/null))
 RUN_LOAD_PATH = $(LOAD_PATH) --libs-dir lib
 DEP_DIRS      = $(addprefix lib/,$(notdir $(basename $(basename $(DEPS)))))
+# The programs of examples/; what else stands under it is data, not built.
+EXAMPLES      = $(wildcard examples/*.ern)
 VERSION       = $(shell cat VERSION)
 
-.PHONY: all version lib build test run doc man format release clean
+.PHONY: all version lib build test examples run doc man format release clean
 
 all: version lib build
 
@@ -81,7 +85,7 @@ build:
 	$(ERN) build --source-root src --build-root build $(LOAD_PATH) src
 
 test: all
-	$(ERN) format --check src tools $(wildcard test) $(wildcard examples)
+	$(ERN) format --check src tools $(wildcard test) $(if $(EXAMPLES),examples)
 	$(ERN) test $(RUN_LOAD_PATH) build
 	$(ERN) build --source-root tools --build-root tools/build tools
 	$(ERN) test tools/build
@@ -91,17 +95,22 @@ test: all
 	        $(LOAD_PATH) test && \
 	    $(ERN) test --load-path build $(RUN_LOAD_PATH) test/build; \
 	fi
-	@if test -d examples; then \
-	    $(ERN) build --source-root examples --build-root examples/build --load-path build \
-	        $(LOAD_PATH) examples && \
-	    mkdir -p build/examples && \
-	    for program in examples/build/*.erc; do \
-	        name=$$(basename $$program .erc); \
-	        $(ERN) run --load-path build $(RUN_LOAD_PATH) $$program \
-	            build/examples/$$name$(EXAMPLE_SUFFIX) || exit 1; \
-	        echo "examples/$$name.ern wrote build/examples/$$name$(EXAMPLE_SUFFIX)"; \
-	    done; \
-	fi
+	@if test -n "$(EXAMPLES)"; then $(MAKE) --no-print-directory examples; fi
+
+# Each program of examples/ built with the program on its load path, then run
+# with one argument, build/examples/NAME followed by EXAMPLE_SUFFIX, which it
+# writes; a program that ends with a status other than 0 fails the target.
+examples: all
+	@test -n "$(EXAMPLES)" || { echo "no program under examples/: nothing to build"; exit 1; }
+	$(ERN) build --source-root examples --build-root examples/build --load-path build \
+	    $(LOAD_PATH) examples
+	@mkdir -p build/examples
+	@for program in examples/build/*.erc; do \
+	    name=$$(basename $$program .erc); \
+	    $(ERN) run --load-path build $(RUN_LOAD_PATH) $$program \
+	        build/examples/$$name$(EXAMPLE_SUFFIX) || exit 1; \
+	    echo "examples/$$name.ern wrote build/examples/$$name$(EXAMPLE_SUFFIX)"; \
+	done
 
 run: all
 	@test -x bin/$(NAME) || { echo "$(NAME) is a library: nothing to run"; exit 1; }
@@ -120,7 +129,7 @@ man: doc
 	@cp build/index.md docs/man/README.md
 
 format:
-	$(ERN) format src tools $(wildcard test) $(wildcard examples)
+	$(ERN) format src tools $(wildcard test) $(if $(EXAMPLES),examples)
 
 # The archive unpacks to NAME-VERSION/: the launcher where there is one, the
 # source and the compiled modules, lib/ with each link copied through, the

@@ -4,7 +4,7 @@ Complete programs that use the library, each larger than a doc block's example c
 
 ## Seeing them
 
-On a machine with a screen, once `make test` has built them and with `ern` on your `PATH`, each one from the repository's root; the window closes on Enter:
+On a machine with a screen, once `make examples` has built them and with `ern` on your `PATH`, each one from the repository's root; the window closes on Enter:
 
 ```
 ern run --load-path build --libs-dir lib examples/build/mandelbrot.erc build/mandelbrot.ppm show
@@ -17,11 +17,11 @@ ern run --load-path build --libs-dir lib examples/build/whitted.erc build/whitte
 
 The ray tracers take a count of workers, 8 above, and Whitted's spheres a count of samples after it: 4 fills the window in well under a minute on eight workers, and 16, the picture at the top of the README, takes about five minutes, each row appearing as a worker finishes it.
 
-The word `show` opens a window of the picture's size before the program draws, shows the picture in it as the program's comment says, writes the file all the same, and leaves the window until Enter is pressed (`Epx.Window`); without the word nothing of the window happens, which is how `make test` runs them. The clock's word `live` opens the window the same way and draws the face again at every whole second until Enter is pressed, writing the last face to the file.
+The word `show` opens a window of the picture's size before the program draws, shows the picture in it as the program's comment says, writes the file all the same, and leaves the window until Enter is pressed (`Epx.Window`); without the word nothing of the window happens, which is how `make examples` runs them. The clock's word `live` opens the window the same way and draws the face again at every whole second until Enter is pressed, writing the last face to the file.
 
 Each file begins with a comment that says what the program does, what to look at in it, and how to run it; what is named beside each is on the page of `Epx`, of `Epx.Gc` or of `Epx.Window`, a heading of its first part or a function.
 
-`make test` builds every program here and runs each, writing its picture under `build/examples/`, and fails where one ends with a status other than 0.
+`make examples` builds every program here and runs each, writing its picture under `build/examples/`, and fails where one ends with a status other than 0; `make test` runs it after its own checks.
 
 | Program | What it is | What it shows | On the page |
 |---|---|---|---|
@@ -53,7 +53,7 @@ What each program draws, from `assets/`, where [`assets/README.md`](../assets/RE
 
 ![A clock face](../assets/clock_face.png)
 
-`whitted.ern`, with one sample, as `make test` runs it, and with sixteen:
+`whitted.ern`, with one sample, as `make examples` runs it, and with sixteen:
 
 ![A glass sphere and a mirror sphere over a checkered floor, with one sample](../assets/whitted.png)
 

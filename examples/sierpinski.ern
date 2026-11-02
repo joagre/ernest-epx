@@ -14,8 +14,8 @@
 // drawn, the deepest subdivision, so that the gasket is seen to grow in the
 // order the recursion draws it. It then writes the file and leaves the
 // window on the screen until Enter is pressed. The window's close button
-// does nothing. Without the word it opens no window, which is how `make
-// test` runs it.
+// does nothing. Without the word it opens no window, which is how
+// `make examples` runs it.
 //
 // The chaos game draws the same figure by random steps from a seed. The
 // subdivision is drawn here because it is the figure's definition written
