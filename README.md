@@ -25,7 +25,7 @@ The archive `make release` writes, built on Linux x86-64 with the NIF compiled t
 
 ## Building
 
-It needs [Ernest](https://github.com/joagre/ernest) on your `PATH`, the floor the Makefile names, `ern 0.8`; `make` says so where another floor is found, and where none is. `ERN=path/to/ern make` names another `ern`.
+It needs [Ernest](https://github.com/joagre/ernest) on your `PATH`, the floor the Makefile names, `ern 0.9`; `make` says so where another floor is found, and where none is. `ERN=path/to/ern make` names another `ern`.
 
 ```
 make            builds: lib/ filled, epx and then the library compiled
