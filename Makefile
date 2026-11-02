@@ -18,6 +18,12 @@
 #                 commits, its index the directory's README
 #   make format   lays every module out
 #   make release  the archive, build/NAME-VERSION.tar.gz, tests first
+#   make install  installs what stands built under PREFIX, /usr/local by
+#                 default, from a checkout or an unpacked archive alike:
+#                 the launcher in bin/, build/'s and lib/'s in lib/NAME/,
+#                 and the documents in share/doc/NAME/
+#   make uninstall  removes from PREFIX what make install put there, and the
+#                 directories it made where they are empty
 #   make clean    removes what the build and make lib wrote
 
 NAME        = epx
@@ -30,6 +36,8 @@ EXAMPLE_SUFFIX = .ppm
 
 # The ern on PATH, or ERN=path/to/ern.
 ERN        ?= ern
+# Where make install puts the program and make uninstall removes it from.
+PREFIX     ?= /usr/local
 
 # Ernest's own libraries stand on every job's load path; everything else
 # beyond the standard library stands under lib/: a dependency's build, and an
@@ -43,8 +51,26 @@ DEP_DIRS      = $(addprefix lib/,$(notdir $(basename $(basename $(DEPS)))))
 # The programs of examples/; what else stands under it is data, not built.
 EXAMPLES      = $(wildcard examples/*.ern)
 VERSION       = $(shell cat VERSION)
+# What the build writes under examples/, which git ignores, make clean
+# removes and the documents leave out.
+EXAMPLES_MADE = examples/build
+# The documents make install and make release take: README.md, LICENSE,
+# CHANGES.md, CLAUDE.md, and under docs/ and examples/ the files git tracks
+# in a checkout, so that no untracked file goes in, read as whoever installs,
+# whose checkout it need not be, which git refuses unless told it is safe;
+# or in an unpacked archive every file there but EXAMPLES_MADE's, which make
+# release wrote with those.
+DOCS          = README.md LICENSE CHANGES.md CLAUDE.md \
+                $(if $(wildcard .git),\
+                    $(shell git -c safe.directory=$(CURDIR) ls-files docs examples),\
+                    $(shell find docs examples -type f \
+                        $(foreach dir,$(EXAMPLES_MADE),! -path '$(dir)/*') 2>/dev/null))
+# An installation's own directories under PREFIX, beside its launcher.
+TREE          = $(PREFIX)/lib/$(NAME)
+DOC_DIR       = $(PREFIX)/share/doc/$(NAME)
 
-.PHONY: all version lib build test examples run doc man format release clean
+.PHONY: all version lib build test examples run doc man format release install uninstall \
+        clean
 
 all: version lib build
 
@@ -133,9 +159,10 @@ format:
 
 # The archive unpacks to NAME-VERSION/: the launcher where there is one, the
 # source and the compiled modules, lib/ with each link copied through, the
-# README and the licenses, the third parties' where there are any. One shape
-# for an application and a library, so
-# that any archive can be a dependency.
+# documents of DOCS, the third parties' licenses where there are any, and
+# the Makefile with VERSION, so that make install and make run run in it.
+# One shape for an application and a library, so that any archive can be a
+# dependency.
 release: test
 	@case "$$($(ERN) --version)" in \
 	    *-dev) echo "a release is not made with a development build of ern"; exit 1 ;; esac
@@ -147,10 +174,39 @@ release: test
 	test -d lib && cp -RL lib build/$(NAME)-$(VERSION)/lib || true
 	test -x bin/$(NAME) && mkdir -p build/$(NAME)-$(VERSION)/bin && \
 	    cp bin/$(NAME) build/$(NAME)-$(VERSION)/bin/ || true
-	cp README.md LICENSE build/$(NAME)-$(VERSION)/
+	tar cf - $(DOCS) Makefile VERSION | \
+	    tar xf - -C build/$(NAME)-$(VERSION)
 	test -f THIRD_PARTY_LICENSES && cp THIRD_PARTY_LICENSES build/$(NAME)-$(VERSION)/ || true
 	tar -czf build/$(NAME)-$(VERSION).tar.gz -C build $(NAME)-$(VERSION)
 	rm -rf build/$(NAME)-$(VERSION)
 
+# What stands built, installed: an installation already there replaced
+# whole, so that no module of an older one is left, and a launcher there of
+# another program's refused. Nothing is built here, so that an archive
+# installs as it was compiled.
+install:
+	@test -x bin/$(NAME) || { echo "$(NAME) is a library: nothing to install"; exit 1; }
+	@test -f build/$(NAME).erc || { echo "build/$(NAME).erc is not there: make builds it"; exit 1; }
+	@test -d $(TREE) || test ! -e $(PREFIX)/bin/$(NAME) || \
+	    { echo "$(PREFIX)/bin/$(NAME) is there already and is not this program's"; exit 1; }
+	rm -rf $(TREE) $(DOC_DIR)
+	mkdir -p $(PREFIX)/bin $(TREE) $(DOC_DIR)
+	cp bin/$(NAME) $(PREFIX)/bin/$(NAME)
+	find build -name '*.erc' ! -path 'build/$(NAME)-*/*' | tar cf - -T - | tar xf - -C $(TREE)
+	test ! -d lib || cp -RL lib $(TREE)/lib
+	tar cf - $(DOCS) | tar xf - -C $(DOC_DIR)
+
+# What make install put under PREFIX, and nothing else: the launcher, the
+# installation's two directories, and then share/doc, share, lib and bin
+# under PREFIX, deepest first, each where it is empty, whoever made it; one
+# that is not stays, and so does PREFIX itself.
+uninstall:
+	@test -d $(TREE) || { echo "no installation of $(NAME) under $(PREFIX)"; exit 1; }
+	rm -f $(PREFIX)/bin/$(NAME)
+	rm -rf $(TREE) $(DOC_DIR)
+	@for dir in $(PREFIX)/share/doc $(PREFIX)/share $(PREFIX)/lib $(PREFIX)/bin; do \
+	    rmdir $$dir 2>/dev/null || true; \
+	done
+
 clean:
-	rm -rf build tools/build test/build examples/build lib
+	rm -rf build tools/build test/build lib $(EXAMPLES_MADE)
