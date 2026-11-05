@@ -90,7 +90,7 @@
 ///
 /// ```ernest
 /// Epx.Gc.lineStyle(Epx.Gc.create())
-/// // => Solid
+/// // => Epx.Gc.Solid
 /// ```
 export type Style =
     /// The color written as it is, its alpha among its channels.
@@ -125,7 +125,7 @@ export type Style =
 ///     let context = Epx.Gc.create();
 ///     #(Epx.Gc.fillStyle(context), Epx.Gc.lineWidth(context), Epx.Gc.borderWidth(context))
 /// }
-/// // => #(Some(Solid), 1, 0)
+/// // => #(Some(Epx.Gc.Solid), 1, 0)
 /// ```
 export fn create() : Epx.Context = {
     let context = rawCreate();
@@ -172,7 +172,7 @@ export foreign fn copy(context : Epx.Context) : Epx.Context =
 ///     Epx.Gc.setFillStyle(context, Some(Epx.Gc.Blend));
 ///     Epx.Gc.fillStyle(context)
 /// }
-/// // => Some(Blend)
+/// // => Some(Epx.Gc.Blend)
 /// ```
 export fn setFillStyle(context : Epx.Context, style : Optional(Style)) : Unit =
     setStyle(context, "fill_style", match style {
@@ -217,7 +217,7 @@ export fn fillStyle(context : Epx.Context) : Optional(Style) = {
 ///     Epx.Gc.setFillColor(context, Epx.rgb(0, 128, 255));
 ///     Epx.Gc.fillColor(context)
 /// }
-/// // => Color(alpha = 255, red = 0, green = 128, blue = 255)
+/// // => Epx.Color(alpha = 255, red = 0, green = 128, blue = 255)
 /// ```
 export fn setFillColor(context : Epx.Context, color : Epx.Color) : Unit =
     setColor(context, "fill_color", color)
@@ -228,7 +228,7 @@ export fn setFillColor(context : Epx.Context, color : Epx.Color) : Unit =
 ///
 /// ```ernest
 /// Epx.Gc.fillColor(Epx.Gc.create())
-/// // => Color(alpha = 255, red = 255, green = 0, blue = 0)
+/// // => Epx.Color(alpha = 255, red = 255, green = 0, blue = 0)
 /// ```
 export fn fillColor(context : Epx.Context) : Epx.Color =
     colorOf(rawGetColor(context, Foreign.atom("fill_color")))
@@ -248,7 +248,7 @@ export fn fillColor(context : Epx.Context) : Epx.Color =
 ///     Epx.Gc.setLineStyle(context, Epx.Gc.Antialiased);
 ///     Epx.Gc.lineStyle(context)
 /// }
-/// // => Antialiased
+/// // => Epx.Gc.Antialiased
 /// ```
 export fn setLineStyle(context : Epx.Context, style : Style) : Unit =
     setStyle(context, "line_style", styleAtoms(style))
@@ -265,7 +265,7 @@ export fn setLineStyle(context : Epx.Context, style : Style) : Unit =
 ///
 /// ```ernest
 /// Epx.Gc.lineStyle(Epx.Gc.create())
-/// // => Solid
+/// // => Epx.Gc.Solid
 /// ```
 export fn lineStyle(context : Epx.Context) : Style =
     styleOf(rawGetStyle(context, Foreign.atom("line_style")))
@@ -318,7 +318,7 @@ export fn lineWidth(context : Epx.Context) : Int =
 ///     Epx.Gc.setBorderStyle(context, Epx.Gc.Blend);
 ///     Epx.Gc.borderStyle(context)
 /// }
-/// // => Blend
+/// // => Epx.Gc.Blend
 /// ```
 export fn setBorderStyle(context : Epx.Context, style : Style) : Unit =
     // The border lies within its shape (design §8).
@@ -336,7 +336,7 @@ export fn setBorderStyle(context : Epx.Context, style : Style) : Unit =
 ///
 /// ```ernest
 /// Epx.Gc.borderStyle(Epx.Gc.create())
-/// // => Solid
+/// // => Epx.Gc.Solid
 /// ```
 export fn borderStyle(context : Epx.Context) : Style = {
     // The placement within the shape left out (design §8).
@@ -360,7 +360,7 @@ export fn borderStyle(context : Epx.Context) : Style = {
 ///     Epx.Gc.setBorderColor(context, Epx.rgb(255, 255, 255));
 ///     Epx.Gc.borderColor(context)
 /// }
-/// // => Color(alpha = 255, red = 255, green = 255, blue = 255)
+/// // => Epx.Color(alpha = 255, red = 255, green = 255, blue = 255)
 /// ```
 export fn setBorderColor(context : Epx.Context, color : Epx.Color) : Unit =
     setColor(context, "border_color", color)
@@ -372,7 +372,7 @@ export fn setBorderColor(context : Epx.Context, color : Epx.Color) : Unit =
 ///
 /// ```ernest
 /// Epx.Gc.borderColor(Epx.Gc.create())
-/// // => Color(alpha = 255, red = 0, green = 0, blue = 0)
+/// // => Epx.Color(alpha = 255, red = 0, green = 0, blue = 0)
 /// ```
 export fn borderColor(context : Epx.Context) : Epx.Color =
     colorOf(rawGetColor(context, Foreign.atom("border_color")))
@@ -431,7 +431,7 @@ export fn borderWidth(context : Epx.Context) : Int =
 ///     Epx.Gc.setForeground(context, Epx.Color(alpha = 128, red = 0, green = 0, blue = 0));
 ///     Epx.Gc.foreground(context)
 /// }
-/// // => Color(alpha = 128, red = 0, green = 0, blue = 0)
+/// // => Epx.Color(alpha = 128, red = 0, green = 0, blue = 0)
 /// ```
 export fn setForeground(context : Epx.Context, color : Epx.Color) : Unit =
     setColor(context, "foreground_color", color)
@@ -443,7 +443,7 @@ export fn setForeground(context : Epx.Context, color : Epx.Color) : Unit =
 ///
 /// ```ernest
 /// Epx.Gc.foreground(Epx.Gc.create())
-/// // => Color(alpha = 255, red = 0, green = 0, blue = 255)
+/// // => Epx.Color(alpha = 255, red = 0, green = 0, blue = 255)
 /// ```
 export fn foreground(context : Epx.Context) : Epx.Color =
     colorOf(rawGetColor(context, Foreign.atom("foreground_color")))

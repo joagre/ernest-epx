@@ -201,3 +201,19 @@ The round, the checklist's new step, read the diff the review's own fixes wrote,
 ## The floor is 0.8
 
 *2026-11-01.* Ernest's checkout works toward 0.8.0 and writes the pun, `=f` for `f = f`, which 0.7 refuses. The library, the examples and the checker write it now, 31 fields swept by Ernest's tool, so the floor moved to 0.8 in the template and here. The pictures the tracers draw are the same, pixel for pixel. The release 0.2.0 stands on the floor it was built on.
+
+## The floor is 0.9
+
+*2026-11-02.* Ernest's checkout works toward 0.9.0, whose archives, each saying its commit, are what the clean room installs, so the floor moved to 0.9 in the Makefile and the README. Ernest 0.9.0 was published 2026-11-03. The plan went on saying 0.8 until *The release at the launch* corrected it.
+
+*2026-11-05.* The released 0.9.0's `Io.show` writes a constructor outside the prelude with its module's name, Appendix E.1, and 28 of the library's doc examples compared against the old text, so `make test` failed on the floor's own release. The expected lines and the pages say `Epx.Color` and `Epx.Gc.Solid` now, and the code did not change. The first run against the release found it: no `ern` on the floor stood installed here, one being 0.8.0 and one a build of 0.10.0, so 0.9.0 was installed from its archive for the run.
+
+## The release at the launch
+
+*2026-11-05.* Ernest's log, *The Floors and the Releases*, sets the order with the user, and the plan states it. The floor stays 0.9 through Ernest's layout stop, whose changes wait on main with no release here, and through Ernest's 0.10.0. It rises to the launch's minor when the reviews of Ernest's MVP 4.4 begin, and the library then builds against the archive of the commit Ernest's readers read. The release follows Ernest's, in the same week, after ernest-template and before ernest-httpd, and must build on the release the site names, since the site lists the library.
+
+The release does not wait on milestone 9, whose defects wait on epx's own fixes and have no date. This is *The release waits on Ernest alone* again: a release carries what is ready when its gate opens, and waits for nothing that has no date. The plan had said a release after 0.2.0 follows a commit of epx's that moves the pin, citing `release.md`, which never said so. The launch's release is the exception, and the citation went.
+
+## A release's `ern` is the version alone
+
+*2026-11-05.* `make release` refused a version text ending in `-dev` and passed `ern 0.10.0+612faac8`, an archive made from a checkout away from a release's tag, which the report's §11.7 calls no release as well: a version text that is not the version alone. The pattern is `*-dev|*+*` now, the two forms §11.7 names. The Makefile is the template's copy, and the template has the same line; this copy differs from it until the template's fix arrives.

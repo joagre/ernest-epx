@@ -98,7 +98,7 @@
 ///     Epx.putPixel(pixmap, 1, 2, Epx.rgb(255, 0, 0));
 ///     Epx.getPixel(pixmap, 1, 2)
 /// }
-/// // => Color(alpha = 255, red = 255, green = 0, blue = 0)
+/// // => Epx.Color(alpha = 255, red = 255, green = 0, blue = 0)
 /// ```
 ///
 /// A rectangle drawn on white with a border two pixels wide, and a pixel
@@ -159,7 +159,7 @@ export foreign type Pixmap
 ///
 /// ```ernest
 /// Epx.format(Epx.create(1, 1, Epx.Rgb))
-/// // => Rgb
+/// // => Epx.Rgb
 /// ```
 export type Format =
     /// Alpha, red, green and blue, four bytes a pixel.
@@ -182,7 +182,7 @@ export type Format =
 ///
 /// ```ernest
 /// Epx.Color(alpha = 128, red = 255, green = 0, blue = 0)
-/// // => Color(alpha = 128, red = 255, green = 0, blue = 0)
+/// // => Epx.Color(alpha = 128, red = 255, green = 0, blue = 0)
 /// ```
 export type Color = Color(
     /// How opaque the color is: 255 is opaque and 0 transparent.
@@ -208,7 +208,7 @@ export type Color = Color(
 ///
 /// ```ernest
 /// Epx.SrcOver
-/// // => SrcOver
+/// // => Epx.SrcOver
 /// ```
 export type Operation =
     /// Transparent black, whatever the two pixels.
@@ -268,7 +268,7 @@ export type Operation =
 ///
 /// ```ernest
 /// Epx.Filled(Epx.rgb(0, 0, 0))
-/// // => Filled(Color(alpha = 255, red = 0, green = 0, blue = 0))
+/// // => Epx.Filled(Epx.Color(alpha = 255, red = 0, green = 0, blue = 0))
 /// ```
 ///
 /// since 0.2.0
@@ -331,7 +331,7 @@ export foreign type Window
 ///     let pixmap = Epx.create(3, 2, Epx.Argb);
 ///     #(Epx.width(pixmap), Epx.height(pixmap), Epx.getPixel(pixmap, 0, 0))
 /// }
-/// // => #(3, 2, Color(alpha = 0, red = 0, green = 0, blue = 0))
+/// // => #(3, 2, Epx.Color(alpha = 0, red = 0, green = 0, blue = 0))
 /// ```
 export fn create(width : Int, height : Int, format : Format) : Pixmap = {
     let columns = extent(width);
@@ -374,7 +374,7 @@ foreign fn rawCreate(width : Int, height : Int, format : Foreign.Term) : Pixmap 
 ///     Epx.fill(pixmap, Epx.rgb(255, 255, 255));
 ///     Epx.getPixel(copied, 0, 0)
 /// }
-/// // => Color(alpha = 0, red = 0, green = 0, blue = 0)
+/// // => Epx.Color(alpha = 0, red = 0, green = 0, blue = 0)
 /// ```
 export foreign fn copy(pixmap : Pixmap) : Pixmap =
     "epx:pixmap_copy/1"
@@ -481,7 +481,7 @@ foreign fn rawFillArea(pixmap : Pixmap,
 ///
 /// ```ernest
 /// Epx.getPixel(Epx.create(2, 2, Epx.Rgb), 5, 5)
-/// // => Color(alpha = 255, red = 0, green = 0, blue = 0)
+/// // => Epx.Color(alpha = 255, red = 0, green = 0, blue = 0)
 /// ```
 export fn getPixel(pixmap : Pixmap, x : Int, y : Int) : Color =
     match rawGetPixel(pixmap, coordinate(x), coordinate(y)) {
@@ -566,7 +566,7 @@ foreign fn rawGetPixels(pixmap : Pixmap, x : Int, y : Int, width : Int, height :
 ///     Epx.putPixels(pixmap, 0, 0, 2, 1, Epx.Rgb, <<1, 2, 3, 4, 5, 6>>);
 ///     Epx.getPixel(pixmap, 1, 0)
 /// }
-/// // => Color(alpha = 255, red = 4, green = 5, blue = 6)
+/// // => Epx.Color(alpha = 255, red = 4, green = 5, blue = 6)
 /// ```
 export fn putPixels(pixmap : Pixmap,
                     x : Int,
@@ -708,7 +708,7 @@ foreign fn rawCopyArea(source : Pixmap,
 ///     Epx.scale(source, target, 2, 2);
 ///     Epx.getPixel(target, 1, 1)
 /// }
-/// // => Color(alpha = 255, red = 9, green = 9, blue = 9)
+/// // => Epx.Color(alpha = 255, red = 9, green = 9, blue = 9)
 /// ```
 export fn scale(source : Pixmap, target : Pixmap, width : Int, height : Int) : Unit =
     rawScale(source, target, extent(width), extent(height))
@@ -852,7 +852,7 @@ foreign fn rawScroll(source : Pixmap,
 ///     Epx.blendArea(source, target, 128, 0, 0, 0, 0, 1, 1);
 ///     Epx.getPixel(target, 0, 0)
 /// }
-/// // => Color(alpha = 255, red = 100, green = 100, blue = 100)
+/// // => Epx.Color(alpha = 255, red = 100, green = 100, blue = 100)
 /// ```
 export fn blendArea(source : Pixmap,
                     target : Pixmap,
@@ -922,7 +922,7 @@ foreign fn rawAlphaArea(source : Pixmap,
 ///     Epx.fadeArea(source, target, 255, 0, 0, 0, 0, 1, 1);
 ///     Epx.getPixel(target, 0, 0)
 /// }
-/// // => Color(alpha = 191, red = 100, green = 100, blue = 100)
+/// // => Epx.Color(alpha = 191, red = 100, green = 100, blue = 100)
 /// ```
 export fn fadeArea(source : Pixmap,
                    target : Pixmap,
@@ -986,7 +986,7 @@ foreign fn rawFadeArea(source : Pixmap,
 ///     Epx.shadowArea(source, target, 0, 0, 0, 0, 1, 1);
 ///     Epx.getPixel(target, 0, 0)
 /// }
-/// // => Color(alpha = 127, red = 50, green = 50, blue = 50)
+/// // => Epx.Color(alpha = 127, red = 50, green = 50, blue = 50)
 /// ```
 export fn shadowArea(source : Pixmap,
                      target : Pixmap,
@@ -1040,7 +1040,7 @@ foreign fn rawShadowArea(source : Pixmap,
 ///     Epx.operationArea(source, target, Epx.Add, 0, 0, 0, 0, 1, 1);
 ///     Epx.getPixel(target, 0, 0)
 /// }
-/// // => Color(alpha = 255, red = 255, green = 10, blue = 255)
+/// // => Epx.Color(alpha = 255, red = 255, green = 10, blue = 255)
 /// ```
 export fn operationArea(source : Pixmap,
                         target : Pixmap,
@@ -1465,7 +1465,7 @@ foreign fn rawDrawPolygon(pixmap : Pixmap, context : Context, points : List(#(In
 ///
 /// ```ernest
 /// Epx.rgb(255, 128, 0)
-/// // => Color(alpha = 255, red = 255, green = 128, blue = 0)
+/// // => Epx.Color(alpha = 255, red = 255, green = 128, blue = 0)
 /// ```
 export fn rgb(red : Int, green : Int, blue : Int) : Color =
     Color(alpha = 255, =red, =green, =blue)
