@@ -30,7 +30,7 @@ It needs [Ernest](https://github.com/joagre/ernest) on your `PATH`, the floor th
 ```
 make            builds: lib/ filled, epx and then the library compiled
 make test       the source's layout, ern format --check, the modules' tests, the documents,
-                listing without failing any paragraph past about a hundred words, and make examples
+                refusing any paragraph past 150 words, and make examples
 make examples   every program of examples/ built and run, its picture under build/examples/
 make release    the archive, build/epx-VERSION.tar.gz
 ```
