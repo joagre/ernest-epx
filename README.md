@@ -2,7 +2,7 @@
 
 *The Importance of Being Ernest, a Trivial Comedy for Serious People*
 
-An Ernest library over [epx](https://github.com/tonyrog/epx), the pixel library for Erlang, at https://github.com/joagre/ernest-epx: a 2-D library of pixmaps and their pixels, with a window that shows a pixmap on the screen and takes nothing back from it: nothing of epx's events. It is a library and not a program: a program adds it to its load path, as *Using it* says.
+An Ernest library over [epx](https://github.com/tonyrog/epx), the pixel library for Erlang: a 2-D library of pixmaps and their pixels. Its window shows a pixmap on the screen and takes nothing back from it, nothing of epx's events. It is a library and not a program: a program adds it to its load path, as *Using it* says.
 
 Its modules are `Epx`, over pixmaps and the drawing functions, `Epx.Gc`, over the graphics context they draw with, and `Epx.Window`, over the window that shows a pixmap, whose pages are [`docs/man/epx.md`](docs/man/epx.md), [`docs/man/epx/gc.md`](docs/man/epx/gc.md) and [`docs/man/epx/window.md`](docs/man/epx/window.md), which `make man` writes and a release commits. The release is 0.2.0; [`docs/plan.md`](docs/plan.md) says where it stands.
 
@@ -39,16 +39,7 @@ Clone with `--recursive`: epx and tree_db are git submodules under `erl/`, which
 
 ## The documents
 
-- [`docs/design.md`](docs/design.md): how the library is arranged, the normative document of this repository, and the glossary of its names.
-- [`docs/plan.md`](docs/plan.md): where the library stands and what comes next.
-- [`docs/log.md`](docs/log.md): the dated rationale, never normative.
-- [`docs/release.md`](docs/release.md): what a release runs to be ready.
-- `docs/proposals/`: what is designed, a directory for each proposal while one is open; none is open.
-- `language_feedback.md`, under `docs/` from its first line and absent while it is empty: what writing Ernest felt against the principles, a queue carried to Ernest by copy.
-- [`CLAUDE.md`](CLAUDE.md): the working rules.
-- [`docs/epx_bugs.md`](docs/epx_bugs.md): the defects found in epx that its pinned commit has not fixed, each a report for its tracker.
-- [`THIRD_PARTY_LICENSES`](THIRD_PARTY_LICENSES): epx's license and tree_db's standing, which the release archive carries with their compiled code.
-- [`ACKNOWLEDGMENTS.md`](ACKNOWLEDGMENTS.md): the people this library stands on, by name alone.
+[`docs/README.md`](docs/README.md) says what each document is.
 
 The tests live in the modules they test, which `make test` runs; `tools/` holds the checker of the documents, and [`examples/`](examples/README.md) programs that use the library, which `make examples` builds and runs, and `make test` after its own checks.
 
