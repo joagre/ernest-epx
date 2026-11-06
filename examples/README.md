@@ -37,7 +37,7 @@ Each is built with the library on the load path, `--load-path build`, and run wi
 
 ## The pictures
 
-What each program but `boids.ern` draws, from `assets/`, where [`assets/README.md`](../assets/README.md) says how a picture is made.
+What each program draws, from `assets/`, where [`assets/README.md`](../assets/README.md) says how a picture is made.
 
 `mandelbrot.ern`:
 
@@ -60,3 +60,7 @@ What each program but `boids.ern` draws, from `assets/`, where [`assets/README.m
 ![A glass sphere and a mirror sphere over a checkered floor, with one sample](../assets/whitted.png)
 
 ![The same with sixteen samples](../assets/whitted16.png)
+
+`boids.ern`, its window in flight:
+
+![Two flocks of pale triangles trailing streaks across a dark sky, with orange leaders among them, in a window](../assets/boids.png)
