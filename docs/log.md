@@ -238,9 +238,11 @@ Two things were weighed to make it more striking, since it is an example and its
 
 ## The test on a clean tree
 
-*2026-11-06.* `make test` failed in a fresh clone and passed on a second run. `tools/docs.ern` runs before `make examples`, and the README named the Mandelbrot picture by its path under `build/examples/`, which is not there until the examples have run. The sentence dates from 6cff505, 2026-11-02, and a tree with the pictures left in it passes, so only a clean tree shows it.
+*2026-11-06.* `make test` failed in a fresh clone. `tools/docs.ern` ran before `make examples`, and the README named the Mandelbrot picture by its path under `build/examples/`, which is not there until the examples have run. A second `make test` fails the same way, since the failed check stops it before the examples; only a tree where `make examples` has already run passes. The sentence dates from 6cff505, 2026-11-02.
 
 The README now writes `build/examples/<program>.ppm`, the form `release.md` already gives the archive, which the tool leaves out. The Makefile's order stays: the Makefile is the template's copy, and moving the examples first would make the documents' check depend on what a run wrote. Principle 5: the sentence was the defect, and one word of a document needs no change to the build.
+
+The same day the template moved the check last, and this copy took the order, so the argument above for keeping it did not stand. A true sentence was refused and the run stopped before it could become true, so the order was a defect as well: principle 1, one command on one tree gives one answer. The check depending on what the run wrote is what holds a full path against what was built. The README keeps the metavariable, which is as true and names every picture.
 
 ## The window's reader
 

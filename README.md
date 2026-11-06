@@ -29,8 +29,8 @@ It needs [Ernest](https://github.com/joagre/ernest) on your `PATH`, the floor th
 
 ```
 make            builds: lib/ filled, epx and then the library compiled
-make test       the source's layout, ern format --check, the modules' tests, the documents,
-                refusing any paragraph past 150 words, and make examples
+make test       the source's layout, ern format --check, the modules' tests, make examples,
+                then the documents, refusing any paragraph past 150 words
 make examples   every program of examples/ built and run, its picture under build/examples/
 make release    the archive, build/epx-VERSION.tar.gz
 ```
@@ -41,7 +41,7 @@ Clone with `--recursive`: epx and tree_db are git submodules under `erl/`, which
 
 [`docs/README.md`](docs/README.md) says what each document is.
 
-The tests live in the modules they test, which `make test` runs; `tools/` holds the checker of the documents, and [`examples/`](examples/README.md) programs that use the library, which `make examples` builds and runs, and `make test` after its own checks.
+The tests live in the modules they test, which `make test` runs; `tools/` holds the checker of the documents, and [`examples/`](examples/README.md) programs that use the library, which `make examples` builds and runs, and `make test` before its check of the documents.
 
 ## License
 

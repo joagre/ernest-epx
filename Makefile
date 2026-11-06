@@ -4,9 +4,9 @@
 #
 #   make          builds: the floor checked, lib/ filled, each dependency and
 #                 then the program compiled
-#   make test     the layout, the tests of every module, the documents and
-#                 the design's citations, test/ where it exists, and make
-#                 examples where there is a program to build
+#   make test     the layout, the tests of every module, test/ where it exists,
+#                 make examples where there is a program to build, and then
+#                 the documents and the design's citations
 #   make examples each program of examples/ built and run, what it writes
 #                 under build/examples/
 #   make run      runs the program through its launcher
@@ -113,18 +113,19 @@ build:
 	done
 	$(ERN) build --source-root src --build-root build $(LOAD_PATH) src
 
+# The documents come last, since one may name what the examples wrote.
 test: all
 	$(ERN) format --check src tools $(wildcard test) $(if $(EXAMPLES),examples)
 	$(ERN) test $(RUN_LOAD_PATH) build
 	$(ERN) build --source-root tools --build-root tools/build tools
 	$(ERN) test tools/build
-	$(ERN) run tools/build/docs.erc
 	@if test -d test; then \
 	    $(ERN) build --source-root test --build-root test/build --load-path build \
 	        $(LOAD_PATH) test && \
 	    $(ERN) test --load-path build $(RUN_LOAD_PATH) test/build; \
 	fi
 	@if test -n "$(EXAMPLES)"; then $(MAKE) --no-print-directory examples; fi
+	$(ERN) run tools/build/docs.erc
 
 # Each program of examples/ built with the program on its load path, then run
 # with one argument, build/examples/NAME followed by EXAMPLE_SUFFIX, which it
