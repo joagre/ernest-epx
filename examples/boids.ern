@@ -7,9 +7,11 @@
 // others within its sight and steers by Reynolds's three rules of 1987:
 // separation, away from a neighbor too close to it; alignment, toward the
 // velocity its neighbors fly at; and cohesion, toward the place they stand
-// at. Flocks form out of the scatter, meet and merge. A boid that flies off
-// one edge comes in at the other, but none sees across an edge, the distance
-// between two being the plain one.
+// at. Five of them are leaders, in their own color, which obey none of the
+// rules: each wanders at the fastest speed, and the others chase any leader
+// they see from further off. Every boid turns back from the picture's edges,
+// so that the flocks keep banking, split and meet again, and never settle
+// into one flying one way.
 //
 // It flies 200 steps and writes the last frame to the file named on the
 // command line as a PPM image, which an image viewer opens. The flock starts
@@ -26,16 +28,19 @@
 //
 // What to look at:
 //
-// - `step` is pure: it takes the list of boids to the next list, each boid
-//   steering by the flock as it stands, so that none sees what another does
-//   in the same step. `neighborsOf`, `steered`, `separation`, `alignment`,
-//   `cohesion`, `moved` and `corners` are pure arithmetic beside the parts
-//   that act, `main`, `write`, `animate`, `reader`, `draw` and `drawBoid`.
-// - The flock is one list in one process, threaded through the recursion of
+// - `step` is pure: it takes the flock to the next one, each boid steering by
+//   the flock as it stands, so that none sees what another does in the same
+//   step. `wandered`, `withinSight`, `steered`, `separation`, `alignment`,
+//   `cohesion`, `chase`, `fromEdges`, `moved` and `corners` are pure arithmetic
+//   beside the parts that act, `main`, `write`, `animate`, `reader`, `draw` and
+//   `drawBoid`.
+// - The flock is one value in one process, threaded through the recursion of
 //   `flown` and of `animate`: a boid waits for nothing, so that it is no
 //   process.
-// - `startingFlock` draws each boid from `Random`, from the seed the boid
-//   before it left (report Appendix E.13).
+// - A leader's wandering is random and `step` is still pure: the seed is part
+//   of the `Flock`, each leader draws from the seed the one before it left, and
+//   the next flock carries the seed on (report Appendix E.13). `startingFlock`
+//   draws each boid the same way.
 // - `Vector` declares its own `+` and `-` (report §4.8), and `limited` takes
 //   a velocity's direction from `Float.atan2`, which answers at the zero
 //   vector, where a division by its length would fault.
@@ -92,6 +97,9 @@ fn polar(angle : Float, length : Float) : Vector =
 // A bird: where it is, and how far it flies in one step.
 type Boid = Boid(place : Vector, velocity : Vector)
 
+// The birds, and the seed the leaders' next turns are drawn from.
+type Flock = Flock(leaders : List(Boid), followers : List(Boid), seed : Random.Seed)
+
 // What the reader process tells the flock: Enter was pressed.
 type FlockMsg = EnterPressed
 
@@ -100,8 +108,11 @@ let size : Int = 512
 
 let span : Float = Int.toFloat(size)
 
-// How many boids fly, and the number their starting flock is drawn from.
+// How many boids fly, how many of them lead, and the number their starting
+// flock is drawn from.
 let flockSize : Int = 150
+
+let leaderCount : Int = 5
 
 let flockSeed : Int = 1
 
@@ -112,28 +123,42 @@ let settlingSteps : Int = 200
 let framesPerSecond : Int = 30
 
 // How far a boid sees, in pixels, and how fast it may fly, in pixels a step.
-let sight : Float = 35.0
+let sight : Float = 45.0
 
-let slowest : Float = 1.5
+let slowest : Float = 3.0
 
-let fastest : Float = 3.0
+let fastest : Float = 8.0
 
 // The strength of each of the three rules, and how close a neighbor must be
 // before the first of them pushes.
-let separationWeight : Float = 4.0
+let separationWeight : Float = 12.0
 
-let elbowRoom : Float = 14.0
+let elbowRoom : Float = 18.0
 
-let alignmentWeight : Float = 0.08
+let alignmentWeight : Float = 0.15
 
-let cohesionWeight : Float = 0.01
+let cohesionWeight : Float = 0.005
+
+// How far a boid sees a leader, how hard it chases one, and how far a leader
+// may turn in one step, in radians either way.
+let leaderSight : Float = 110.0
+
+let chaseWeight : Float = 0.8
+
+let wanderTurn : Float = 0.3
+
+// How near an edge a boid starts to turn back, in pixels, and how hard it
+// turns at the edge itself.
+let edgeMargin : Float = 80.0
+
+let edgeWeight : Float = 3.0
 
 // The boid's triangle: how far its nose stands ahead of its place, how far
 // its two tail corners stand from its place, and the turn in radians from
 // its heading to each of them.
-let noseLength : Float = 7.0
+let noseLength : Float = 5.0
 
-let tailLength : Float = 5.0
+let tailLength : Float = 3.5
 
 let tailTurn : Float = 2.5
 
@@ -141,6 +166,8 @@ let tailTurn : Float = 2.5
 let sky : Epx.Color = Epx.rgb(18, 24, 44)
 
 let plumage : Epx.Color = Epx.rgb(236, 232, 214)
+
+let leaderPlumage : Epx.Color = Epx.rgb(240, 110, 70)
 
 // The vector of no length.
 let zero : Vector = Vector(x = 0.0, y = 0.0)
@@ -172,7 +199,7 @@ export fn main() : Unit receiving FlockMsg =
     }
 
 // The flock after the count of steps.
-fn flown(flock : List(Boid), count : Int) : List(Boid) =
+fn flown(flock : Flock, count : Int) : Flock =
     if count == 0 then flock else flown(step(flock), count - 1)
 
 // The frame written to the file, or why it could not be, on standard error.
@@ -191,7 +218,7 @@ fn write(name : String, pixmap : Epx.Pixmap) : Unit =
 // then the last frame is written to the file and the window closed.
 fn animate(window : Epx.Window,
            name : String,
-           flock : List(Boid),
+           flock : Flock,
            front : Epx.Pixmap,
            back : Epx.Pixmap,
            startTime : Int,
@@ -219,13 +246,15 @@ fn reader(to : Address(FlockMsg)) : Unit = {
     send(to, EnterPressed)
 }
 
-// The sky, and over it a triangle for each boid of the flock, drawn over the
-// pixmap with one context.
-fn draw(pixmap : Epx.Pixmap, flock : List(Boid)) : Unit = {
+// The sky, and over it a triangle for each boid of the flock, the leaders
+// last and in their own color, drawn over the pixmap with one context.
+fn draw(pixmap : Epx.Pixmap, flock : Flock) : Unit = {
     let context = Epx.Gc.create();
-    Epx.Gc.setFillColor(context, plumage);
     Epx.fill(pixmap, sky);
-    List.forEach(flock, fn(boid) = drawBoid(pixmap, context, boid))
+    Epx.Gc.setFillColor(context, plumage);
+    List.forEach(flock.followers, fn(boid) = drawBoid(pixmap, context, boid));
+    Epx.Gc.setFillColor(context, leaderPlumage);
+    List.forEach(flock.leaders, fn(boid) = drawBoid(pixmap, context, boid))
 }
 
 // The boid's triangle, its corners rounded to pixels.
@@ -253,11 +282,15 @@ fn corners(boid : Boid) : #(Vector, Vector, Vector) = {
 // The flock a run starts from, the same in every run, since its seed is
 // fixed: places over the whole picture, and headings all around at the
 // slowest speed.
-let startingFlock : List(Boid) = {
-    let #(_, flock) =
-        List.mapFold(List.range(1, flockSize), Random.seed(flockSeed), fn(seed, _) = hatched(seed));
-    flock
+let startingFlock : Flock = {
+    let #(seed, leaders) = hatchedFrom(Random.seed(flockSeed), leaderCount);
+    let #(seed, followers) = hatchedFrom(seed, flockSize - leaderCount);
+    Flock(=leaders, =followers, =seed)
 }
+
+// The count of boids drawn from the seed, and the seed after them.
+fn hatchedFrom(seed : Random.Seed, count : Int) : #(Random.Seed, List(Boid)) =
+    List.mapFold(List.range(1, count), seed, fn(seed, _) = hatched(seed))
 
 // A boid drawn from the seed, and the seed after it.
 fn hatched(seed : Random.Seed) : #(Random.Seed, Boid) = {
@@ -268,29 +301,48 @@ fn hatched(seed : Random.Seed) : #(Random.Seed, Boid) = {
     #(seed, Boid(=place, velocity = polar(2.0 * Float.pi * turn, slowest)))
 }
 
-// The flock a step further: each boid steers by what it sees of the flock as
-// it stands, and moves.
-fn step(flock : List(Boid)) : List(Boid) =
-    List.map(flock, fn(boid) = moved(boid, steered(boid, neighborsOf(boid, flock))))
+// The flock a step further: each leader wanders, and each follower steers by
+// what it sees of the flock as it stands; all of them move.
+fn step(flock : Flock) : Flock = {
+    let #(seed, leaders) = List.mapFold(flock.leaders, flock.seed, wandered);
+    let everyone = flock.leaders <> flock.followers;
+    let followers =
+        List.map(flock.followers,
+                 fn(boid) =
+                     moved(boid, steered(boid, withinSight(boid, everyone, sight), flock.leaders)));
+    Flock(=leaders, =followers, =seed)
+}
 
-// The boids the boid sees: those within its sight by the plain distance,
-// across no edge. One at its very place is left out, the boid itself among
-// them, since it lies in no direction.
-fn neighborsOf(boid : Boid, flock : List(Boid)) : List(Boid) =
+// The leader a step further and the seed after it: its heading turned by a
+// random amount at the fastest speed, and back from the edges.
+fn wandered(seed : Random.Seed, leader : Boid) : #(Random.Seed, Boid) = {
+    let #(turn, seed) = Random.nextFloat(seed);
+    let heading =
+        Float.atan2(leader.velocity.y, leader.velocity.x) + wanderTurn * (2.0 * turn - 1.0);
+    #(seed, moved(leader, polar(heading, fastest) + fromEdges(leader.place)))
+}
+
+// The boids of the list within the distance of the boid. One at its very
+// place is left out, the boid itself among them, since it lies in no
+// direction.
+fn withinSight(boid : Boid, flock : List(Boid), reach : Float) : List(Boid) =
     List.filter(flock, fn(other) = {
         let squaredDistance = squaredLength(other.place - boid.place);
-        squaredDistance > 0.0 && squaredDistance < sight * sight
+        squaredDistance > 0.0 && squaredDistance < reach * reach
     })
 
-// The boid's velocity after the three rules; one that sees none flies on.
-fn steered(boid : Boid, neighbors : List(Boid)) : Vector =
+// The boid's velocity after the chase, the edges and the three rules; one
+// that sees no neighbor has no rule to steer by.
+fn steered(boid : Boid, neighbors : List(Boid), leaders : List(Boid)) : Vector = {
+    let velocity = boid.velocity + chase(boid, leaders) + fromEdges(boid.place);
     if List.isEmpty(neighbors) then
-        boid.velocity
+        velocity
     else
-        boid.velocity
+        velocity
             + separation(boid, neighbors)
             + alignment(boid, neighbors)
             + cohesion(boid, neighbors)
+}
 
 // Away from each neighbor within the elbow room, the harder the closer.
 fn separation(boid : Boid, neighbors : List(Boid)) : Vector =
@@ -316,6 +368,22 @@ fn alignment(boid : Boid, neighbors : List(Boid)) : Vector =
 fn cohesion(boid : Boid, neighbors : List(Boid)) : Vector =
     scaled(mean(List.map(neighbors, fn(other) = other.place)) - boid.place, cohesionWeight)
 
+// Toward each leader the boid sees, as hard however far it is.
+fn chase(boid : Boid, leaders : List(Boid)) : Vector =
+    sum(List.map(withinSight(boid, leaders, leaderSight), fn(leader) = {
+        let offset = leader.place - boid.place;
+        scaled(offset, chaseWeight / length(offset))
+    }))
+
+// Back from the edges the place is near, the harder the nearer and harder
+// still past them.
+fn fromEdges(place : Vector) : Vector =
+    Vector(x = fromBothEnds(place.x), y = fromBothEnds(place.y))
+
+fn fromBothEnds(value : Float) : Float =
+    edgeWeight * (Float.max(0.0, edgeMargin - value) - Float.max(0.0, value - (span - edgeMargin)))
+        / edgeMargin
+
 // The mean of vectors, of which there is at least one.
 fn mean(vectors : List(Vector)) : Vector =
     scaled(sum(vectors), 1.0 / Int.toFloat(List.size(vectors)))
@@ -323,11 +391,10 @@ fn mean(vectors : List(Vector)) : Vector =
 fn sum(vectors : List(Vector)) : Vector =
     List.foldLeft(vectors, zero, fn(acc, vector) = acc + vector)
 
-// The boid moved one step at the velocity once limited, and brought back over
-// the edge it passes.
+// The boid moved one step at the velocity once limited.
 fn moved(boid : Boid, velocity : Vector) : Boid = {
     let velocity = limited(velocity);
-    Boid(place = wrapped(boid.place + velocity), =velocity)
+    Boid(place = boid.place + velocity, =velocity)
 }
 
 // The velocity at a speed from the slowest to the fastest, its direction
@@ -346,11 +413,3 @@ fn length(vector : Vector) : Float =
 
 fn squaredLength(vector : Vector) : Float =
     vector.x * vector.x + vector.y * vector.y
-
-// The place within the picture: one past an edge comes in at the other. A
-// step is shorter than the picture, so that it passes one edge at most.
-fn wrapped(place : Vector) : Vector =
-    Vector(x = withinSpan(place.x), y = withinSpan(place.y))
-
-fn withinSpan(value : Float) : Float =
-    if value < 0.0 then value + span else if value >= span then value - span else value
