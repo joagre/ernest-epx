@@ -61,6 +61,9 @@
 //   queue (*A call's cost*), and no function waits for it. A request still
 //   waiting when the program comes back to its pixmap shows what the program
 //   is writing there, whole or half done.
+// - A frame keeps a trail of the ones before it: `draw` fills the sky and fades
+//   the last frame over it with `Epx.fadeArea`, whose rounding down leaves
+//   nothing of a trail in the end, and draws the boids over that.
 // - `Epx.toPpm` makes the bytes of the file, and `Fs.write` writes them, its
 //   failure a value (report Appendix E.17).
 //
@@ -162,6 +165,9 @@ let tailLength : Float = 3.5
 
 let tailTurn : Float = 2.5
 
+// How much of the last frame stays in the next, out of 256.
+let trailFade : Int = 180
+
 // The colors of the picture.
 let sky : Epx.Color = Epx.rgb(18, 24, 44)
 
@@ -175,22 +181,14 @@ let zero : Vector = Vector(x = 0.0, y = 0.0)
 export fn main() : Unit receiving FlockMsg =
     match Os.arguments {
         [name] -> {
-            let pixmap = Epx.create(size, size, Epx.Rgb);
-            draw(pixmap, flown(startingFlock, settlingSteps));
-            write(name, pixmap)
+            write(name, flown(startingFlock, settlingSteps, emptySky(), emptySky()))
         }
       | [name, "show"] -> {
             let window = Epx.Window.open(0, 0, size, size);
             let me = self();
             let _ = spawn(fn() = reader(me));
             Io.println("press Enter to close");
-            animate(window,
-                    name,
-                    startingFlock,
-                    Epx.create(size, size, Epx.Rgb),
-                    Epx.create(size, size, Epx.Rgb),
-                    Clock.monotonic(),
-                    0)
+            animate(window, name, startingFlock, emptySky(), emptySky(), Clock.monotonic(), 0)
         }
       | _ -> {
             Io.printlnError("usage: boids file.ppm [show]");
@@ -198,9 +196,19 @@ export fn main() : Unit receiving FlockMsg =
         }
     }
 
-// The flock after the count of steps.
-fn flown(flock : Flock, count : Int) : Flock =
-    if count == 0 then flock else flown(step(flock), count - 1)
+// The last frame of a flock flown for the count of steps, drawn as `animate`
+// draws them, with nothing shown.
+fn flown(flock : Flock, count : Int, front : Epx.Pixmap, back : Epx.Pixmap) : Epx.Pixmap = {
+    draw(back, front, flock);
+    if count == 0 then back else flown(step(flock), count - 1, back, front)
+}
+
+// A new pixmap of nothing but the sky.
+fn emptySky() : Epx.Pixmap = {
+    let pixmap = Epx.create(size, size, Epx.Rgb);
+    Epx.fill(pixmap, sky);
+    pixmap
+}
 
 // The frame written to the file, or why it could not be, on standard error.
 fn write(name : String, pixmap : Epx.Pixmap) : Unit =
@@ -223,7 +231,7 @@ fn animate(window : Epx.Window,
            back : Epx.Pixmap,
            startTime : Int,
            frame : Int) : Unit receiving FlockMsg = {
-    draw(back, flock);
+    draw(back, front, flock);
     Epx.Window.show(window, back);
     receive {
         EnterPressed -> {
@@ -246,11 +254,13 @@ fn reader(to : Address(FlockMsg)) : Unit = {
     send(to, EnterPressed)
 }
 
-// The sky, and over it a triangle for each boid of the flock, the leaders
-// last and in their own color, drawn over the pixmap with one context.
-fn draw(pixmap : Epx.Pixmap, flock : Flock) : Unit = {
+// The sky, the last frame faded over it, and over them a triangle for each
+// boid of the flock, the leaders last and in their own color, drawn over the
+// pixmap with one context.
+fn draw(pixmap : Epx.Pixmap, last : Epx.Pixmap, flock : Flock) : Unit = {
     let context = Epx.Gc.create();
     Epx.fill(pixmap, sky);
+    Epx.fadeArea(last, pixmap, trailFade, 0, 0, 0, 0, size, size);
     Epx.Gc.setFillColor(context, plumage);
     List.forEach(flock.followers, fn(boid) = drawBoid(pixmap, context, boid));
     Epx.Gc.setFillColor(context, leaderPlumage);
