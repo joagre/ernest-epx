@@ -217,3 +217,13 @@ The release does not wait on milestone 9, whose defects wait on epx's own fixes 
 ## A release's `ern` is the version alone
 
 *2026-11-05.* `make release` refused a version text ending in `-dev` and passed `ern 0.10.0+612faac8`, an archive made from a checkout away from a release's tag, which the report's §11.7 calls no release as well: a version text that is not the version alone. The pattern is `*-dev|*+*` now, the two forms §11.7 names. The Makefile is the template's copy, and the template has the same line; this copy differs from it until the template's fix arrives.
+
+## The flock
+
+*2026-11-06.* `examples/boids.ern` flies 150 boids by separation, alignment and cohesion in one process, a pure `step` from one list to the next, from a fixed seed of `Random`. A process for each boid was left out on principle 5, since a boid waits for nothing. The word `show` animates them at 30 frames a second in two pixmaps shown in turn, each frame's due time counted from the first and the wait a `receive` with `after`.
+
+A step takes about 2.2 ms and drawing a frame 0.2 ms on an i7-8565U, so about 550 boids fit a 33 ms frame before the backend's share, and the headless 200 steps add 0.9 s to `make examples`. With the window's three calls replaced by a log line, the loop held 30.00 frames a second over 300 frames without drift, caught up after a stall of 500 ms, took Enter while always late, and kept its memory flat over 30000 frames.
+
+The due times read `Clock.monotonic`, not `Clock.now`: Appendix E.15 says the host's clock may be set while a program runs, which would freeze the flock or send a burst of frames, and principle 1 has a reader predict the clock that measures elapsed time.
+
+The swap has only been tried at one frame a second, by the clock face. §11 says requests made faster than the backend draws them wait in a queue and that no function waits for it, so the swap keeps a frame whole only while the backend keeps up, and a late frame's catching up is when it protects least. Neither has been seen on a screen, no display server being available to the build, so both stand in the plan as one decision.

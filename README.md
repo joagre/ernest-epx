@@ -8,7 +8,7 @@ Its modules are `Epx`, over pixmaps and the drawing functions, `Epx.Gc`, over th
 
 ![Five pictures the examples draw: Whitted's glass and mirror spheres, the Boing ball above a mirror floor, a clock face, the Mandelbrot set, and the Sierpinski gasket](assets/collage.png)
 
-The five pictures are what [`examples/`](examples/README.md) draws, each a program of a page or two; [`assets/README.md`](assets/README.md) says how a picture is made from a program's output. `make examples` builds the library and every example and runs each, writing its picture under `build/examples/`, `build/examples/mandelbrot.ppm` and so on, which an image viewer opens. On a machine with a screen the word `show` after the file opens a window of the picture while it is drawn, and the ray tracers take a count of workers first; [`examples/README.md`](examples/README.md) gives that line for each.
+The five pictures are what five of the six programs of [`examples/`](examples/README.md) draw, each a page or two, the sixth a flock animated in a window; [`assets/README.md`](assets/README.md) says how a picture is made from a program's output. `make examples` builds the library and every example and runs each, writing its picture under `build/examples/`, `build/examples/mandelbrot.ppm` and so on, which an image viewer opens. On a machine with a screen the word `show` after the file opens a window of the picture while it is drawn, and the ray tracers take a count of workers first; [`examples/README.md`](examples/README.md) gives that line for each.
 
 ## Using it
 

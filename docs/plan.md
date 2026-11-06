@@ -12,7 +12,9 @@ The second cut is built, 2026-10-20, and the window that shows, 2026-10-21: `Epx
 
 What waited on Ernest's MVP 3.28 is taken, 2026-10-22, milestone 6. epx's fixes are in the pin, 2026-10-23, the library follows them, and `sub`, `scroll`, the rounded rectangle and the polygon are built the same day, milestone 2 done; `sub` is held back from 0.2.0, since epx's `flip` and `copyTo` corrupt memory through one (milestone 9). Ernest 0.5.0 is tagged 2026-10-25 and the floor is 0.5, and 0.6 from 2026-10-27, Ernest 0.6.0 tagged the same night; the release 0.2.0 is out the same day, milestone 3b, its archive beside its tag. The floor is 0.8 since 2026-11-01, for the pun the library, its examples and its checker now write, which Ernest 0.7 refuses, and 0.9 since 2026-11-02 (the log's *The floor is 0.9*).
 
-What is left: milestone 9, what epx has not fixed, `sub` returning as `subPixmap` with two of its fixes and each other defect going as epx fixes it. With that the library is done: a 2-D library of pixmaps, pixels and the drawing functions, with its five examples, and nothing more is planned.
+What is left: milestone 9, what epx has not fixed, `sub` returning as `subPixmap` with two of its fixes and each other defect going as epx fixes it. With that the library is done: a 2-D library of pixmaps, pixels and the drawing functions, with its six examples, and nothing more is planned but milestone 10's decision.
+
+`examples/boids.ern`, the sixth, a flock animated at 30 frames a second, is built 2026-11-06, and its window has not been tried on a screen.
 
 The next release comes at Ernest's launch and does not wait on milestone 9, which stays planned; decided 2026-11-05 (the log's *The release at the launch*). The floor stays 0.9 through Ernest's layout stop and its 0.10.0, and rises to the launch's minor, 0.11 or 0.12 as Ernest names it, when the reviews of Ernest's MVP 4.4 begin. Ernest's release is tagged; the same week ernest-template releases, then this library, then ernest-httpd; and the site, which lists the library, goes live last. Each step comes on the user's word. A release after that one follows a commit of epx's that moves the pin.
 
@@ -36,3 +38,7 @@ The defects of `epx_bugs.md` that epx's fix commit leaves, which the library doc
 `sub` returns as `subPixmap`, its design as the log's *The four functions* has it and its code in the history before the release 0.2.0, once epx's `pixmap_flip` and `pixmap_copy_to` take a sub's width, `epx_bugs.md` 36 and 37, and the pin moves; decided 2026-10-25 (the log's *The release 0.2.0*).
 
 Each other defect goes as a commit of epx's fixes it and the pin moves; a fix that changes what the design states changes the design first, §9 or §11, then the page and the test. Nothing is asked of epx's author for them. Decided 2026-10-23 (the log's *The release waits on Ernest alone*).
+
+## Milestone 10: the window at animation speed
+
+**Decision: whether `Epx.Window` gains a wait for the backend**, and with it whether a late frame of `examples/boids.ern` still catches up, decided once the flock has been watched on a screen (the log's *The flock*). Until then the library stands as `design.md` §11 states it.

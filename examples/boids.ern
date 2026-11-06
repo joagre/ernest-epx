@@ -1,0 +1,356 @@
+//
+// Boids: a flock of birds steering by three rules, drawn into a pixmap,
+// written as PPM or animated in a window
+//
+// A hundred and fifty boids, each a small triangle pointing where it flies,
+// over a picture of 512 by 512 pixels. At each step every boid looks at the
+// others within its sight and steers by Reynolds's three rules of 1987:
+// separation, away from a neighbor too close to it; alignment, toward the
+// velocity its neighbors fly at; and cohesion, toward the place they stand
+// at. Flocks form out of the scatter, meet and merge. A boid that flies off
+// one edge comes in at the other, but none sees across an edge, the distance
+// between two being the plain one.
+//
+// It flies 200 steps and writes the last frame to the file named on the
+// command line as a PPM image, which an image viewer opens. The flock starts
+// from a fixed seed, so that every run on one machine writes the same picture.
+// Run with no file, or with any word after it but `show`, it says how it is
+// called and ends with status 2; a file it cannot write is reported on
+// standard error, and it ends with status 1.
+//
+// With the word `show` after the file, it opens a window of the picture's
+// size before it draws, and shows the flock a step further 30 times a second
+// until Enter is pressed; it then writes the last frame to the file and
+// closes the window. The window's close button does nothing. Without the
+// word it opens no window, which is how `make examples` runs it.
+//
+// What to look at:
+//
+// - `step` is pure: it takes the list of boids to the next list, each boid
+//   steering by the flock as it stands, so that none sees what another does
+//   in the same step. `neighborsOf`, `steered`, `separation`, `alignment`,
+//   `cohesion`, `moved` and `corners` are pure arithmetic beside the parts
+//   that act, `main`, `write`, `animate`, `reader`, `draw` and `drawBoid`.
+// - The flock is one list in one process, threaded through the recursion of
+//   `flown` and of `animate`: a boid waits for nothing, so that it is no
+//   process.
+// - `startingFlock` draws each boid from `Random`, from the seed the boid
+//   before it left (report Appendix E.13).
+// - `Vector` declares its own `+` and `-` (report §4.8), and `limited` takes
+//   a velocity's direction from `Float.atan2`, which answers at the zero
+//   vector, where a division by its length would fault.
+// - A boid is one filled `Epx.drawTriangle` (`Epx.Gc`'s page, *The keys*):
+//   its place is a `Float`, which keeps the part of a step short of a whole
+//   pixel, and is rounded when drawn.
+// - `animate` waits in a `receive` for the `EnterPressed` a reader process
+//   sends, or until the next frame is due, a delay derived from the clock and
+//   no fixed sleep. `dueTime` counts each frame's time from the first frame's,
+//   so that the frames do not drift. A late frame's delay is below 0, which is
+//   none (report §7.4): it does not wait, a waiting `EnterPressed` is still
+//   taken first, and the frames run on until they are due again.
+// - `animate` draws each frame into the pixmap it did not show last, two
+//   pixmaps shown in turn, since the backend reads a pixmap's pixels as it
+//   draws them (`Epx.Window`'s *Shown later*). That keeps a frame whole only
+//   while the backend keeps up: `Epx.Window.show` answers before the pixels
+//   are drawn, requests made faster than the backend draws them wait in its
+//   queue (*A call's cost*), and no function waits for it. A request still
+//   waiting when the program comes back to its pixmap shows what the program
+//   is writing there, whole or half done.
+// - `Epx.toPpm` makes the bytes of the file, and `Fs.write` writes them, its
+//   failure a value (report Appendix E.17).
+//
+// Run it from the repository's root once `make` has built the library,
+// and with the word `show` on a machine with a screen:
+//
+//     ern build --source-root examples --build-root examples/build --load-path build \
+//         examples/boids.ern
+//     ern run --load-path build --libs-dir lib examples/build/boids.erc \
+//         build/boids.ppm
+//     ern run --load-path build --libs-dir lib examples/build/boids.erc \
+//         build/boids.ppm show
+//
+
+// A place or a velocity on the picture, in pixels and in pixels a step: `x`
+// grows to the right and `y` downward.
+type Vector = Vector(x : Float, y : Float)
+
+fn Vector.+(left : Vector, right : Vector) : Vector =
+    Vector(x = left.x + right.x, y = left.y + right.y)
+
+fn Vector.-(left : Vector, right : Vector) : Vector =
+    Vector(x = left.x - right.x, y = left.y - right.y)
+
+// The vector times a number. `*` is not this, since a type's own operator
+// takes two values of the type (report §4.8).
+fn scaled(vector : Vector, factor : Float) : Vector =
+    Vector(x = vector.x * factor, y = vector.y * factor)
+
+// The vector of that angle in radians and that length.
+fn polar(angle : Float, length : Float) : Vector =
+    Vector(x = length * Float.cos(angle), y = length * Float.sin(angle))
+
+// A bird: where it is, and how far it flies in one step.
+type Boid = Boid(place : Vector, velocity : Vector)
+
+// What the reader process tells the flock: Enter was pressed.
+type FlockMsg = EnterPressed
+
+// The picture's width and height in pixels, and the same as a `Float`.
+let size : Int = 512
+
+let span : Float = Int.toFloat(size)
+
+// How many boids fly, and the number their starting flock is drawn from.
+let flockSize : Int = 150
+
+let flockSeed : Int = 1
+
+// The steps flown before the picture is written where there is no window,
+// and the frames shown a second where there is one.
+let settlingSteps : Int = 200
+
+let framesPerSecond : Int = 30
+
+// How far a boid sees, in pixels, and how fast it may fly, in pixels a step.
+let sight : Float = 35.0
+
+let slowest : Float = 1.5
+
+let fastest : Float = 3.0
+
+// The strength of each of the three rules, and how close a neighbor must be
+// before the first of them pushes.
+let separationWeight : Float = 4.0
+
+let elbowRoom : Float = 14.0
+
+let alignmentWeight : Float = 0.08
+
+let cohesionWeight : Float = 0.01
+
+// The boid's triangle: how far its nose stands ahead of its place, how far
+// its two tail corners stand from its place, and the turn in radians from
+// its heading to each of them.
+let noseLength : Float = 7.0
+
+let tailLength : Float = 5.0
+
+let tailTurn : Float = 2.5
+
+// The colors of the picture.
+let sky : Epx.Color = Epx.rgb(18, 24, 44)
+
+let plumage : Epx.Color = Epx.rgb(236, 232, 214)
+
+// The vector of no length.
+let zero : Vector = Vector(x = 0.0, y = 0.0)
+
+export fn main() : Unit receiving FlockMsg =
+    match Os.arguments {
+        [name] -> {
+            let pixmap = Epx.create(size, size, Epx.Rgb);
+            draw(pixmap, flown(startingFlock, settlingSteps));
+            write(name, pixmap)
+        }
+      | [name, "show"] -> {
+            let window = Epx.Window.open(0, 0, size, size);
+            let me = self();
+            let _ = spawn(fn() = reader(me));
+            Io.println("press Enter to close");
+            animate(window,
+                    name,
+                    startingFlock,
+                    Epx.create(size, size, Epx.Rgb),
+                    Epx.create(size, size, Epx.Rgb),
+                    Clock.monotonic(),
+                    0)
+        }
+      | _ -> {
+            Io.printlnError("usage: boids file.ppm [show]");
+            Os.exit(2)
+        }
+    }
+
+// The flock after the count of steps.
+fn flown(flock : List(Boid), count : Int) : List(Boid) =
+    if count == 0 then flock else flown(step(flock), count - 1)
+
+// The frame written to the file, or why it could not be, on standard error.
+fn write(name : String, pixmap : Epx.Pixmap) : Unit =
+    match Fs.write(Path(name), Epx.toPpm(pixmap), 5000) {
+        Right(_) ->
+            Unit
+      | Left(error) -> {
+            Io.printlnError("boids: " <> name <> ": " <> Io.show(error));
+            Os.exit(1)
+        }
+    }
+
+// The flock drawn into `back` and shown, then a step further with the two
+// pixmaps swapped once the next frame is due, until `EnterPressed` comes;
+// then the last frame is written to the file and the window closed.
+fn animate(window : Epx.Window,
+           name : String,
+           flock : List(Boid),
+           front : Epx.Pixmap,
+           back : Epx.Pixmap,
+           startTime : Int,
+           frame : Int) : Unit receiving FlockMsg = {
+    draw(back, flock);
+    Epx.Window.show(window, back);
+    receive {
+        EnterPressed -> {
+            write(name, back);
+            Epx.Window.close(window)
+        }
+      | after dueTime(startTime, frame + 1) - Clock.monotonic() ->
+            animate(window, name, step(flock), back, front, startTime, frame + 1)
+    }
+}
+
+// The time the frame is due, counted from the first frame's time, so that a
+// late frame moves no frame after it.
+fn dueTime(startTime : Int, frame : Int) : Int =
+    startTime + frame * 1000 / framesPerSecond
+
+// A line, or the end of standard input, read and told to the flock.
+fn reader(to : Address(FlockMsg)) : Unit = {
+    let _ = Io.readLine();
+    send(to, EnterPressed)
+}
+
+// The sky, and over it a triangle for each boid of the flock, drawn over the
+// pixmap with one context.
+fn draw(pixmap : Epx.Pixmap, flock : List(Boid)) : Unit = {
+    let context = Epx.Gc.create();
+    Epx.Gc.setFillColor(context, plumage);
+    Epx.fill(pixmap, sky);
+    List.forEach(flock, fn(boid) = drawBoid(pixmap, context, boid))
+}
+
+// The boid's triangle, its corners rounded to pixels.
+fn drawBoid(pixmap : Epx.Pixmap, context : Epx.Context, boid : Boid) : Unit = {
+    let #(nose, left, right) = corners(boid);
+    Epx.drawTriangle(pixmap,
+                     context,
+                     Float.round(nose.x),
+                     Float.round(nose.y),
+                     Float.round(left.x),
+                     Float.round(left.y),
+                     Float.round(right.x),
+                     Float.round(right.y))
+}
+
+// The corners of the boid's triangle: its nose ahead of its place along its
+// heading, and a tail corner behind it to either side.
+fn corners(boid : Boid) : #(Vector, Vector, Vector) = {
+    let heading = Float.atan2(boid.velocity.y, boid.velocity.x);
+    #(boid.place + polar(heading, noseLength),
+      boid.place + polar(heading - tailTurn, tailLength),
+      boid.place + polar(heading + tailTurn, tailLength))
+}
+
+// The flock a run starts from, the same in every run, since its seed is
+// fixed: places over the whole picture, and headings all around at the
+// slowest speed.
+let startingFlock : List(Boid) = {
+    let #(_, flock) =
+        List.mapFold(List.range(1, flockSize), Random.seed(flockSeed), fn(seed, _) = hatched(seed));
+    flock
+}
+
+// A boid drawn from the seed, and the seed after it.
+fn hatched(seed : Random.Seed) : #(Random.Seed, Boid) = {
+    let #(across, seed) = Random.nextFloat(seed);
+    let #(down, seed) = Random.nextFloat(seed);
+    let #(turn, seed) = Random.nextFloat(seed);
+    let place = Vector(x = across * span, y = down * span);
+    #(seed, Boid(=place, velocity = polar(2.0 * Float.pi * turn, slowest)))
+}
+
+// The flock a step further: each boid steers by what it sees of the flock as
+// it stands, and moves.
+fn step(flock : List(Boid)) : List(Boid) =
+    List.map(flock, fn(boid) = moved(boid, steered(boid, neighborsOf(boid, flock))))
+
+// The boids the boid sees: those within its sight by the plain distance,
+// across no edge. One at its very place is left out, the boid itself among
+// them, since it lies in no direction.
+fn neighborsOf(boid : Boid, flock : List(Boid)) : List(Boid) =
+    List.filter(flock, fn(other) = {
+        let squaredDistance = squaredLength(other.place - boid.place);
+        squaredDistance > 0.0 && squaredDistance < sight * sight
+    })
+
+// The boid's velocity after the three rules; one that sees none flies on.
+fn steered(boid : Boid, neighbors : List(Boid)) : Vector =
+    if List.isEmpty(neighbors) then
+        boid.velocity
+    else
+        boid.velocity
+            + separation(boid, neighbors)
+            + alignment(boid, neighbors)
+            + cohesion(boid, neighbors)
+
+// Away from each neighbor within the elbow room, the harder the closer.
+fn separation(boid : Boid, neighbors : List(Boid)) : Vector =
+    sum(List.map(neighbors, fn(other) = pushed(boid, other)))
+
+// The push from the neighbor: along the line from it to the boid, its
+// strength falling as one over the distance, which `neighborsOf` leaves above
+// 0.
+fn pushed(boid : Boid, other : Boid) : Vector = {
+    let offset = boid.place - other.place;
+    let squaredDistance = squaredLength(offset);
+    if squaredDistance < elbowRoom * elbowRoom then
+        scaled(offset, separationWeight / squaredDistance)
+    else
+        zero
+}
+
+// Toward the velocity the neighbors fly at, on average.
+fn alignment(boid : Boid, neighbors : List(Boid)) : Vector =
+    scaled(mean(List.map(neighbors, fn(other) = other.velocity)) - boid.velocity, alignmentWeight)
+
+// Toward the place the neighbors stand at, on average.
+fn cohesion(boid : Boid, neighbors : List(Boid)) : Vector =
+    scaled(mean(List.map(neighbors, fn(other) = other.place)) - boid.place, cohesionWeight)
+
+// The mean of vectors, of which there is at least one.
+fn mean(vectors : List(Vector)) : Vector =
+    scaled(sum(vectors), 1.0 / Int.toFloat(List.size(vectors)))
+
+fn sum(vectors : List(Vector)) : Vector =
+    List.foldLeft(vectors, zero, fn(acc, vector) = acc + vector)
+
+// The boid moved one step at the velocity once limited, and brought back over
+// the edge it passes.
+fn moved(boid : Boid, velocity : Vector) : Boid = {
+    let velocity = limited(velocity);
+    Boid(place = wrapped(boid.place + velocity), =velocity)
+}
+
+// The velocity at a speed from the slowest to the fastest, its direction
+// kept, the zero vector's being along `x`.
+fn limited(velocity : Vector) : Vector =
+    polar(Float.atan2(velocity.y, velocity.x),
+          Float.max(slowest, Float.min(fastest, length(velocity))))
+
+// The vector's length. A sum of squares is never below zero, so `Float.sqrt`
+// answers `Some`.
+fn length(vector : Vector) : Float =
+    match Float.sqrt(squaredLength(vector)) {
+        Some(root) -> root
+      | None -> fault("a sum of squares is below zero")
+    }
+
+fn squaredLength(vector : Vector) : Float =
+    vector.x * vector.x + vector.y * vector.y
+
+// The place within the picture: one past an edge comes in at the other. A
+// step is shorter than the picture, so that it passes one edge at most.
+fn wrapped(place : Vector) : Vector =
+    Vector(x = withinSpan(place.x), y = withinSpan(place.y))
+
+fn withinSpan(value : Float) : Float =
+    if value < 0.0 then value + span else if value >= span then value - span else value
