@@ -235,3 +235,9 @@ Watched, the flock was right and dull: slow, and settling into one group flying 
 Measured over 3000 steps with the window's calls replaced, alignment after step 500 now swings from 0.02 to 0.92 with 3.6 groups on average and no boid off the picture at any step sampled, at 29.99 frames a second. The headless run takes about 1.0 s, up from 0.9 s. Watched on the screen, it is as wanted.
 
 Two things were weighed to make it more striking, since it is an example and its length counts. A hawk was left out on principle 5: it adds code and shows nothing of the library. A trail was kept: `draw` fills the sky and fades the last frame over it, a net ten lines, and it is the one use of `fadeArea` among the examples. A frame's drawing goes from about 0.2 ms to about 0.4 ms, and the headless run from 1.0 s to about 1.45 s. In its last frame about 89% of the pixels are the sky's exact color, so the rounding down leaves no ghost. The trails have been seen in that frame and not yet in motion.
+
+## The test on a clean tree
+
+*2026-11-06.* `make test` failed in a fresh clone and passed on a second run. `tools/docs.ern` runs before `make examples`, and the README named the Mandelbrot picture by its path under `build/examples/`, which is not there until the examples have run. The sentence dates from 6cff505, 2026-11-02, and a tree with the pictures left in it passes, so only a clean tree shows it.
+
+The README now writes `build/examples/<program>.ppm`, the form `release.md` already gives the archive, which the tool leaves out. The Makefile's order stays: the Makefile is the template's copy, and moving the examples first would make the documents' check depend on what a run wrote. Principle 5: the sentence was the defect, and one word of a document needs no change to the build.
