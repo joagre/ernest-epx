@@ -241,3 +241,11 @@ Two things were weighed to make it more striking, since it is an example and its
 *2026-11-06.* `make test` failed in a fresh clone and passed on a second run. `tools/docs.ern` runs before `make examples`, and the README named the Mandelbrot picture by its path under `build/examples/`, which is not there until the examples have run. The sentence dates from 6cff505, 2026-11-02, and a tree with the pictures left in it passes, so only a clean tree shows it.
 
 The README now writes `build/examples/<program>.ppm`, the form `release.md` already gives the archive, which the tool leaves out. The Makefile's order stays: the Makefile is the template's copy, and moving the examples first would make the documents' check depend on what a run wrote. Principle 5: the sentence was the defect, and one word of a document needs no change to the build.
+
+## The window's reader
+
+*2026-11-06.* `docs/full_review.md` gains W, the window reader, below the template's four. What this library alone has is its window, and §11 says no test opens one, so a reader of code or documents cannot say it keeps §11. `release.md`'s second step tries the examples by hand at a release; this reader goes on to every sentence of §11 and §12 a program can try.
+
+A session has no eyes of its own, and the flock's trial needed the user's on a screen (*The flock*). So the brief says the user looks where the reader cannot, and the list says who looked: principle 3, since a picture nobody saw must not read as a picture that passed. The list names the display server too, since this machine's `DISPLAY` is a Wayland session's, and §11 speaks of an X server.
+
+The file's first words stay "Four readers", now one short here, since a copy changes nothing above the readers it adds. That sentence cannot hold in any copy that adds one, so it went to the template as a finding, as the file says of one.

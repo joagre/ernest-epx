@@ -37,6 +37,10 @@ A reader's letter names its findings: C12 is the code reader's twelfth.
 
 A copy of the template adds below these the readers its program alone needs, and changes nothing above them.
 
+- **W, the window reader**, this library's own, since `make test` opens no window. Reads `docs/man/epx/window.md`, the design's §11 and §12, and `examples/README.md`, and works on a machine with a screen. Where the reader cannot see what a window shows, the user looks and tells it. Its list names the machine and the display server, and says who looked.
+
+  "Try the window on a screen: each example of the page, each line of the examples' *Seeing them*, and then every sentence of §11 and §12 a program can try, a window covered and uncovered, its close button, a `close` and a `show` after it, and no display to open. Report every picture that is not what its program says it draws, every half-done frame, flicker or lag you saw, every sentence the window did not keep, every fault or warning the page does not name, and every window or process left behind when a program ended."
+
 ## The findings
 
 - The lists become `findings.md` beside this file, a line per finding, each naming its reader's letter and number. Each reader's whole list is kept below the lines, since a line is too short to fix from.
