@@ -248,4 +248,4 @@ The README now writes `build/examples/<program>.ppm`, the form `release.md` alre
 
 A session has no eyes of its own, and the flock's trial needed the user's on a screen (*The flock*). So the brief says the user looks where the reader cannot, and the list says who looked: principle 3, since a picture nobody saw must not read as a picture that passed. The list names the display server too, since this machine's `DISPLAY` is a Wayland session's, and §11 speaks of an X server.
 
-The file's first words stay "Four readers", now one short here, since a copy changes nothing above the readers it adds. That sentence cannot hold in any copy that adds one, so it went to the template as a finding, as the file says of one.
+The file's first words were "Four readers", which no copy that adds a reader can keep true and which a copy may not change. That went to the template as a finding, as the file says of one, and the same day the template's opening stated no count a copy can falsify, and this copy took it.
