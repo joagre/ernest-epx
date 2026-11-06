@@ -249,3 +249,7 @@ The README now writes `build/examples/<program>.ppm`, the form `release.md` alre
 A session has no eyes of its own, and the flock's trial needed the user's on a screen (*The flock*). So the brief says the user looks where the reader cannot, and the list says who looked: principle 3, since a picture nobody saw must not read as a picture that passed. The list names the display server too, since this machine's `DISPLAY` is a Wayland session's, and §11 speaks of an X server.
 
 The file's first words were "Four readers", which no copy that adds a reader can keep true and which a copy may not change. That went to the template as a finding, as the file says of one, and the same day the template's opening stated no count a copy can falsify, and this copy took it.
+
+## The named `ern` for every target
+
+*2026-11-06.* The Makefile takes the template's line that stands the directory of an `ERN` that is a path first on `PATH`, with the README's sentence. Why it exists is the template's, from a program whose tests start `ern` by its name. Nothing here does, so the line changes what this library's own programs run in no case today. It is taken anyway because the Makefile is the template's copy, and a copy that differs by a line it does not need is a difference a reader must explain: principle 1.

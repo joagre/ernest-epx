@@ -34,8 +34,11 @@ ERL_DEPS    = tree_db epx
 # the one path it is given.
 EXAMPLE_SUFFIX = .ppm
 
-# The ern on PATH, or ERN=path/to/ern.
+# The ern on PATH, or ERN=path/to/ern, whose directory then stands first on
+# PATH for every target, so that whatever names ern by its name, a test or an
+# example's shell, runs that one too; a file not called ern is not reached so.
 ERN        ?= ern
+export PATH := $(if $(findstring /,$(ERN)),$(abspath $(dir $(ERN))):)$(PATH)
 # Where make install puts the program and make uninstall removes it from.
 PREFIX     ?= /usr/local
 
