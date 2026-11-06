@@ -61,6 +61,6 @@ What each program draws, from `assets/`, where [`assets/README.md`](../assets/RE
 
 ![The same with sixteen samples](../assets/whitted16.png)
 
-`boids.ern`, its window in flight:
+`boids.ern`, the last of its 200 steps, as `make examples` runs it:
 
-![Two flocks of pale triangles trailing streaks across a dark sky, with orange leaders among them, in a window](../assets/boids.png)
+![Two flocks of pale triangles trailing streaks across a dark sky, with orange leaders among them](../assets/boids.png)
