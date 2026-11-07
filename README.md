@@ -6,7 +6,7 @@ An Ernest library over [epx](https://github.com/tonyrog/epx), the pixel library 
 
 Its modules are `Epx`, over pixmaps and the drawing functions, `Epx.Gc`, over the graphics context they draw with, and `Epx.Window`, over the window that shows a pixmap, whose pages are [`docs/man/epx.md`](docs/man/epx.md), [`docs/man/epx/gc.md`](docs/man/epx/gc.md) and [`docs/man/epx/window.md`](docs/man/epx/window.md), which `make man` writes and a release commits. The release is 0.2.0.
 
-![Five pictures the examples draw: Whitted's glass and mirror spheres, the Boing ball above a mirror floor, a clock face, the Mandelbrot set, and the Sierpinski gasket](assets/collage.png)
+![Six pictures the examples draw: Whitted's glass and mirror spheres, a flock of boids, a clock face, the Sierpinski gasket, the Mandelbrot set, and the Boing ball above a mirror floor](assets/collage.png)
 
 The five pictures are what five of the six programs of [`examples/`](examples/README.md) draw, each a page or two, the sixth a flock animated in a window; [`assets/README.md`](assets/README.md) says how a picture is made from a program's output. `make examples` builds the library and every example and runs each, writing its picture to `build/examples/<program>.ppm`, which an image viewer opens. On a machine with a screen the word `show` after the file opens a window of the picture while it is drawn, and the ray tracers take a count of workers first; [`examples/README.md`](examples/README.md) gives that line for each.
 
