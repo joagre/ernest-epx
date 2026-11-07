@@ -255,3 +255,11 @@ The file's first words were "Four readers", which no copy that adds a reader can
 ## The named `ern` for every target
 
 *2026-11-06.* The Makefile takes the template's line that stands the directory of an `ERN` that is a path first on `PATH`, with the README's sentence. Why it exists is the template's, from a program whose tests start `ern` by its name. Nothing here does, so the line changes what this library's own programs run in no case today. It is taken anyway because the Makefile is the template's copy, and a copy that differs by a line it does not need is a difference a reader must explain: principle 1.
+
+## The release cleanup
+
+*2026-11-07.* A session of Ernest's read the four repositories as a stranger reads them before Ernest's launch, and carried each decision here on the user's word (Ernest's log, *The Release Cleanup*). It refreshed `CLAUDE.md`, the Makefile's shared lines and `docs/release.md` from the template, whose commit `44e3637` brought them.
+
+From the template: user-facing text and comments name no milestone, plan item or date; the archive carries the user's documents alone, the README, the license and the third parties', `CHANGES.md`, the design, the pages and the examples, and its checksum stands beside it; a release tag is signed; a defect has an issue form, which sends a security hole to private reporting.
+
+Here: `THIRD_PARTY_LICENSES` says what the archive carries of tree_db, and no longer tells the story of a license asked of its author. The README names the floor the v0.2.0 archive was built on beside its link, since the page's own floor is 0.9, and links Ernest's name to ernest-lang.org. It writes `docs/README.md` as a path and not a link, since the archive no longer carries that file. `CHANGES.md` begins after 0.2.0, the release it holds no section for. `docs/epx_bugs.md` names no reader.

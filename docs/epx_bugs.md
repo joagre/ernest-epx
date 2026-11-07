@@ -4,7 +4,7 @@ The defects the library met in epx that its pinned commit has not fixed, each wr
 
 Each of these stays until a commit of epx the library builds has its fix.
 
-Two parts: what blocks a function of the library, and the warts the library states as epx has them and ships around. 26 to 35 were found 2026-10-23 trying the edges of `sub`, `scroll`, the rounded rectangle and the polygon, and 36 to 38 on 2026-10-25 by the release's code reader (`docs/log.md`, *The four functions*, *The release 0.2.0*).
+Two parts: what blocks a function of the library, and the warts the library states as epx has them and ships around. 26 to 35 were found 2026-10-23 trying the edges of `sub`, `scroll`, the rounded rectangle and the polygon, and 36 to 38 on 2026-10-25 (`docs/log.md`, *The four functions*, *The release 0.2.0*).
 
 ## Blocking
 

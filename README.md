@@ -4,7 +4,7 @@
 
 An Ernest library over [epx](https://github.com/tonyrog/epx), the pixel library for Erlang: a 2-D library of pixmaps and their pixels. Its window shows a pixmap on the screen and takes nothing back from it, nothing of epx's events. It is a library and not a program: a program adds it to its load path, as *Using it* says.
 
-Its modules are `Epx`, over pixmaps and the drawing functions, `Epx.Gc`, over the graphics context they draw with, and `Epx.Window`, over the window that shows a pixmap, whose pages are [`docs/man/epx.md`](docs/man/epx.md), [`docs/man/epx/gc.md`](docs/man/epx/gc.md) and [`docs/man/epx/window.md`](docs/man/epx/window.md), which `make man` writes and a release commits. The release is 0.2.0; [`docs/plan.md`](docs/plan.md) says where it stands.
+Its modules are `Epx`, over pixmaps and the drawing functions, `Epx.Gc`, over the graphics context they draw with, and `Epx.Window`, over the window that shows a pixmap, whose pages are [`docs/man/epx.md`](docs/man/epx.md), [`docs/man/epx/gc.md`](docs/man/epx/gc.md) and [`docs/man/epx/window.md`](docs/man/epx/window.md), which `make man` writes and a release commits. The release is 0.2.0.
 
 ![Five pictures the examples draw: Whitted's glass and mirror spheres, the Boing ball above a mirror floor, a clock face, the Mandelbrot set, and the Sierpinski gasket](assets/collage.png)
 
@@ -21,11 +21,11 @@ ern run --load-path <repo>/build --libs-dir <repo>/lib main.erc
 
 `main.ern` is a module whose `export fn main() : Unit` is the program's entry point, as Ernest's guide has it; without the `export`, `ern run` finds no `Main.main`.
 
-The archive `make release` writes, built on Linux x86-64 with the NIF compiled there, unpacks to the same layout, `build/` beside `lib/epx/` and `lib/tree_db/`, so that an operator names its directory in place of `<repo>`; it is published beside its tag, https://github.com/joagre/ernest-epx/releases/download/v0.2.0/epx-0.2.0.tar.gz for 0.2.0. A program begun from [`ernest-template`](https://github.com/joagre/ernest-template) that names the archive among its `DEPS` lists both applications among its own `ERL_DEPS` too, `ERL_DEPS = tree_db epx`, submodules under its `erl/`, since its load path reaches no `lib/` inside a dependency.
+The archive `make release` writes, built on Linux x86-64 with the NIF compiled there, unpacks to the same layout, `build/` beside `lib/epx/` and `lib/tree_db/`, so that an operator names its directory in place of `<repo>`; it is published beside its tag, https://github.com/joagre/ernest-epx/releases/download/v0.2.0/epx-0.2.0.tar.gz for 0.2.0, which was built on `ern 0.5` and runs under that floor. A program begun from [`ernest-template`](https://github.com/joagre/ernest-template) that names the archive among its `DEPS` lists both applications among its own `ERL_DEPS` too, `ERL_DEPS = tree_db epx`, submodules under its `erl/`, since its load path reaches no `lib/` inside a dependency.
 
 ## Building
 
-It needs [Ernest](https://github.com/joagre/ernest) on your `PATH`, the floor the Makefile names, `ern 0.9`; `make` says so where another floor is found, and where none is. `ERN=path/to/ern make` names another `ern`: its directory stands first on `PATH` for everything the build starts, so whatever names `ern` by its name, a test or an example's shell, runs that one too. A file not called `ern` is not reached this way.
+It needs [Ernest](https://ernest-lang.org) on your `PATH`, the floor the Makefile names, `ern 0.9`; `make` says so where another floor is found, and where none is. `ERN=path/to/ern make` names another `ern`: its directory stands first on `PATH` for everything the build starts, so whatever names `ern` by its name, a test or an example's shell, runs that one too. A file not called `ern` is not reached this way.
 
 ```
 make            builds: lib/ filled, epx and then the library compiled
@@ -39,7 +39,7 @@ Clone with `--recursive`: epx and tree_db are git submodules under `erl/`, which
 
 ## The documents
 
-[`docs/README.md`](docs/README.md) says what each document is.
+In the repository, `docs/README.md` says what each document is.
 
 The tests live in the modules they test, which `make test` runs; `tools/` holds the checker of the documents, and [`examples/`](examples/README.md) programs that use the library, which `make examples` builds and runs, and `make test` before its check of the documents.
 
