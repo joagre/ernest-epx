@@ -30,9 +30,10 @@ It needs [Ernest](https://ernest-lang.org) on your `PATH`, the floor the Makefil
 ```
 make            builds: lib/ filled, epx and then the library compiled
 make test       the source's layout, ern format --check, the modules' tests, make examples,
-                then the documents, refusing any paragraph past 150 words
+                then the documents, refusing any paragraph past 150 words and any
+                comment or text a user reads that names the project's history
 make examples   every program of examples/ built and run, its picture under build/examples/
-make release    the archive, build/epx-VERSION.tar.gz
+make release    the archive, build/epx-VERSION.tar.gz, and its checksum beside it
 ```
 
 Clone with `--recursive`: epx and tree_db are git submodules under `erl/`, which `make lib` builds by their own `make`, its NIF among it, and links under `lib/epx/` and `lib/tree_db/` as `ebin` and `priv`. epx's NIF needs a C compiler and the X11 and xcb headers, and epx's own `make` prints warnings from its C and Erlang sources, which are expected. `make doc` writes the modules' pages under `build/`, `make man` copies them into `docs/man/`, `make format` lays the modules out, and `make clean` removes what the build and `make lib` wrote.

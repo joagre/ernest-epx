@@ -6,7 +6,8 @@
 #                 then the program compiled
 #   make test     the layout, the tests of every module, test/ where it exists,
 #                 make examples where there is a program to build, and then
-#                 the documents and the design's citations
+#                 the documents, the design's citations, and the project's
+#                 history kept out of the comments and what a user reads
 #   make examples each program of examples/ built and run, what it writes
 #                 under build/examples/
 #   make run      runs the program through its launcher
