@@ -2,23 +2,25 @@
 
 The roadmap: what will be built, in what order, and what is built already. Why anything is the way it is belongs to [`log.md`](log.md), and how the program is arranged to [`design.md`](design.md).
 
-Read *Where we are* first, then the table of milestones; the milestones to come follow in order. A gap stands in the milestone whose item closes it, and a decision the user must make stands in its milestone as a named decision, never as "open".
+Read *Where we are* first; the milestones to come follow in order, and the table of the finished ones ends the page. A gap stands in the milestone whose item closes it, and a decision the user must make stands in its milestone as a named decision, never as "open".
 
 ## Where we are
 
-The first cut is built and released as 0.1.0, 2026-10-20: `Epx` with twenty functions over epx's pixmaps, its design in `design.md`, the manual page under `docs/man/`, and three examples, the ray tracer among them, milestone 4. The area functions are epx's exactly.
+The library is done: a 2-D library of pixmaps, pixels and the drawing functions, with its six examples, and nothing more is planned. Its last release is 0.2.0, 2026-10-25. The floor is 0.9, and epx is pinned at `3fdacef`.
 
-The second cut is built, 2026-10-20, and the window that shows, 2026-10-21: `Epx.Gc`, five drawing functions, the clock face, `Epx.Window`, and the word `show` on every example. Whitted's spheres, the slow tracer, is built, 2026-10-21, the fifth example, and the collage of the five pictures heads the README, 2026-10-21.
+What is left waits outside the library: the release at Ernest's launch, milestone 11, and the defects epx has not fixed, milestone 9.
 
-What waited on Ernest's MVP 3.28 is taken, 2026-10-22, milestone 6. epx's fixes are in the pin, 2026-10-23, the library follows them, and `sub`, `scroll`, the rounded rectangle and the polygon are built the same day, milestone 2 done; `sub` is held back from 0.2.0, since epx's `flip` and `copyTo` corrupt memory through one (milestone 9). Ernest 0.5.0 is tagged 2026-10-25 and the floor is 0.5, and 0.6 from 2026-10-27, Ernest 0.6.0 tagged the same night; the release 0.2.0 is out the same day, milestone 3b, its archive beside its tag. The floor is 0.8 since 2026-11-01, for the pun the library, its examples and its checker now write, which Ernest 0.7 refuses, and 0.9 since 2026-11-02 (the log's *The floor is 0.9*).
+## Milestone 11: the release at Ernest's launch
 
-What is left: milestone 9, each defect epx has not fixed going as epx fixes it; `subPixmap` is built 2026-11-08 (the log's *The subPixmap built*). With that the library is done: a 2-D library of pixmaps, pixels and the drawing functions, with its six examples, and nothing more is planned. epx's commit `3fdacef` fixes every report but half of 33, verified 2026-11-08 (the log's *The second fixes verified*); the design's sentences for it are written and the pin moved to it the same day (the log's *The sentences for 3fdacef*).
+The floor stays 0.9 through Ernest's layout stop and its 0.10.0, and rises to the launch's minor, 0.11 or 0.12 as Ernest names it, when the reviews of Ernest's MVP 4.4 begin. Ernest's release is tagged; the same week ernest-template releases, then this library, then ernest-httpd; and the site, which lists the library, goes live last. Each step comes on the user's word. The release does not wait on milestone 9. Decided 2026-11-05 (the log's *The release at the launch*).
 
-`examples/boids.ern`, the sixth, a flock animated at 30 frames a second, is built and watched on a screen 2026-11-06, milestone 10.
+## Milestone 9: what epx has not fixed, after 0.2.0
 
-The next release comes at Ernest's launch and does not wait on milestone 9, which stays planned; decided 2026-11-05 (the log's *The release at the launch*). The floor stays 0.9 through Ernest's layout stop and its 0.10.0, and rises to the launch's minor, 0.11 or 0.12 as Ernest names it, when the reviews of Ernest's MVP 4.4 begin. Ernest's release is tagged; the same week ernest-template releases, then this library, then ernest-httpd; and the site, which lists the library, goes live last. Each step comes on the user's word. A release after that one follows a commit of epx's that moves the pin.
+Each defect of `epx_bugs.md` left, 33's clamp of a channel and 39 to 41, goes as a commit of epx's fixes it and the pin moves; a fix that changes what the design states changes the design first, §4 or §5, then the page and the test. Nothing is asked of epx's author for them. Decided 2026-10-23 (the log's *The release waits on Ernest alone*). A release after the launch's follows a commit of epx's that moves the pin.
 
-## Milestones
+Done 2026-11-08: the fixes of `3fdacef` verified, its sentences written and the pin moved to it, and `subPixmap` built (the log's *The second fixes verified*, *The sentences for 3fdacef*, *The sentences for subPixmap*, *The subPixmap built*).
+
+## Finished milestones
 
 | | What | Done | Where its reasons are |
 |---|---|---|---|
@@ -31,13 +33,3 @@ The next release comes at Ernest's launch and does not wait on milestone 9, whic
 | Milestone 6 | what Ernest's MVP 3.28 brought: the foreign answers declared `Unit`, `Test.faults`, the doc examples under `ern test`, the rules read from Ernest's installation, `Epx.Window` named for itself, `List.mapFold` in Whitted's row, and the Makefile's `--libs-dir lib` with Ernest's libraries off `make lib` | 2026-10-22 | the log's *The window named for itself*, *What MVP 3.28 brought* |
 | Milestone 8 | a window that shows, `Epx.Window` | 2026-10-21 | the log's *A Window That Shows*, *The window decided*, *The window built*, *The window named for itself* |
 | Milestone 10 | the flock, `examples/boids.ern`, and the window at animation speed: no wait for the backend | 2026-11-06 | the log's *The flock* |
-
-## Milestone 9: what epx has not fixed, after 0.2.0
-
-The defects of `epx_bugs.md` that epx's first fix commit left, which the library documented around and shipped 0.2.0 with, are fixed in epx's `3fdacef` but 33's clamp of a channel, verified 2026-11-08 (the log's *The second fixes verified*). The design's sentences for it are written, §1, §4, §8 and §9 and the glossary's `shape`, read cold, and the four decisions decided the same day (the log's *The sentences for 3fdacef*): §9 states the shape rule; §11 stays silent on a new window's first picture; 33 stays, cut to its clamp; and the 2 GiB bound stays, since `pixmap_fill_area` alone fails above it, `epx_bugs.md` 40.
-
-The pin moved to `3fdacef` 2026-11-08, with the tests, the code, the pages and the bug file (the log's *The sentences for 3fdacef*).
-
-`subPixmap` is built 2026-11-08, `sub` returned under the glossary's name with its tests and its page, and `drawLine`'s page has §9's sentence on a line whose two ends are one pixel (the log's *The sentences for subPixmap*, *The subPixmap built*).
-
-Each defect left, 33's clamp and 39 to 41, goes as a commit of epx's fixes it and the pin moves; a fix that changes what the design states changes the design first, §4 or §5, then the page and the test. Nothing is asked of epx's author for them. Decided 2026-10-23 (the log's *The release waits on Ernest alone*).
