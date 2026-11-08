@@ -19,10 +19,11 @@ NIF in the `priv` directory beside its `ebin`. Run without epx's `ebin`,
 a call faults with a cause such as `foreign function
 epx:pixmap_create/3 raised error:undef`.
 
-**A pixmap's life.** A pixmap lives while a process holds it, and the
-host frees it once none does: there is no `close`. Its width, its height
-and its format are fixed when it is made, and every pixel of a new
-pixmap is 0 in every channel. It stays on the node that made it.
+**A pixmap's life.** A pixmap lives while a process holds it or a
+sub-pixmap of it lives, and the host frees it once neither does: there
+is no `close`. Its width, its height and its format are fixed when it is
+made, and every pixel of a pixmap `create` makes is 0 in every channel.
+It stays on the node that made it.
 
 **In place and shared.** A pixmap is not a value. `fill`, `putPixel` and
 every other function that writes change it in place, and every process
@@ -32,6 +33,12 @@ writes of two processes but the order in which they run, and epx takes
 no lock: two calls on one pixmap from two processes may interleave pixel
 by pixel, and a read may see a write half done. `copy` makes a pixmap
 that shares nothing with the first.
+
+`subPixmap` makes a sub-pixmap, a pixmap over a rectangle of another's
+pixels, its parent, which the two share: a write to either is read in
+the other. Two pixmaps share pixels where one is a sub-pixmap of the
+other, or both are sub-pixmaps of one pixmap over rectangles that
+overlap; each function of two pixmaps says what it writes where they do.
 
 **Coordinates.** A pixel is at `x`, `y`, where `0`, `0` is the top left
 pixel, `x` grows to the right and `y` downward. A rectangle is its top
@@ -49,19 +56,21 @@ same bounds, each with a cause of its own, `a scroll's amount is beyond
 
 A pixmap's bytes are its row's bytes times its height, a row's bytes
 being its width times its format's bytes a pixel, rounded up to a
-multiple of 16; `create` faults on a pixmap whose bytes reach 2 GiB,
-with the cause `the pixmap's bytes reach 2 GiB`.
+multiple of 16, and a sub-pixmap's row being its parent's; `create`
+faults on a pixmap whose bytes reach 2 GiB, with the cause `the pixmap's
+bytes reach 2 GiB`.
 
 **The clip.** Each pixmap has a clip, a rectangle within it, which is
-the whole pixmap until `setClip` sets another.
+the whole pixmap until `setClip` sets another. The parent's clip does
+not reach a sub-pixmap, nor a sub-pixmap's its parent.
 `putPixel`, `putPixels`, `fillArea`, `scale`, `copyArea` and the blends,
 `blendArea`, `fadeArea`, `shadowArea` and `operationArea`, write only
 within the target's clip; `copyArea` and the blends read only within
 the source's; and `getPixel` answers opaque black outside it. `fill`,
-`flip`, `copyTo`, `scroll` and `getPixels` do not read it. `scale` reads
-the source's clip, and what it writes from a source whose clip is not
-the whole pixmap is not stated: set the source's clip to the whole
-pixmap first.
+`flip`, `copyTo`, `scroll`, `getPixels` and `subPixmap` do not read it.
+`scale` reads the source's clip, and what it writes from a source whose
+clip is not the whole pixmap is not stated: set the source's clip to the
+whole pixmap first.
 
 **Rectangles.** A rectangle that reaches outside what a function reads
 or writes is cut to the part within it, and each pixel that remains
@@ -387,6 +396,53 @@ epx's cause: `foreign function epx:pixmap_copy/1 raised error:badarg`.
 // => Epx.Color(alpha = 0, red = 0, green = 0, blue = 0)
 ```
 
+## Epx.subPixmap
+
+```ernest
+Epx.subPixmap(pixmap : Pixmap, x : Int, y : Int, width : Int, height : Int) : Pixmap
+```
+
+A sub-pixmap of the pixmap, its parent: a pixmap over the pixels of the
+rectangle at `x`, `y`, which the two share. A write to either is read in
+the other, and two calls on the two interleave as two processes' calls
+on one pixmap do.
+
+The rectangle is cut to the parent, and the sub-pixmap's pixel at `0`,
+`0` is the parent's at the cut rectangle's top left; its width and
+height are the cut rectangle's, and its format the parent's. A rectangle
+wholly outside the parent, or of width or height 0, makes a sub-pixmap
+of width and height 0, with no pixels. A sub-pixmap taken of a
+sub-pixmap is cut to it, and is a sub-pixmap of every pixmap that one is
+a sub-pixmap of.
+
+The parent's clip is not read. A sub-pixmap's clip is the whole
+sub-pixmap when it is made, and its own: the parent's clip does not
+reach it, nor its clip the parent. The parent lives while a sub-pixmap
+of it lives, whether a process holds the parent or not.
+
+### Errors
+
+Faults on a coordinate outside -16777216 to 16777216, with the cause `a
+coordinate is beyond 16777216`, and on a width or a height above
+16777216, with the cause `a width or height is beyond 16777216`. Faults
+where the host cannot allocate the sub-pixmap, with epx's cause:
+`foreign function epx:pixmap_sub_pixmap/5 raised error:badarg`.
+
+### Examples
+
+The rectangle cut to the parent, and the sub-pixmap's fill read in the
+parent:
+
+```ernest
+{
+    let parent = Epx.create(3, 2, Epx.Rgb);
+    let corner = Epx.subPixmap(parent, 1, 1, 5, 5);
+    Epx.fill(corner, Epx.rgb(255, 255, 255));
+    #(Epx.width(corner), Epx.height(corner), Epx.getPixels(parent, 0, 1, 3, 1))
+}
+// => #(2, 1, <<0, 0, 0, 255, 255, 255, 255, 255, 255>>)
+```
+
 ## Epx.width
 
 ```ernest
@@ -566,7 +622,9 @@ Epx.copyTo(source : Pixmap, target : Pixmap) : Unit
 
 Copies the source's pixels into the target, in the target's format: the
 rectangle at the top left of both, as wide as the smaller width and as
-high as the smaller height. Neither clip is read.
+high as the smaller height. Neither clip is read. The source and the
+target may be one pixmap or share pixels, and the target is written as
+from a copy of the source taken first.
 
 ### Examples
 
@@ -592,7 +650,8 @@ Copies the source's rectangle at `sourceX`, `sourceY` into the target at
 blended. A pixel outside the target's clip is left out, and one outside
 the source's clip is not read, the rest landing at their places all the
 same. The source and the target may be one pixmap, the two rectangles
-overlapping.
+overlapping, or share pixels, and the rectangle is written as from a
+copy of the source taken first.
 
 ### Errors
 
@@ -638,7 +697,8 @@ the target at its top left, within the target's clip. Scaled up, a
 pixel is mixed from the source's pixels around its place; scaled down,
 from those it covers. A width or a height of 0 or below writes nothing.
 What it writes from a source whose clip is not the whole pixmap is not
-stated: set the source's clip to the whole pixmap first.
+stated: set the source's clip to the whole pixmap first. Nor is what it
+writes where the source and the target are one pixmap or share pixels.
 
 ### Errors
 
@@ -702,7 +762,8 @@ by a whole width or height copies the source as it is. `Filled(color)`
 fills the uncovered part with the color, the whole area where the shift
 reaches its width or height.
 
-The source and the target may be one pixmap. A scroll by 0 and 0 copies
+The source and the target may be one pixmap; what a scroll writes where
+they are two that share pixels is not stated. A scroll by 0 and 0 copies
 the common area into the target, as a wrap by a whole width or height
 does. A scroll by two amounts neither 0 into a target wider or taller
 than the source writes the common area shifted by `down` and then
@@ -757,9 +818,9 @@ own. An alpha of 0 leaves the target as it was, and at 255 a channel
 comes out one short of the source's where the target's was below it,
 200 as 199; `copyArea` copies the source exactly.
 
-The rectangles are placed and cut as `copyArea` places and cuts them,
-and must not overlap in one pixmap: where they do, what is written is
-not stated.
+The rectangles are placed and cut as `copyArea` places and cuts them.
+What is written where the two pixmaps share pixels, or are one and the
+rectangles overlap, is not stated.
 
 Where both pixmaps hold four bytes a pixel in one format and the
 rectangle is 8 pixels wide or more, epx may blend with the machine's
@@ -801,9 +862,9 @@ the source's alpha times `fade / 256`, rounded down, and at a fade of
 255 the source's alpha itself. A fade of 0 leaves the target as it was,
 and one of 255 blends as `SrcBlend` does.
 
-The rectangles are placed and cut as `copyArea` places and cuts them,
-and must not overlap in one pixmap: where they do, what is written is
-not stated.
+The rectangles are placed and cut as `copyArea` places and cuts them.
+What is written where the two pixmaps share pixels, or are one and the
+rectangles overlap, is not stated.
 
 Where both pixmaps hold four bytes a pixel in one format and the
 rectangle is 8 pixels wide or more, epx may blend with the machine's
@@ -844,9 +905,9 @@ down, where `l` is the luminance of the source's pixel, `(299 * red +
 was, and a white one makes it transparent black. The source's alpha is
 not read.
 
-The rectangles are placed and cut as `copyArea` places and cuts them,
-and must not overlap in one pixmap: where they do, what is written is
-not stated.
+The rectangles are placed and cut as `copyArea` places and cuts them.
+What is written where the two pixmaps share pixels, or are one and the
+rectangles overlap, is not stated.
 
 ### Errors
 
@@ -878,9 +939,9 @@ Combines the source's rectangle with the target's by the operation,
 pixel by pixel, and writes the result into the target; `Operation` says
 what each gives.
 
-The rectangles are placed and cut as `copyArea` places and cuts them,
-and must not overlap in one pixmap: where they do, what is written is
-not stated.
+The rectangles are placed and cut as `copyArea` places and cuts them.
+What is written where the two pixmaps share pixels, or are one and the
+rectangles overlap, is not stated.
 
 ### Errors
 
@@ -971,13 +1032,15 @@ foreground, by its line's style, as wide as its line's width, within the
 clip. It reads the context's foreground, line style and line width.
 
 A line of width 0 draws nothing, and one of width 1 every pixel from one
-end to the other, both ends among them. A horizontal or vertical line
-wider than 1 is the rectangle that runs from one end of the line to the
-other and is the line's width across, `width / 2` of its rows or columns
-above or left of the line, rounded down. Any other line wider than 1 is
-a band centered on the line, and which pixels it covers is not stated.
-`Antialiased` smooths a line of width 1 that is neither horizontal nor
-vertical, and no other.
+end to the other, both ends among them. A line whose two ends are one
+pixel is a horizontal line of one pixel's length.
+
+A horizontal or vertical line wider than 1 is the rectangle that runs
+from one end of the line to the other and is the line's width across,
+`width / 2` of its rows or columns above or left of the line, rounded
+down. Any other line wider than 1 is a band centered on the line, and
+which pixels it covers is not stated. `Antialiased` smooths a line of
+width 1 that is neither horizontal nor vertical, and no other.
 
 ### Errors
 
