@@ -38,8 +38,15 @@ The defects of `epx_bugs.md` that epx's first fix commit left, which the library
 
 The pin moved to `3fdacef` 2026-11-08, with the tests, the code, the pages and the bug file (the log's *The sentences for 3fdacef*).
 
-`sub` returns as `subPixmap` next, its design as the log's *The four functions* has it and its code in the history before the release 0.2.0, since the pin's `pixmap_flip` and `pixmap_copy_to` take a sub's width; decided 2026-10-25 (the log's *The release 0.2.0*). Its item also gives `drawLine`'s page §9's sentence on a line whose two ends are one pixel (the log's *The pin at 3fdacef*).
+`sub` returns as `subPixmap`, its design as the log's *The four functions* has it and its code in the history before the release 0.2.0, since the pin's `pixmap_flip` and `pixmap_copy_to` take a sub's width; decided 2026-10-25 (the log's *The release 0.2.0*). Every function the library calls was tried on a sub at the pin 2026-11-08 and holds, 26, 36 and 37 fixed (the log's *The sub-pixmap tried at 3fdacef*).
 
-Named decision, for a design session before the release: §9's sentence on a pixel's center, "below its `x`, `y`", reworded so that it cannot be read as the shape's `x`, `y` (the log's *The pin at 3fdacef*).
+A design session writes its sentences first, §1, §2, §4, §5 and the glossary's. Then its item builds the code, the tests and the pages, and gives `drawLine`'s page §9's sentence on a line whose two ends are one pixel (the log's *The pin at 3fdacef*).
+
+Named decisions, for that design session, before the release:
+
+- what §4 says of two pixmaps that share pixels, `copyTo` and `copyArea` writing as from a copy of the source and the other functions of two pixmaps differing (the log's *The sub-pixmap tried at 3fdacef*);
+- whether §5 names `epx:pixmap_sub_pixmap/5`'s cause for memory the host cannot allocate (the same entry);
+- the glossary's name for a sub-pixmap, `sub` standing beside the constructor `Sub` (the same entry);
+- §9's sentence on a pixel's center, "below its `x`, `y`", reworded so that it cannot be read as the shape's `x`, `y` (the log's *The pin at 3fdacef*).
 
 Each defect left, 33's clamp and 39 to 41, goes as a commit of epx's fixes it and the pin moves; a fix that changes what the design states changes the design first, §4 or §5, then the page and the test. Nothing is asked of epx's author for them. Decided 2026-10-23 (the log's *The release waits on Ernest alone*).
