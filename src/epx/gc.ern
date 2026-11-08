@@ -19,7 +19,7 @@
 ///   where they have no fill;
 /// - the border's style, color and width, which `drawRectangle`,
 ///   `drawEllipse` and `drawRoundedRectangle` draw their border with,
-///   within the shape;
+///   within what it borders;
 /// - the foreground, the color of a point, a line, and a triangle's and a
 ///   polygon's edges.
 ///
@@ -100,9 +100,12 @@ export type Style =
   /// pixel, alpha among them, moves toward the color's by the color's
   /// alpha, and an opaque color is written as it is.
   | Blend
-  /// As `Blend`, and in a line one pixel wide that is neither horizontal nor
-  /// vertical, and along the edge of an ellipse's fill, a pixel the edge
-  /// passes through is blended by how near the edge passes to it.
+  /// As `Blend`, except in a line one pixel wide that is neither horizontal
+  /// nor vertical, where a pixel the line passes through is blended by how
+  /// near it passes, and along the edge of an ellipse's or a rounded
+  /// rectangle's fill where the border's width is 0, where the first and
+  /// the last pixel of each row are blended by how much of each the fill
+  /// covers.
   | Antialiased
 
 //
@@ -129,7 +132,8 @@ export type Style =
 /// ```
 export fn create() : Epx.Context = {
     let context = rawCreate();
-    // epx's own context places a border outside its shape (design §1, §8).
+    // epx's own context places a border outside what it borders (design
+    // §1, §8).
     setBorderStyle(context, Solid);
     context
 }
@@ -321,7 +325,7 @@ export fn lineWidth(context : Epx.Context) : Int =
 /// // => Epx.Gc.Blend
 /// ```
 export fn setBorderStyle(context : Epx.Context, style : Style) : Unit =
-    // The border lies within its shape (design §8).
+    // The border lies within what it borders (design §8).
     setStyle(context, "border_style", styleAtoms(style) <> [inside])
 
 /// The style the border of a rectangle, a rounded rectangle and an ellipse
@@ -502,7 +506,7 @@ fn styleOf(atoms : List(Foreign.Term)) : Style =
 
 let styles : List(Style) = [Solid, Blend, Antialiased]
 
-// The placement of a border within its shape (design §8).
+// The placement of a border within what it borders (design §8).
 let inside : Foreign.Term = Foreign.atom("inside")
 
 // A color as epx answers it, `{A, R, G, B}`.
@@ -704,23 +708,44 @@ let solidAndBlend = Test.Case(name = "Solid writes the color, Blend blends it", 
 })
 
 // design §8: Antialiased smooths a line of width 1 that is neither
-// horizontal nor vertical and the edge of an ellipse's fill, where Blend
-// writes each pixel whole.
-let antialiased = Test.Case(name = "Antialiased smooths a thin line and an ellipse", run = fn() = {
-    let partial = fn(style : Style) : #(Bool, Bool) = {
+// horizontal nor vertical, and the edge of an ellipse's and a rounded
+// rectangle's fill where the border's width is 0, the first and the last
+// pixel of each row alone; Blend writes each pixel whole, and so does
+// Antialiased in a shape whose border's width is above 0. A regression
+// test, written after the code; it does not cover how much a pixel is
+// blended.
+let antialiased = Test.Case(name = "Antialiased smooths a thin line and a shape", run = fn() = {
+    // The line, the ellipse and the rounded rectangle drawn in black by the
+    // style at the border's width, each as its rows.
+    let drawn = fn(style : Style, border : Int) : List(List(String)) = {
         let context = create();
         setLineStyle(context, style);
         setFillStyle(context, Some(style));
         setForeground(context, black);
         setFillColor(context, black);
+        setBorderWidth(context, border);
         let line = blank(16, 6);
         Epx.drawLine(line, context, 0, 0, 15, 5);
         let ellipse = blank(16, 12);
         Epx.drawEllipse(ellipse, context, 1, 1, 13, 9);
-        #(List.any(rows(line), fn(text) = String.contains(text, "?")),
-          List.any(rows(ellipse), fn(text) = String.contains(text, "?")))
+        let rounded = blank(16, 12);
+        Epx.drawRoundedRectangle(rounded, context, 1, 1, 13, 9, 4, 3);
+        List.map([line, ellipse, rounded], rows)
     };
-    Test.equal(#(partial(Blend), partial(Antialiased)), #(#(false, false), #(true, true)))
+    let blended =
+        fn(picture : List(String)) : Bool =
+            List.any(picture, fn(text) = String.contains(text, "?"));
+    // A shape's row is one run of pixels, of which only the ends may blend.
+    let atEnds = fn(picture : List(String)) : Bool = List.all(picture, fn(text) = {
+        let run = String.replace(text, ".", "");
+        !String.contains(String.slice(run, 1, String.size(run) - 1), "?")
+    });
+    let smoothed = drawn(Antialiased, 0);
+    Test.equal(#(List.map(drawn(Blend, 0), blended),
+                 List.map(smoothed, blended),
+                 List.map(drawn(Antialiased, 1), blended),
+                 List.all(List.drop(smoothed, 1), atEnds)),
+               #([false, false, false], [true, true, true], [true, false, false], true))
 })
 
 // design §8: a style that foreign code set and that is none of Style's
@@ -793,22 +818,21 @@ let diagonalOfWidthZero =
         Test.equal(rows(pixmap), ["....", "....", "....", "...."])
     })
 
-// design §9: a line of width 1 that is neither horizontal nor vertical
-// leaves out its first pixel and keeps its last, and a horizontal one keeps
-// both ends. A regression test, written after the code; it does not cover
-// which pixels between its ends the diagonal sets.
+// design §9: a line of width 1 draws both its ends, one neither
+// horizontal nor vertical among them, whichever end it is drawn from. A
+// regression test, written after the code; it does not cover which pixels
+// between its ends the diagonal sets.
 let diagonalOfWidthOne =
-    Test.Case(name = "a diagonal line of width 1 leaves out its first pixel", run = fn() = {
+    Test.Case(name = "a diagonal line of width 1 draws both its ends", run = fn() = {
         let context = create();
         setLineWidth(context, 1);
-        let diagonal = blank(6, 4);
-        Epx.drawLine(diagonal, context, 0, 0, 5, 3);
-        let horizontal = blank(6, 4);
-        Epx.drawLine(horizontal, context, 0, 0, 5, 0);
-        Test.equal(#(letter(Epx.getPixel(diagonal, 0, 0)),
-                     letter(Epx.getPixel(diagonal, 5, 3)),
-                     row(horizontal, 0)),
-                   #(".", "L", "LLLLLL"))
+        let ends = fn(x1 : Int, y1 : Int, x2 : Int, y2 : Int) : List(String) = {
+            let pixmap = blank(6, 4);
+            Epx.drawLine(pixmap, context, x1, y1, x2, y2);
+            [letter(Epx.getPixel(pixmap, x1, y1)), letter(Epx.getPixel(pixmap, x2, y2))]
+        };
+        Test.equal([ends(0, 0, 5, 3), ends(5, 3, 0, 0), ends(0, 0, 5, 0)],
+                   [["L", "L"], ["L", "L"], ["L", "L"]])
     })
 
 // design §9: a horizontal or vertical line wider than 1 is written within
@@ -891,61 +915,86 @@ let borderWider =
         Test.equal(List.map([Some(Solid), None], drawn), [within, within])
     })
 
-// design §9: an ellipse covers one more column and row than an even width
-// and height, draws nothing below a width or height of 2, and its border
-// is a ring the border's width and one across.
-let ellipses = Test.Case(name = "drawEllipse covers its radii and its ring", run = fn() = {
-    let drawn =
-        fn(fill : Optional(Style), border : Int, width : Int, height : Int) : List(String) = {
-            let pixmap = blank(9, 7);
-            let context = create();
-            setFillStyle(context, fill);
-            setBorderWidth(context, border);
-            Epx.drawEllipse(pixmap, context, 1, 1, width, height);
-            rows(pixmap)
-        };
-    let empty =
-        [".........", ".........", ".........", ".........", ".........", ".........", "........."];
-    Test.equal([drawn(Some(Solid), 0, 6, 4), drawn(None, 0, 6, 4), drawn(Some(Solid), 0, 1, 4)],
-               [[".........",
-                 "...RRR...",
-                 ".RRRRRRR.",
-                 ".RRRRRRR.",
-                 ".RRRRRRR.",
-                 "...RRR...",
-                 "........."],
+// An ellipse drawn at 1, 1 into a white pixmap a pixel larger on every
+// side, as its rows.
+fn ellipseDrawn(fill : Optional(Style), border : Int, width : Int, height : Int) : List(String) = {
+    let pixmap = blank(width + 2, height + 2);
+    let context = create();
+    setFillStyle(context, fill);
+    setBorderWidth(context, border);
+    Epx.drawEllipse(pixmap, context, 1, 1, width, height);
+    rows(pixmap)
+}
+
+// design §9: an ellipse is the shape of radii half its width and half its
+// height, a pixel within it where its center is: 6 by 4 covers its
+// rectangle, a thin 2 by 8 draws 6 of its 8 rows, width 1 is a line of
+// pixels in the fill's color or with no fill the border's, and width 0
+// draws nothing. A regression test, written after the code; it does not
+// cover a width or a height below 0.
+let ellipses = Test.Case(name = "drawEllipse draws the pixels its shape holds", run = fn() = {
+    Test.equal([ellipseDrawn(Some(Solid), 0, 6, 4),
+                ellipseDrawn(Some(Solid), 0, 2, 8),
+                ellipseDrawn(Some(Solid), 0, 1, 4),
+                ellipseDrawn(None, 0, 1, 4),
+                ellipseDrawn(Some(Solid), 0, 0, 4)],
+               [["........", "..RRRR..", ".RRRRRR.", ".RRRRRR.", "..RRRR..", "........"],
+                ["....", "....", ".RR.", ".RR.", ".RR.", ".RR.", ".RR.", ".RR.", "....", "...."],
+                ["...", ".R.", ".R.", ".R.", ".R.", "..."],
+                ["...", ".B.", ".B.", ".B.", ".B.", "..."],
+                ["..", "..", "..", "..", "..", ".."]])
+})
+
+// design §9: an ellipse's border is the shape less the shape inset by the
+// border's width, the same width across at the top and the sides, one
+// pixel wide with no fill where the width is 0, and the whole shape where
+// the width doubled reaches the height. A regression test, written after
+// the code; it does not cover a border wider than 0 with no fill.
+let ellipseBorders = Test.Case(name = "an ellipse's border is its width across", run = fn() = {
+    Test.equal([ellipseDrawn(None, 0, 6, 4),
+                ellipseDrawn(Some(Solid), 1, 6, 4),
+                ellipseDrawn(Some(Solid), 2, 7, 5),
+                ellipseDrawn(Some(Solid), 2, 6, 4)],
+               [["........", "..BBBB..", ".B....B.", ".B....B.", "..BBBB..", "........"],
+                ["........", "..BBBB..", ".BRRRRB.", ".BRRRRB.", "..BBBB..", "........"],
                 [".........",
-                 "...BBB...",
-                 ".BB...BB.",
-                 ".B.....B.",
-                 ".BB...BB.",
-                 "...BBB...",
+                 "..BBBBB..",
+                 ".BBBBBBB.",
+                 ".BBRRRBB.",
+                 ".BBBBBBB.",
+                 "..BBBBB..",
                  "........."],
-                empty])
+                ["........", "..BBBB..", ".BBBBBB.", ".BBBBBB.", "..BBBB..", "........"]])
 })
 
 // design §9: an ellipse far past a radius of 65535 is drawn as any other
-// is, and returns: one 1048576 wide and 4 high fills its left end, the row
-// of its center, and one 1048576 by 1048576 at the origin leaves the corner
-// outside it as it was. A regression test, written after the code; it does
-// not cover its ring, which the design states malformed there, nor what
-// such an ellipse costs.
+// is, and returns: one 1048576 wide and 5 high fills its left end on the
+// row of its center alone, its border one pixel wide there with no fill,
+// and one 1048576 by 1048576 at the origin leaves the corner outside it as
+// it was. A regression test, written after the code; it does not cover
+// what such an ellipse costs.
 let largeEllipses = Test.Case(name = "an ellipse past a radius of 65535 is drawn", run = fn() = {
-    let pixmap = blank(4, 5);
+    let filled = blank(4, 5);
     let context = create();
-    Epx.drawEllipse(pixmap, context, 0, 0, 1048576, 1048576);
-    Epx.drawEllipse(pixmap, context, 0, 0, 1048576, 4);
-    Test.equal(rows(pixmap), ["....", "....", "RRRR", "....", "...."])
+    Epx.drawEllipse(filled, context, 0, 0, 1048576, 1048576);
+    Epx.drawEllipse(filled, context, 0, 0, 1048576, 5);
+    let bordered = blank(4, 5);
+    setFillStyle(context, None);
+    Epx.drawEllipse(bordered, context, 0, 0, 1048576, 5);
+    Test.equal(#(rows(filled), rows(bordered)),
+               #(["....", "....", "RRRR", "....", "...."],
+                 ["....", "....", "B...", "....", "...."]))
 })
 
 // design §9: a rounded rectangle with both radii 0 has square corners, its
-// border a row thicker at the top and the bottom than at the sides;
-// `radiusX` above (width - 1) / 2 is that, `radiusY` above (height - 1) / 2
-// likewise, and one below 0 is 0; and one of width or height 0 draws
-// nothing, of width or height 1 a line of pixels in the fill's color where
-// there is a fill and no border. A regression test, written after the
-// code; it does not cover which pixels a corner covers but at radii 3 on 7
-// by 7, nor a line of width or height 1 in the border's color.
+// border the border's width on every side and the whole shape where the
+// width doubled reaches the height; a radius above half its side is that
+// half exactly, 3.5 for 7, 2.5 for 5 and 4 for 8, and one below 0 is 0;
+// and one of width or height 0 draws nothing, of width or height 1 a line
+// of pixels in the fill's color where there is a fill and no border. A
+// regression test, written after the code; it does not cover which pixels
+// a corner covers but at radii 3 on 7 by 7, nor a line of width or height
+// 1 in the border's color.
 let roundedRectangles =
     Test.Case(name = "drawRoundedRectangle's corners and its radii", run = fn() = {
         let drawn =
@@ -962,33 +1011,53 @@ let roundedRectangles =
             };
         Test.equal(#(drawn(0, 6, 4, 0, 0),
                      drawn(1, 6, 5, 0, 0),
+                     drawn(2, 8, 6, 0, 0),
+                     drawn(3, 8, 6, 0, 0),
                      drawn(0, 7, 7, 3, 3),
-                     drawn(0, 7, 7, 9, 4) == drawn(0, 7, 7, 3, 3),
-                     drawn(0, 12, 8, 6, 9) == drawn(0, 12, 8, 5, 3),
-                     drawn(0, 12, 8, 4, 3) == drawn(0, 12, 8, 5, 3),
+                     drawn(0, 7, 7, 9, 4) == drawn(0, 7, 7, 4, 4),
+                     drawn(0, 7, 7, 4, 4) == drawn(0, 7, 7, 3, 3),
+                     drawn(0, 5, 9, 9, 9) == drawn(0, 5, 9, 2, 4),
+                     drawn(0, 12, 8, 6, 9) == drawn(0, 12, 8, 6, 4),
                      drawn(0, 4, 0, 1, 1),
                      drawn(0, 4, 1, 1, 1),
                      drawn(0, 6, 4, -5, -5) == drawn(0, 6, 4, 0, 0)),
                    #(["........", ".RRRRRR.", ".RRRRRR.", ".RRRRRR.", ".RRRRRR.", "........"],
                      ["........",
                       ".BBBBBB.",
-                      ".BBBBBB.",
+                      ".BRRRRB.",
+                      ".BRRRRB.",
                       ".BRRRRB.",
                       ".BBBBBB.",
-                      ".BBBBBB.",
                       "........"],
+                     ["..........",
+                      ".BBBBBBBB.",
+                      ".BBBBBBBB.",
+                      ".BBRRRRBB.",
+                      ".BBRRRRBB.",
+                      ".BBBBBBBB.",
+                      ".BBBBBBBB.",
+                      ".........."],
+                     ["..........",
+                      ".BBBBBBBB.",
+                      ".BBBBBBBB.",
+                      ".BBBBBBBB.",
+                      ".BBBBBBBB.",
+                      ".BBBBBBBB.",
+                      ".BBBBBBBB.",
+                      ".........."],
                      [".........",
-                      "....R....",
                       "..RRRRR..",
                       ".RRRRRRR.",
                       ".RRRRRRR.",
                       ".RRRRRRR.",
+                      ".RRRRRRR.",
+                      ".RRRRRRR.",
                       "..RRRRR..",
-                      "....R....",
                       "........."],
                      true,
-                     true,
                      false,
+                     false,
+                     true,
                      ["......", "......"],
                      ["......", ".RRRR.", "......"],
                      true))
@@ -1037,14 +1106,13 @@ let polygons = Test.Case(name = "drawPolygon fills by even-odd or draws its edge
 })
 
 // design §9: a polygon's edge with no fill is one pixel wide where the
-// line's width is 0 or 1, and one neither horizontal nor vertical leaves
-// out its upper end, whichever end the list names first, so that a concave
-// outline lacks the vertex its two diagonal edges share; and one point at
-// a line's width of 3 is a line of no length, three pixels down. A
-// regression test, written after the code; it does not cover a diagonal
-// edge wider than 1.
+// line's width is 0 or 1, both its ends among its pixels, whichever end
+// the list names first, so that a concave outline has the vertex its two
+// diagonal edges share; and one point at a line's width of 3 is a line of
+// no length, three pixels down. A regression test, written after the
+// code; it does not cover a diagonal edge wider than 1.
 let polygonOutlines =
-    Test.Case(name = "a polygon's diagonal edge leaves out its upper end", run = fn() = {
+    Test.Case(name = "a polygon's diagonal edge draws both its ends", run = fn() = {
         let drawn = fn(width : Int, size : Int, points : List(#(Int, Int))) : List(String) = {
             let pixmap = blank(size, size);
             let context = create();
@@ -1053,17 +1121,58 @@ let polygonOutlines =
             Epx.drawPolygon(pixmap, context, points);
             rows(pixmap)
         };
-        let diagonal = ["....", ".L..", "..L.", "...L"];
+        let diagonal = ["L...", ".L..", "..L.", "...L"];
         Test.equal([drawn(1, 7, [#(0, 0), #(6, 0), #(6, 6), #(3, 3), #(0, 6)]),
                     drawn(1, 4, [#(0, 0), #(3, 3)]),
                     drawn(1, 4, [#(3, 3), #(0, 0)]),
                     drawn(0, 5, [#(1, 1), #(3, 1), #(3, 3), #(1, 3)]),
                     drawn(3, 7, [#(3, 3)])],
-                   [["LLLLLLL", "L.....L", "L.....L", "L.....L", "L.L.L.L", "LL...LL", "L.....L"],
+                   [["LLLLLLL", "L.....L", "L.....L", "L..L..L", "L.L.L.L", "LL...LL", "L.....L"],
                     diagonal,
                     diagonal,
                     [".....", ".LLL.", ".L.L.", ".LLL.", "....."],
                     [".......", ".......", "...L...", "...L...", "...L...", ".......", "......."]])
+    })
+
+// design §9: a polygon with no fill writes the pixel at a point once where
+// the line's width is at most 1, and where two edges cross, or the width
+// is above 1, a pixel two edges cover is written by each, as a blended
+// outline shows against a point blended once and twice: a square's corner,
+// one point and two points once, a bowtie's crossing and a wide square's
+// corner twice. A regression test, written after the code; it does not
+// cover a crossing of edges wider than 1.
+let polygonWrites =
+    Test.Case(name = "a polygon's outline writes a point once and a crossing twice", run = fn() = {
+        let context = create();
+        setFillStyle(context, None);
+        setLineStyle(context, Blend);
+        setForeground(context, Epx.Color(alpha = 128, red = 0, green = 0, blue = 0));
+        let blended = fn(count : Int) : Epx.Color = {
+            let pixmap = blank(1, 1);
+            List.forEach(List.range(1, count), fn(_) = Epx.drawPoint(pixmap, context, 0, 0));
+            Epx.getPixel(pixmap, 0, 0)
+        };
+        let drawn = fn(width : Int, size : Int, points : List(#(Int, Int))) : Epx.Pixmap = {
+            let pixmap = blank(size, size);
+            setLineWidth(context, width);
+            Epx.drawPolygon(pixmap, context, points);
+            pixmap
+        };
+        let square = drawn(1, 6, [#(1, 1), #(4, 1), #(4, 4), #(1, 4)]);
+        let one = drawn(1, 3, [#(1, 1)]);
+        let two = drawn(1, 5, [#(1, 1), #(3, 1)]);
+        let bowtie = drawn(1, 5, [#(0, 0), #(4, 4), #(4, 0), #(0, 4)]);
+        let wide = drawn(3, 11, [#(2, 2), #(8, 2), #(8, 8), #(2, 8)]);
+        Test.equal([Epx.getPixel(square, 1, 1),
+                    Epx.getPixel(square, 2, 1),
+                    Epx.getPixel(one, 1, 1),
+                    Epx.getPixel(two, 2, 1),
+                    Epx.getPixel(bowtie, 0, 0),
+                    Epx.getPixel(bowtie, 1, 1),
+                    Epx.getPixel(wide, 5, 2),
+                    Epx.getPixel(bowtie, 2, 2),
+                    Epx.getPixel(wide, 8, 2)],
+                   List.repeat(blended(1), 7) <> List.repeat(blended(2), 2))
     })
 
 // design §9: with a fill, a polygon of one point is that pixel and of two
@@ -1122,7 +1231,7 @@ let drawingClipped = Test.Case(name = "the drawing functions write within the cl
                  },
                  fn(pixmap) = Epx.drawLine(pixmap, context, 0, 0, 3, 3),
                  fn(pixmap) = Epx.drawRectangle(pixmap, context, 0, 0, 4, 4),
-                 fn(pixmap) = Epx.drawEllipse(pixmap, context, 0, 0, 3, 3),
+                 fn(pixmap) = Epx.drawEllipse(pixmap, context, 1, 1, 4, 4),
                  fn(pixmap) = Epx.drawTriangle(pixmap, context, 0, 0, 3, 0, 0, 3),
                  fn(pixmap) = Epx.drawRoundedRectangle(pixmap, context, 0, 0, 4, 4, 0, 0),
                  fn(pixmap) = Epx.drawPolygon(pixmap, context, [#(0, 0), #(3, 0), #(0, 3)])];
@@ -1130,7 +1239,7 @@ let drawingClipped = Test.Case(name = "the drawing functions write within the cl
                [["....", ".L..", "....", "...."],
                 ["....", ".L..", "..L.", "...."],
                 ["....", ".RR.", ".RR.", "...."],
-                ["....", ".RR.", ".R..", "...."],
+                ["....", "..R.", ".RR.", "...."],
                 ["....", ".RR.", ".R..", "...."],
                 ["....", ".RR.", ".RR.", "...."],
                 ["....", ".RR.", ".R..", "...."]])

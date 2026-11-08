@@ -265,8 +265,7 @@ foreign fn rawDraw(pixmap : Epx.Pixmap,
 
 // The farthest a window's coordinate goes, and the most columns and rows
 // it has: the X protocol holds a window's place in 16 bits, and the
-// display makes no copy off the screen larger (design §11, epx_bugs.md
-// 19).
+// display makes no copy off the screen larger (design §11).
 let windowLimit : Int = 32767
 
 // A window's coordinate as epx takes it, once it is within the limit

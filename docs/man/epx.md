@@ -84,12 +84,10 @@ once; one that touches each pixel of a large pixmap or rectangle does
 not: `create`, `copy`, `fill`, `copyTo`, `flip`, `scroll`, `scale` and
 `toPpm` of a large pixmap, and `fillArea`, `getPixels`, `putPixels`,
 `copyArea` and the blends of a large rectangle. `scale` of an 8192 by
-8192 pixmap holds its scheduler for seconds. A drawing function traces
-its shape whole, the part outside the pixmap among it: a triangle with
-its corners at the coordinates' bounds holds its scheduler for a fifth
-of a second. A filled polygon scans each row of its height, within the
-clip or not, and one from the coordinates' top bound to their bottom
-holds its scheduler for about three seconds.
+8192 pixmap holds its scheduler for seconds. A line, a triangle and a
+polygon's edges are traced whole, the part outside the pixmap among
+them: a triangle with its corners at the coordinates' bounds holds its
+scheduler for a fifth of a second.
 
 ## Examples
 
@@ -693,21 +691,23 @@ Writes the source's pixels into the target shifted `right` columns to
 the right, or to the left where it is below 0, and `down` rows down, or
 up where it is below 0, within the common area of the two: the smaller
 width by the smaller height, from the top left of each. The target
-outside it is left as it was, and a pixel is written in the target's
+outside it is left as it was, but by a scroll of two amounts neither 0
+into a larger target, below, and a pixel is written in the target's
 format. Neither clip is read.
 
 The part of the common area the shift uncovers is as `backfill` says.
 `Wrapped` writes there the pixels shifted out of the other side, the
 shift taken modulo the common area's width and height, so that a shift
-by a whole width or height copies the source as it is. A wrapped scroll
-keeps the wrapped columns or rows in memory of their size meanwhile, and
-where the host cannot allocate that memory it writes nothing.
-`Filled(color)` fills the uncovered part with the color, the whole area
-where the shift reaches its width or height.
+by a whole width or height copies the source as it is. `Filled(color)`
+fills the uncovered part with the color, the whole area where the shift
+reaches its width or height.
 
-The source and the target may be one pixmap. A scroll by 0 and 0 writes
-nothing, into another pixmap too, and what a scroll between two pixmaps
-by both amounts writes is not stated.
+The source and the target may be one pixmap. A scroll by 0 and 0 copies
+the common area into the target, as a wrap by a whole width or height
+does. A scroll by two amounts neither 0 into a target wider or taller
+than the source writes the common area shifted by `down` and then
+shifts the whole target by `right`, as `scroll(target, target, right, 0,
+backfill)` would, its wrap modulo the target's width.
 
 ### Errors
 
@@ -971,14 +971,13 @@ foreground, by its line's style, as wide as its line's width, within the
 clip. It reads the context's foreground, line style and line width.
 
 A line of width 0 draws nothing, and one of width 1 every pixel from one
-end to the other, both ends among them where it is horizontal or
-vertical; one that is neither leaves out its first pixel, `x1`, `y1`. A
-horizontal or vertical line wider than 1 is the rectangle that runs from
-one end of the line to the other and is the line's width across,
-`width / 2` of its rows or columns above or left of the line, rounded
-down. Any other line wider than 1 is a band centered on the line, and
-which pixels it covers is not stated. `Antialiased` smooths a line of
-width 1 that is neither horizontal nor vertical, and no other.
+end to the other, both ends among them. A horizontal or vertical line
+wider than 1 is the rectangle that runs from one end of the line to the
+other and is the line's width across, `width / 2` of its rows or columns
+above or left of the line, rounded down. Any other line wider than 1 is
+a band centered on the line, and which pixels it covers is not stated.
+`Antialiased` smooths a line of width 1 that is neither horizontal nor
+vertical, and no other.
 
 ### Errors
 
@@ -1050,24 +1049,27 @@ Epx.drawEllipse(pixmap : Pixmap, context : Context, x : Int, y : Int, width : In
 
 *Since 0.2.0.*
 
-Draws the ellipse in the rectangle at `x`, `y` within the clip:
-centered at `x + width / 2`, `y + height / 2`, its radii `width / 2`
-and `height / 2`, each rounded down, so that it covers
-`2 * (width / 2) + 1` columns and `2 * (height / 2) + 1` rows, one more
-than an even width or height. An ellipse whose width or height is below 2 draws
-nothing. It reads the context's fill style and color and its border
-style, color and width.
+Draws the ellipse inscribed in the rectangle at `x`, `y`, within the
+clip, its radii half the width and half the height, exactly, 2.5 for a
+side of 5. A pixel is within the ellipse where its center is, the point
+half a pixel right of and below the pixel's own coordinates, so that a
+thin ellipse, 2 by 8, draws 6 of its 8 rows. It reads the context's fill
+style and color and its border style, color and width.
 
-Its border is the ring from its edge inward, the context's border's
-width and one pixel across, both its edges drawn, in the border's color
-by the border's style; its fill is within the ring, in the fill's color
-by the fill's style. With a fill, a border of width 0 is none. With no
-fill, the ring alone is drawn, one pixel across where the border's width
-is 0. `Antialiased` smooths the edge of the fill.
+Its border is the ellipse less the ellipse inset by the context's
+border's width on every side, so that it is that width across at the
+top, the bottom and the sides alike, in the border's color by the
+border's style; its fill is within the border, in the fill's color by
+the fill's style. With a fill, a border of width 0 is none. With no
+fill, the border alone is drawn, one pixel wide where its width is 0. A
+border whose width doubled reaches the width or the height is the whole
+ellipse. `Antialiased` smooths the edge of the fill where the border's
+width is 0: the first and the last pixel of each row are blended by how
+much of each the ellipse covers.
 
-A ring is malformed near the top and the bottom where the border's width
-is 1 or 2, a pixel of it outside the ellipse and the fill showing
-through below it, and at any border's width past a radius of 65535.
+A width or a height below 0 is 0. An ellipse of width or height 0 draws
+nothing, and one of width or height 1 is a line of pixels in the
+border's color, or in the fill's where there is a fill and no border.
 
 ### Errors
 
@@ -1077,7 +1079,7 @@ coordinate is beyond 16777216`, and on a width or a height above
 
 ### Examples
 
-The ellipse 4 by 4 covers 5 columns:
+The ellipse 4 by 4 covers its 4 columns:
 
 ```ernest
 {
@@ -1085,7 +1087,7 @@ The ellipse 4 by 4 covers 5 columns:
     Epx.drawEllipse(pixmap, Epx.Gc.create(), 0, 0, 4, 4);
     Epx.getPixels(pixmap, 0, 2, 6, 1)
 }
-// => <<255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 0, 0, 0>>
+// => <<255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 0, 0, 0, 0, 0, 0>>
 ```
 
 ## Epx.drawRoundedRectangle
@@ -1097,18 +1099,29 @@ Epx.drawRoundedRectangle(pixmap : Pixmap, context : Context, x : Int, y : Int, w
 *Since 0.2.0.*
 
 Draws the rectangle at `x`, `y` with rounded corners, within the clip:
-each corner a quarter of an ellipse of radii `radiusX` and `radiusY`,
-`radiusX` above `(width - 1) / 2`, rounded down, being that, and
-`radiusY` above `(height - 1) / 2` likewise; with both radii 0 the
-corners are square. It reads the context's fill style and color and its
-border style, color and width.
+each corner a quarter of an ellipse of radii `radiusX` and `radiusY`, a
+radius above half its side, `radiusX` the width's and `radiusY` the
+height's, being that half, 2.5 for a side of 5; with both radii 0 the
+corners are square. A pixel is within the rounded rectangle where its
+center is, the point half a pixel right of and below the pixel's own
+coordinates. It reads the context's fill style and color and its border
+style, color and width.
 
-Its border and its fill are a rectangle's, as `drawRectangle` draws
-them, the border within the shape, except that the border is a row
-thicker at the top and at the bottom than at the sides. A width, a
-height or a radius below 0 is 0. A rounded rectangle of width or height
-0 draws nothing, and one of width or height 1 is a line of pixels in the
-border's color, or in the fill's where there is a fill and no border.
+Its border is the rounded rectangle less the rounded rectangle inset by
+the context's border's width on every side, each radius less the
+border's width, one below 0 being 0, so that the border is that width
+across on every side, in the border's color by the border's style; its
+fill is within the border, in the fill's color by the fill's style.
+With a fill, a border of width 0 is none. With no fill, the border alone
+is drawn, one pixel wide where its width is 0. A border whose width
+doubled reaches the width or the height is the whole rounded rectangle.
+`Antialiased` smooths the edge of the fill where the border's width is
+0, as `drawEllipse` does.
+
+A width, a height or a radius below 0 is 0. A rounded rectangle of width
+or height 0 draws nothing, and one of width or height 1 is a line of
+pixels in the border's color, or in the fill's where there is a fill and
+no border.
 
 ### Errors
 
@@ -1127,7 +1140,7 @@ The top row of a rounded rectangle of radii 2, its corners left out:
     Epx.drawRoundedRectangle(pixmap, Epx.Gc.create(), 0, 0, 7, 7, 2, 2);
     Epx.getPixels(pixmap, 0, 0, 7, 1)
 }
-// => <<0, 0, 0, 0, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 0, 0, 0, 0, 0, 0>>
+// => <<0, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 0, 0, 0>>
 ```
 
 ## Epx.drawTriangle
@@ -1180,17 +1193,17 @@ width.
 
 With no fill, it is its edges, each a line from point to point in the
 context's foreground by its line's style and width, one pixel wide where
-the width is 0 or 1, as a triangle's edges are. An edge that is neither
-horizontal nor vertical leaves out its upper end, the point of the
-smaller `y`, whichever end the list names first.
+the width is 0 or 1, as a triangle's edges are. Where the width is at
+most 1, the pixel at a point is written once; where two edges cross, or
+the width is above 1, a pixel two edges cover is written by each, which
+a blended outline shows.
 
 A polygon of no points draws nothing. With a fill, one point is that
 pixel and two points the line between them, both ends among them, in
 the fill's color and one pixel wide whatever the line's width. With no
 fill, one point is a line of no length, that pixel where the line's
 width is at most 1, and two points the line between them, drawn as an
-edge is. A filled polygon costs its height in rows, within the clip or
-not.
+edge is.
 
 ### Errors
 

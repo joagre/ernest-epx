@@ -23,7 +23,7 @@ by its getter:
   where they have no fill;
 - the border's style, color and width, which `drawRectangle`,
   `drawEllipse` and `drawRoundedRectangle` draw their border with,
-  within the shape;
+  within what it borders;
 - the foreground, the color of a point, a line, and a triangle's and a
   polygon's edges.
 
@@ -102,9 +102,12 @@ Epx.Gc.lineStyle(Epx.Gc.create())
 combines a source pixel with a target pixel: each channel of the
 pixel, alpha among them, moves toward the color's by the color's
 alpha, and an opaque color is written as it is.
-- `Antialiased`: As `Blend`, and in a line one pixel wide that is neither horizontal nor
-vertical, and along the edge of an ellipse's fill, a pixel the edge
-passes through is blended by how near the edge passes to it.
+- `Antialiased`: As `Blend`, except in a line one pixel wide that is neither horizontal
+nor vertical, where a pixel the line passes through is blended by how
+near it passes, and along the edge of an ellipse's or a rounded
+rectangle's fill where the border's width is 0, where the first and
+the last pixel of each row are blended by how much of each the fill
+covers.
 
 ## Epx.Gc.create
 
