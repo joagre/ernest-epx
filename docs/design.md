@@ -16,7 +16,7 @@ Each function but `toPpm` and the window's calls the epx functions its table nam
 
 The differences closed are these, each stated where its rule is (§2 to §10): a `Color` crosses as the tuple epx takes, and a `Format`, an `Operation` or a `Style` as its atoms; epx's `ok` is `Unit`; a width or a height below 0 is 0; a precondition of §5, §10 or §12 is checked before the call; `scroll`'s `down` moves the pixels down where epx's vertical amount moves them up. Each module checks with functions of its own, since Ernest has no function private to a library (report §4.2).
 
-Also closed: a new pixmap is filled; a new context's border lies within its shape; and `getPixels` answers a rectangle of width and height 0 without epx, which answers its whole memory for one at `0`, `0`.
+Also closed: a new pixmap is filled, and a new context's border lies within what it borders.
 
 | Function | epx | What it does |
 |---|---|---|
@@ -106,11 +106,11 @@ The two rectangles of `copyArea` may overlap in one pixmap. Those of `blendArea`
 
 `getPixels` answers the bytes of the part of its rectangle within the pixmap, row by row from the top, and no bytes for a rectangle that has no pixels.
 
-`scroll` writes the source's pixels into the target shifted by `right` columns to the right, or to the left where it is below 0, and `down` rows down, or up where it is below 0, within the common area of the two, the smaller width by the smaller height from `0`, `0` of each; the target outside it is left as it was, and a pixel crosses into the target's format.
+`scroll` writes the source's pixels into the target shifted by `right` columns to the right, or to the left where it is below 0, and `down` rows down, or up where it is below 0, within the common area of the two, the smaller width by the smaller height from `0`, `0` of each; the target outside it is left as it was, but by a scroll of two amounts neither 0 into a larger target (below, `epx_bugs.md` 39), and a pixel crosses into the target's format.
 
-The part of the common area the shift uncovers is as the `Backfill` says (§3): `Wrapped` takes the shift modulo the common area's width and height, so a shift by a whole width or height copies the source as it is, and keeps the wrapped columns or rows in memory of their size meanwhile, writing nothing where the host cannot allocate it (`epx_bugs.md` 38); `Filled(color)` fills the uncovered part with the color, the whole area where the shift reaches its width or height.
+The part of the common area the shift uncovers is as the `Backfill` says (§3): `Wrapped` takes the shift modulo the common area's width and height, so a shift by a whole width or height copies the source as it is; `Filled(color)` fills the uncovered part with the color, the whole area where the shift reaches its width or height.
 
-The source and the target may be one pixmap. A scroll by 0 and 0 writes nothing, into another pixmap too (`epx_bugs.md` 28), and what a scroll between two pixmaps by both amounts writes is not stated (`epx_bugs.md` 27).
+The source and the target may be one pixmap. A scroll by 0 and 0 copies the common area into the target, as a wrap by a whole width or height does. A scroll by two amounts neither 0 into a target wider or taller than the source writes the common area shifted by `down` and then shifts the whole target by `right`, as `scroll(target, target, right, 0, backfill)` would, its wrap modulo the target's width (`epx_bugs.md` 39).
 
 ## 5. What faults
 
@@ -154,7 +154,7 @@ The defaults are epx's. A width below 0 is 0, and one above 16,777,216 faults (�
 
 | Function | epx | What it does |
 |---|---|---|
-| `create()` | `gc_create/0`, `gc_set/3` | a new context of the defaults, its border placed within its shape (§8) |
+| `create()` | `gc_create/0`, `gc_set/3` | a new context of the defaults, its border placed within what it borders (§8) |
 | `copy(context)` | `gc_copy/1` | a new context with the same keys |
 | each setter | `gc_set/3` | the key set |
 | each getter | `gc_get/2` | the key read |
@@ -165,11 +165,11 @@ The defaults are epx's. A width below 0 is 0, and one above 16,777,216 faults (�
 export type Style = Solid | Blend | Antialiased
 ```
 
-A style says how a drawing function writes a pixel in a color. `Solid` writes the color as it is, its alpha among its channels. `Blend` combines the color with the pixel as the operation `SrcBlend` combines a source pixel with a target pixel (§3), so that an opaque color is written as it is. `Antialiased` is `Blend`, except in a line one pixel wide that is neither horizontal nor vertical and along the edge of an ellipse's fill, where a pixel the edge passes through is blended by how near the edge passes to it.
+A style says how a drawing function writes a pixel in a color. `Solid` writes the color as it is, its alpha among its channels. `Blend` combines the color with the pixel as the operation `SrcBlend` combines a source pixel with a target pixel (§3), so that an opaque color is written as it is. `Antialiased` is `Blend`, except in a line one pixel wide that is neither horizontal nor vertical, where a pixel the line passes through is blended by how near it passes, and along the edge of a shape's fill where the border's width is 0, where the first and the last pixel of each row are blended by how much of each the shape covers.
 
 The fill's style is an `Optional(Style)`, and `None` is no fill. The line's style and the border's are a `Style`.
 
-A style crosses to epx as a list of atoms: `Solid` as `[solid]`, `Blend` as `[blend]` and `Antialiased` as `[blend, aalias]`. A border's style adds `inside`, which places the border within its shape (§9), and `create` sets the border's style so. A fill of `None` crosses as `[]`. A style read back is the one whose atoms epx answers, the border's `inside` left out; a list that is none of these faults (§10).
+A style crosses to epx as a list of atoms: `Solid` as `[solid]`, `Blend` as `[blend]` and `Antialiased` as `[blend, aalias]`. A border's style adds `inside`, which places the border within what it borders (§9), and `create` sets the border's style so. A fill of `None` crosses as `[]`. A style read back is the one whose atoms epx answers, the border's `inside` left out; a list that is none of these faults (§10).
 
 ## 9. The drawing functions
 
@@ -187,27 +187,23 @@ A drawing function draws into a pixmap with a context, the pixmap first and the 
 
 A point is the pixel at `x`, `y`, in the foreground by the line's style.
 
-A line of width 0 draws nothing, and one of width 1 every pixel from `x1`, `y1` to `x2`, `y2`, both ends among them where it is horizontal or vertical; one that is neither leaves out its first pixel, `x1`, `y1` (`epx_bugs.md` 25). A line whose two ends are one pixel is a horizontal line of one pixel's length.
+A line of width 0 draws nothing, and one of width 1 every pixel from `x1`, `y1` to `x2`, `y2`, both ends among them. A line whose two ends are one pixel is a horizontal line of one pixel's length.
 
 A horizontal or vertical line wider than 1 is the rectangle that runs from one end of the line to the other and is the line's width across, `width / 2` of its rows or columns above or left of the line, rounded down. Any other line wider than 1 is a band centered on the line, and which pixels it covers is not stated.
 
 A rectangle is its border and its fill. The border is the outermost pixels of the rectangle, the border's width of them on each side, in the border's color by the border's style; the fill is the rest, in the fill's color by the fill's style. With a fill, a border of width 0 is none. With no fill, the border alone is drawn, one pixel wide where its width is 0. A border wider than the rectangle's width or height writes nothing outside the rectangle.
 
-An ellipse is centered at `x + width / 2`, `y + height / 2`, its radii `width / 2` and `height / 2`, each rounded down, so that it covers `2 * (width / 2) + 1` columns from `x` and `2 * (height / 2) + 1` rows from `y`: one more than an even width or height. An ellipse whose width or height is below 2 draws nothing.
+An ellipse and a rounded rectangle are shapes. A shape is the rectangle at `x`, `y` of `width` and `height` with each corner a quarter of an ellipse of radii `radiusX` and `radiusY`, a radius above half its side, `radiusX` the width's and `radiusY` the height's, being that half, 2.5 for a side of 5. A pixel is within the shape where its center is, the point half a pixel right of and below its `x`, `y`.
 
-An ellipse's border is the ring from its edge to the edge of the ellipse the border's width inside it, both edges drawn, so that the ring is the border's width and one pixel across; its fill is within the ring. With a fill, a border of width 0 is none. With no fill, the ring alone is drawn, one pixel across where the border's width is 0.
+The shape's border is the shape less the shape inset by the border's width on every side, each radius less the border's width, one below 0 being 0; the fill is the shape within the border. With a fill, a border of width 0 is none. With no fill, the border alone is drawn, one pixel wide where its width is 0. A border whose width doubled reaches the shape's width or height is the whole shape.
 
-A ring is malformed near the ellipse's top and bottom where the border's width is 1 or 2, a pixel of it outside the ellipse and the fill showing through below it, and at any border's width past a radius of 65,535 (`epx_bugs.md` 12).
-
-A rounded rectangle is the rectangle at `x`, `y` of `width` and `height` with each corner a quarter of an ellipse of radii `radiusX` and `radiusY`, `radiusX` above `(width - 1) / 2`, rounded down, being that, `radiusY` above `(height - 1) / 2` likewise, and one below 0 being 0 as a width or a height is (§4); with both radii 0 its corners are square.
-
-Its border and its fill are the rectangle's above, the border within the shape, and its border is a row thicker at the top and the bottom than at the sides (`epx_bugs.md` 31). One whose width or height is 0 draws nothing, and one of width or height 1 is a line of pixels in the border's color, or in the fill's where there is a fill and no border.
+An ellipse is the shape whose radii are half its width and half its height. A rounded rectangle's radii are `radiusX` and `radiusY`, one below 0 being 0 as a width or a height is (§4); with both 0 its corners are square. A shape whose width or height is 0 draws nothing, and one of width or height 1 is a line of pixels in the border's color, or in the fill's where there is a fill and no border.
 
 A polygon is the closed figure of its points, each joined to the next and the last to the first. With a fill it is every pixel within the figure by the even-odd rule, the edges among them, in the fill's color by the fill's style.
 
-With no fill it is its edges, each a line from point to point in the foreground by the line's style and width, one pixel wide where the width is 0 or 1 as a triangle's edges are; an edge that is neither horizontal nor vertical leaves out its upper end, the point of the smaller `y`, whichever end the list names first (`epx_bugs.md` 35).
+With no fill it is its edges, each a line from point to point in the foreground by the line's style and width, one pixel wide where the width is 0 or 1 as a triangle's edges are. Where the width is at most 1, the pixel at a point is written once; where two edges cross, or the width is above 1, a pixel two edges cover is written by each.
 
-A polygon of no points draws nothing. With a fill, one point is that pixel and two points the line between them, both ends among them, in the fill's color and one pixel wide whatever the line's width; with no fill, one point is a line of no length, that pixel where the line's width is at most 1, and two points the line between them, drawn as an edge is. A filled polygon costs its height in rows, within the clip or not (`epx_bugs.md` 30).
+A polygon of no points draws nothing. With a fill, one point is that pixel and two points the line between them, both ends among them, in the fill's color and one pixel wide whatever the line's width; with no fill, one point is a line of no length, that pixel where the line's width is at most 1, and two points the line between them, drawn as an edge is.
 
 A triangle with a fill is every pixel within its three corners, its edges among them, in the fill's color by the fill's style. With no fill it is its three edges, each a line from corner to corner in the foreground by the line's style, one pixel wide where the line's width is 0 or 1; where the width is above 1, which pixels the edges cover is not stated.
 
@@ -283,6 +279,7 @@ The names that recur across modules, one for each concept, in every module. A na
 - **function, operation**: one of the library's functions, `fill` or `copyArea` (§1), and an `Operation`, one of epx's ways of combining two pixels (§3). Not `operation` for a function.
 - **context**: epx's graphics context, a `Context` (§7), which `Epx.Gc` makes, sets and reads; many are `contexts`. Not `gc`, `graphicsContext`: `Gc` is the module's name alone.
 - **style**: a `Style`, how a drawing function writes a pixel in a color (§8). Not `flags`, `mode`.
+- **shape**: an ellipse or a rounded rectangle, the rectangle with each corner a quarter ellipse, which a pixel is within where its center is (§9). Not `figure`, which is a polygon's, nor `form`.
 - **fill**: what a rectangle, a rounded rectangle, an ellipse, a triangle or a polygon holds within its border or its edges, and the two keys it is drawn by, the fill's style and color (§9). Not `interior`, `body`.
 - **border**: the edge of a rectangle, a rounded rectangle or an ellipse, within it, and the three keys it is drawn by, the border's style, color and width (§9). Not `outline`, `stroke`, `frame`.
 - **line**: what `drawLine` draws, and the two keys a line, a point and a triangle's or a polygon's edges are drawn by beside the foreground, the line's style and width (§9). Not `stroke`, `pen`.
