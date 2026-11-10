@@ -11,7 +11,7 @@ It does not run while `findings.md` stands, a release's findings or a review's.
 ## How it runs
 
 - `make test` passes from a fresh clone before a reader starts, as [`release.md`](release.md)'s first step has it.
-- Each reader is a session of its own, on the stronger model, as `CLAUDE.md` says of a review's reader. It is given its brief and the files it reads, and nothing that argues for them, such as the log or another reader's list.
+- Each reader is a session of its own, on the model `CLAUDE.md` gives its kind of reader: C and S read the code, K and D the documents. It is given its brief and the files it reads, and nothing that argues for them, such as the log or another reader's list.
 - A reader edits nothing in the repository. It builds and tries the program in a clone of the commit, in a scratch directory of its own, with the `ern` the Makefile names.
 - The readers read one commit, which the findings name, and run side by side.
 - Each reader hands in a numbered list, most serious first. A finding gives its place, a file and line or a section; a short quote; what is wrong; a program or a command that shows it, where there is one; and a one-line fix. Defects stand apart from matters of clarity.
@@ -37,7 +37,7 @@ A reader's letter names its findings: C12 is the code reader's twelfth.
 
 A copy of the template adds below these the readers its program alone needs, and changes nothing above them.
 
-- **W, the window reader**, this library's own, since `make test` opens no window. Reads `docs/man/epx/window.md`, the design's §11 and §12, and `examples/README.md`, and works on a machine with a screen. Where the reader cannot see what a window shows, the user looks and tells it. Its list names the machine and the display server, and says who looked.
+- **W, the window reader**, this library's own, since `make test` opens no window. Reads `docs/man/epx/window.md`, the design's §11 and §12, and `examples/README.md`, and works on a machine with a screen. Where the reader cannot see what a window shows, the user looks and tells it. Its list names the machine and the display server, and says who looked. It is a reader of the code, since it tries what the program does.
 
   "Try the window on a screen: each example of the page, each line of the examples' *Seeing them*, and then every sentence of §11 and §12 a program can try, a window covered and uncovered, its close button, a `close` and a `show` after it, and no display to open. Report every picture that is not what its program says it draws, every half-done frame, flicker or lag you saw, every sentence the window did not keep, every fault or warning the page does not name, and every window or process left behind when a program ended."
 
