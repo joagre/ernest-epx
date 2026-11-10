@@ -4,7 +4,7 @@
 
 An Ernest library over [epx](https://github.com/tonyrog/epx), the pixel library for Erlang: a 2-D library of pixmaps and their pixels. Its window shows a pixmap on the screen and takes nothing back from it, nothing of epx's events. It is a library and not a program: a program adds it to its load path, as *Using it* says.
 
-Its modules are `Epx`, over pixmaps and the drawing functions, `Epx.Gc`, over the graphics context they draw with, and `Epx.Window`, over the window that shows a pixmap, whose pages are [`docs/man/epx.md`](docs/man/epx.md), [`docs/man/epx/gc.md`](docs/man/epx/gc.md) and [`docs/man/epx/window.md`](docs/man/epx/window.md), which `make man` writes and a release commits. The release is 0.2.0.
+Its modules are `Epx`, over pixmaps and the drawing functions, `Epx.Gc`, over the graphics context they draw with, and `Epx.Window`, over the window that shows a pixmap. Their pages stand in the release's archive as `docs/man/epx.md`, `docs/man/epx/gc.md` and `docs/man/epx/window.md`, and in a checkout under `build/`, once `make doc` has written them. The release is 0.2.0.
 
 ![Six pictures the examples draw: Whitted's glass and mirror spheres, a flock of boids, a clock face, the Sierpinski gasket, the Mandelbrot set, and the Boing ball above a mirror floor](assets/collage.png)
 
@@ -36,7 +36,7 @@ make examples   every program of examples/ built and run, its picture under buil
 make release    the archive, build/epx-VERSION.tar.gz, and its checksum beside it
 ```
 
-Clone with `--recursive`: epx and tree_db are git submodules under `erl/`, which `make lib` builds by their own `make`, its NIF among it, and links under `lib/epx/` and `lib/tree_db/` as `ebin` and `priv`. epx's NIF needs a C compiler and the X11 and xcb headers, and epx's own `make` prints warnings from its C and Erlang sources, which are expected. `make doc` writes the modules' pages under `build/`, `make man` copies them into `docs/man/`, `make format` lays the modules out, and `make clean` removes what the build and `make lib` wrote.
+Clone with `--recursive`: epx and tree_db are git submodules under `erl/`, which `make lib` builds by their own `make`, its NIF among it, and links under `lib/epx/` and `lib/tree_db/` as `ebin` and `priv`. epx's NIF needs a C compiler and the X11 and xcb headers, and epx's own `make` prints warnings from its C and Erlang sources, which are expected. `make doc` writes the modules' pages under `build/`, `make format` lays the modules out, and `make clean` removes what the build and `make lib` wrote.
 
 ## The documents
 
