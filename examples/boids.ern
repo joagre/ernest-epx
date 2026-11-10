@@ -42,8 +42,9 @@
 //   the next flock carries the seed on (report Appendix E.13). `startingFlock`
 //   draws each boid the same way.
 // - `Vector` declares its own `+` and `-` (report §4.8), and `limited` takes
-//   a velocity's direction from `Float.atan2`, which answers at the zero
-//   vector, where a division by its length would fault.
+//   a velocity's direction from `Float.atan2`, which answers `0.0` at the
+//   zero vector (report Appendix E.9), where a division by its length would
+//   fault.
 // - A boid is one filled `Epx.drawTriangle` (`Epx.Gc`'s page, *The keys*):
 //   its place is a `Float`, which keeps the part of a step short of a whole
 //   pixel, and is rounded when drawn.

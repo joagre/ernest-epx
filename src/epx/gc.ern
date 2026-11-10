@@ -658,12 +658,8 @@ let widthBelowZero = Test.Case(name = "a width below 0 is 0", run = fn() = {
 let shared = Test.Case(name = "a context is shared and a copy is not", run = fn() = {
     let context = create();
     let copied = copy(context);
-    let _ = spawnMonitored(fn() = setForeground(context, white), fn(down) = down);
-    receive {
-        down ->
-            Test.equal(#(down.reason, foreground(context), foreground(copied)),
-                       #(Returned, white, blue))
-    }
+    let ended = Process.run(fn() = setForeground(context, white));
+    Test.equal(#(ended, foreground(context), foreground(copied)), #(Right(Unit), white, blue))
 })
 
 // design §8: each style crosses as its atoms, the border's beside the
