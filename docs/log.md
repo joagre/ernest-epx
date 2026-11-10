@@ -331,3 +331,15 @@ A cold reader of the sentences, on the stronger model, found eighteen things, fi
 The pages say what §4 says of two pixmaps that share pixels, the blending functions' "must not" going as the design's did, and the module's page defines sharing once, where `copy` is. `drawLine`'s page takes §9's sentence on a line whose two ends are one pixel. The function has no `since` line yet: the release writes it with the version, `release.md`'s step 6.
 
 Read back, the design was silent nowhere: a sub-pixmap is a pixmap, and every rule of a pixmap holds of it, `show` and `toPpm` among them, as *The sub-pixmap tried at 3fdacef* found of every function the library calls.
+
+## The feedback checked against 0.10.0
+
+*2026-11-10.* Ernest 0.10.0 answers the one line `language_feedback.md` held, its feedback 236, decided in Ernest's log entry *`Float.atan2` at the Origin*: Appendix E.9 states `0.0` at the origin, the host's answer. Installed from its archive into a directory of its own, the page says so, and `Float.atan2(0.0, 0.0)` answers `0.0` on 0.9.0 as on 0.10.0. §3.1 has no negative zero, so the one origin is the whole case. The line goes.
+
+Until 2026-11-06 a line went from the file when it was carried, so the lines before it had never been checked against a release. An agent checked each against 0.10.0's installation and its probes, and the session read its citations again. 123, 124, 136 and 138 are built, and the library took each in milestone 6. 137 is decided: §8.4 states that a message foreign code sends to a process by its host identity crosses nothing and is not checked, the foreign side's promise (§4.7), a sentence 0.9.0's report already holds. It goes, agreed with: the library is the foreign side here and cannot keep the promise against epx, and §11 says how a program opens a window all the same. *The window built* called it a defect §8.4 said could not happen; the page now says it can.
+
+133, 134 and 135 are not answered: the report states the rules they were written against, §4.8, E.9 with shape rule 4, and §4.1 and §4.2, and nothing weighing their asks. They return to the file, standing, with their verdicts asked of Ernest's session. 125 to 132, the 0.1.0 review's, went straight to Ernest's file and were never held here, so their texts are asked too.
+
+What is left of 124 is three tests that read a return, not a fault, through a spawn, a monitor and a receive: the two *The fault helper* names, and the one of a parent outliving its sub-pixmap, which *The subPixmap built* added. `Process.run`, new in 0.10.0 (E.21), answers `Right` of the value or `Left` of the reason, and the two in `Epx` written with it pass in a probe. They take it at the floor's rise.
+
+A clone built against 0.10.0, its floor check set to 0.10, builds, lays out and passes every test of the library, and its six examples write their pictures. Only `tools/docs.ern`, the template's, is refused: 0.10.0's `Os.Command` has `environment` and `workingDirectory` beside its fields (E.23). The rise takes it again from the template. Milestone 11 states both.

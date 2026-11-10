@@ -14,6 +14,8 @@ What is left waits outside the library: the release at Ernest's launch, mileston
 
 The floor stays 0.9 through Ernest's layout stop and its 0.10.0, and rises to the launch's minor, 0.11 or 0.12 as Ernest names it, when the reviews of Ernest's MVP 4.4 begin. Ernest's release is tagged; the same week ernest-template releases, then this library, then ernest-httpd; and the site, which lists the library, goes live last. Each step comes on the user's word. The release does not wait on milestone 9. Decided 2026-11-05 (the log's *The release at the launch*).
 
+At the rise the library takes what Ernest changed since 0.9, as Ernest's `CHANGES.md` lists it. Built against 0.10.0, the library, its tests and its examples pass unchanged, and `tools/docs.ern`, whose `Os.Command` 0.10.0 refuses, comes again from the template. The three tests that read a return through a spawn, a monitor and a receive take `Process.run`, E.21, and the comment on `limited` in `examples/boids.ern` cites E.9 for the zero vector's direction (the log's *The feedback checked against 0.10.0*).
+
 ## Milestone 9: what epx has not fixed, after 0.2.0
 
 Each defect of `epx_bugs.md` left, 33's clamp of a channel and 39 to 41, goes as a commit of epx's fixes it and the pin moves; a fix that changes what the design states changes the design first, §4 or §5, then the page and the test. Nothing is asked of epx's author for them. Decided 2026-10-23 (the log's *The release waits on Ernest alone*). A release after the launch's follows a commit of epx's that moves the pin.
