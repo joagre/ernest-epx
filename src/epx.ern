@@ -426,6 +426,8 @@ export foreign fn copy(pixmap : Pixmap) : Pixmap =
 /// }
 /// // => #(2, 1, <<0, 0, 0, 255, 255, 255, 255, 255, 255>>)
 /// ```
+///
+/// since 0.3.0
 export fn subPixmap(pixmap : Pixmap, x : Int, y : Int, width : Int, height : Int) : Pixmap =
     rawSubPixmap(pixmap, coordinate(x), coordinate(y), extent(width), extent(height))
 

@@ -365,3 +365,9 @@ Here: the README linked the three pages under `docs/man/`, which a checkout and 
 ## The done lines stay
 
 *2026-11-11.* The plan's lines of done items, in milestones 9 and 11, were cut as saying twice what *Where we are* and the log say, and the template was asked to drop the rule that keeps them. The template refused (its `TEMPLATE_LOG.md`, *The done line stays*), and the lines are back. Until a milestone closes, its line is the one place that names the entries arguing its finished items, and the row is written from it: none of milestone 9's four entries names the milestone, and *Where we are* says only that the library is done (principle 2). *Where we are* keeps its new wording, that no more of the library is planned.
+
+## The release read for readiness
+
+*2026-11-11.* The tree read against the template's layout and the release's steps, before the release at Ernest's launch. A fresh clone's `make release` passes in 36 s, and its archive holds what the Makefile names. A program built and run against the unpacked archive, as the README's *Using it* says, draws through `subPixmap`. Five of the six pictures under `assets/` are their programs' output pixel for pixel, and the clock face draws the time it runs.
+
+Three findings. `subPixmap`, the one export since 0.2.0, had no `since`: it says 0.3.0 now, since a release that adds a function raises the minor, and the plan names the release so. The README names its release, its archive's link and that archive's floor, and no step of `release.md` changed them: step 6 does now. tree_db still states no license, its repository last pushed 2024-06-12; the decision of *The release review of 0.2.0* stands, the archive carrying its compiled code with `THIRD_PARTY_LICENSES` saying so. Its author is not asked again, and a dependent begun from the template builds tree_db from its own submodule.

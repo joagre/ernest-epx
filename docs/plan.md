@@ -12,7 +12,7 @@ What is left waits outside the library: the release at Ernest's launch, mileston
 
 ## Milestone 11: the release at Ernest's launch
 
-The floor rises to the launch's minor, 0.11 or 0.12 as Ernest names it, when the reviews of Ernest's MVP 4.4 begin. Ernest's release is tagged; the same week ernest-template releases, then this library, then ernest-httpd; and the site, which lists the library, goes live last. Each step comes on the user's word. The release does not wait on milestone 9. Decided 2026-11-05 (the log's *The release at the launch*).
+The floor rises to the launch's minor, 0.11 or 0.12 as Ernest names it, when the reviews of Ernest's MVP 4.4 begin. Ernest's release is tagged; the same week ernest-template releases, then this library, then ernest-httpd; and the site, which lists the library, goes live last. Each step comes on the user's word. The release does not wait on milestone 9. Decided 2026-11-05 (the log's *The release at the launch*). The release is 0.3.0, since it adds `subPixmap`. Decided 2026-11-11 (the log's *The release read for readiness*).
 
 Done 2026-11-10: the floor is 0.10, with the template's `v0.10.0` (the log's *The floor is 0.10*).
 
