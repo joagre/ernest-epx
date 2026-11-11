@@ -379,3 +379,7 @@ Three findings. `subPixmap`, the one export since 0.2.0, had no `since`: it says
 ## The targets' block in the README
 
 *2026-11-11.* The README's block of `make` targets takes the template's lines, from Ernest's session, each description after a `#`, as Ernest's own README writes them: a block of commands is shell a reader pastes, and one form across the repositories reads alike (principle 1). The template's lines are the truer ones here too. `make` compiles the Ernest dependencies and then the library, while `make lib` builds epx, and `make test` checks the design's citations, which the old line left out, and named the layout twice. The run, install and uninstall lines stay out, since a library has nothing to run or install.
+
+## The commands held by the checker
+
+*2026-11-11.* `tools/docs.ern` is the template's of `5797262`, ahead of its next tag: in a fenced block but an Ernest one, a command's description stands after `#`, and a line indented under it begins with `#` (the template's `TEMPLATE_LOG.md`, *The commands held by the checker*). The README's `make test` lines are the template's, the last naming the refusal. The check finds nothing here: the README's targets are written so since *The targets' block in the README*, and its two commands of *Using it* and the seven of `examples/README.md` that open a window have no description.
