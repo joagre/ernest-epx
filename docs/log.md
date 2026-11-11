@@ -375,3 +375,7 @@ Three findings. `subPixmap`, the one export since 0.2.0, had no `since`: it says
 ## The template's v0.10.1
 
 *2026-11-11.* The template's files are its `v0.10.1`'s, tagged on `6e18a0c`: the Makefile's shared part, `tools/docs.ern`, `CLAUDE.md` and the template's part of `docs/full_review.md`, read against the tag. Its `2121a30` came in `d59bafb`, its `20c9b09` in `3219654` and its `b60935d` in `70f4654`, and its `6e18a0c` touches only a new copy. A fresh clone's `make release` passed at `70f4654`, its archive's `src/` the three tracked modules alone.
+
+## The targets' block in the README
+
+*2026-11-11.* The README's block of `make` targets takes the template's lines, from Ernest's session, each description after a `#`, as Ernest's own README writes them: a block of commands is shell a reader pastes, and one form across the repositories reads alike (principle 1). The template's lines are the truer ones here too. `make` compiles the Ernest dependencies and then the library, while `make lib` builds epx, and `make test` checks the design's citations, which the old line left out, and named the layout twice. The run, install and uninstall lines stay out, since a library has nothing to run or install.
