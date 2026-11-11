@@ -6,7 +6,7 @@ Read *Where we are* first; the milestones to come follow in order, and the table
 
 ## Where we are
 
-The library is done: a 2-D library of pixmaps, pixels and the drawing functions, with its six examples, and nothing more is planned. Its last release is 0.2.0, 2026-10-25. The floor is 0.10, and epx is pinned at `3fdacef`.
+The library is done: a 2-D library of pixmaps, pixels and the drawing functions, with its six examples, and no more of it is planned. Its last release is 0.2.0, 2026-10-25. The floor is 0.10, and epx is pinned at `3fdacef`.
 
 What is left waits outside the library: the release at Ernest's launch, milestone 11, and the defects epx has not fixed, milestone 9.
 
@@ -14,13 +14,9 @@ What is left waits outside the library: the release at Ernest's launch, mileston
 
 The floor rises to the launch's minor, 0.11 or 0.12 as Ernest names it, when the reviews of Ernest's MVP 4.4 begin. Ernest's release is tagged; the same week ernest-template releases, then this library, then ernest-httpd; and the site, which lists the library, goes live last. Each step comes on the user's word. The release does not wait on milestone 9. Decided 2026-11-05 (the log's *The release at the launch*).
 
-Done 2026-11-10: the floor is 0.10, with the template's `v0.10.0` (the log's *The floor is 0.10*).
-
 ## Milestone 9: what epx has not fixed, after 0.2.0
 
 Each defect of `epx_bugs.md` left, 33's clamp of a channel and 39 to 41, goes as a commit of epx's fixes it and the pin moves; a fix that changes what the design states changes the design first, §4 or §5, then the page and the test. Nothing is asked of epx's author for them. Decided 2026-10-23 (the log's *The release waits on Ernest alone*). A release after the launch's follows a commit of epx's that moves the pin.
-
-Done 2026-11-08: the fixes of `3fdacef` verified, its sentences written and the pin moved to it, and `subPixmap` built (the log's *The second fixes verified*, *The sentences for 3fdacef*, *The sentences for subPixmap*, *The subPixmap built*).
 
 ## Finished milestones
 

@@ -361,3 +361,7 @@ Here: the README linked the three pages under `docs/man/`, which a checkout and 
 ## The archive's sources
 
 *2026-11-11.* The template's `20c9b09`, from Ernest's session: `make release` copied `src/` whole, so an untracked file under it, and one git ignores, went into the archive; the sources now go as the documents do, `SOURCES` naming the files git tracks under `src/` in a checkout and every file there in an unpacked archive, through the `tar` that copies `DOCS` (the template's `TEMPLATE_LOG.md`, *The archive's sources*). The Makefile takes the change unchanged.
+
+## The plan holds what is planned
+
+*2026-11-11.* Milestones 9 and 11 lose their lines of done items, the floor at 0.10 and the work at `3fdacef`. *Where we are* states both and the log's entries argue them, so each line said a fact twice in a page read for what comes next (principle 2). A milestone's row names its log entries when it closes, found in the log by their titles and dates. `CLAUDE.md`'s *Done* still keeps such a line until the row takes it. The rule is the template's, and its session is asked to change it, so this plan departs from it until the template's `CLAUDE.md` arrives.
