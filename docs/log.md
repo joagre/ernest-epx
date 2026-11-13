@@ -383,3 +383,7 @@ Three findings. `subPixmap`, the one export since 0.2.0, had no `since`: it says
 ## The commands held by the checker
 
 *2026-11-11.* `tools/docs.ern` is the template's of `5797262`, ahead of its next tag: in a fenced block but an Ernest one, a command's description stands after `#`, and a line indented under it begins with `#` (the template's `TEMPLATE_LOG.md`, *The commands held by the checker*). The README's `make test` lines are the template's, the last naming the refusal. The check finds nothing here: the README's targets are written so since *The targets' block in the README*, and its two commands of *Using it* and the seven of `examples/README.md` that open a window have no description.
+
+## The template's v0.10.2
+
+*2026-11-13.* `CLAUDE.md` is the template's `v0.10.2`'s, tagged on `5397fae`, but for its title and the sentence under it. Five bullets of *The repository* stand where four did: the session designs, reasons and coordinates on the stronger model, and agents write the code. The two kinds of session and the switch between them go (Ernest's log, *The Session Designs, Agents Build*). The tag's other two commits were here already, its `7767f9b` in `f105b08` and its `5797262` in `e2de309`, and `tools/docs.ern` and the template's part of `docs/full_review.md` equal the tag's. Nothing else here named either kind of session but four entries of this log, which record sessions that were, and stay.
