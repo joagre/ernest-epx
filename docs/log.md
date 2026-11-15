@@ -387,3 +387,9 @@ Three findings. `subPixmap`, the one export since 0.2.0, had no `since`: it says
 ## The template's v0.10.2
 
 *2026-11-13.* `CLAUDE.md` is the template's `v0.10.2`'s, tagged on `5397fae`, but for its title and the sentence under it. Five bullets of *The repository* stand where four did: the session designs, reasons and coordinates on the stronger model, and agents write the code. The two kinds of session and the switch between them go (Ernest's log, *The Session Designs, Agents Build*). The tag's other two commits were here already, its `7767f9b` in `f105b08` and its `5797262` in `e2de309`, and `tools/docs.ern` and the template's part of `docs/full_review.md` equal the tag's. Nothing else here named either kind of session but four entries of this log, which record sessions that were, and stay. Five entries named a model or its effort, which that file gives to the session's memory, and say the stronger effort or a lesser model now.
+
+## The template's v0.10.3
+
+*2026-11-15.* `CLAUDE.md` is the template's `v0.10.3`'s, tagged on `e00e193`, but for its title and the sentence under it. The tag changes that file alone since `v0.10.2`, and this copy had no difference of its own. It brings the rules of 2026-11-14: a no-brainer is stated and made and everything else is discussed first, a round takes a few issues at a time, a build's sentences hold while it runs, and a defense names its attacker (Ernest's log, *In Doubt, Discuss*, *A Few at a Time* and *A Defense Names Its Attacker*).
+
+It brings the cuts of Ernest's reading of the file too. The cold reading of a batch's design sentences goes, a silence of the design is held to what a user meets, and a report names each thing that remains (Ernest's log, *The Rules Read Against Each Other*).
