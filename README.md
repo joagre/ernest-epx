@@ -69,7 +69,8 @@ make test       # the layout, every module's tests, test/ and the examples where
                 # then the documents and the design's citations,
                 # refusing any paragraph past 150 words, any comment or
                 # text a user reads that names the project's history,
-                # and any command whose description stands without its #
+                # any command whose description stands without its #,
+                # and any Ernest block of the README that no module holds
 make examples   # each program of examples/ built and run, what it writes under build/examples/
 make release    # the archive, build/epx-VERSION.tar.gz, and its checksum beside it
 ```

@@ -437,3 +437,7 @@ The review documents were read against the rules (Ernest's log, *The Review Docu
 **What moved, and what stayed.** The sentences on what the window leaves out, on the library being no program, and on the modules and their pages stand below the showing, word for word. *Using it* and everything after it are as they were. The sentence on the archive's floor stays too: the release at Ernest's launch, the plan's milestone 11, ends the difference between it and *Building*'s floor.
 
 **Checked.** A fresh clone from GitHub, with `--recursive`, ran `make examples` under `ern 0.10.0` in 27 seconds and wrote the six pictures. `make test` passed. The quoted lines were compared with the example by a script; the template's next tag has `make test` hold them.
+
+## The template's v0.10.11
+
+*2026-11-16.* `tools/docs.ern` is the template's `v0.10.11`'s, tagged on `1fe427a`. The tag changes that file and the README's form since `v0.10.10`. The tool holds an Ernest block of the README to the program: each part of it, its lines between blank lines, stands as consecutive lines in one tracked module under `src/`, `test/` or `examples/`, once the module's comment lines are taken out, and `make test` refuses a part that stands nowhere. So `subdivide` on the front page cannot drift from `examples/sierpinski.ern`. The README's comment on `make test` names the check. Ernest's session wrote it here (the template's log, *The front page shows the program*).
