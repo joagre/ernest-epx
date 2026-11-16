@@ -417,3 +417,7 @@ The agents' rules stand in `docs/agents.md`, which the template now gives: the b
 *2026-11-16.* `docs/agents.md` is the template's `v0.10.8`'s, tagged on `859bff5`, and `docs/full_review.md` is too but for the reader W. `docs/release.md` is this copy's own and took the tag's lines by hand, keeping its step for the window tried by hand and what its release step sets beside `VERSION`. Ernest's session wrote all three here.
 
 The review documents were read against the rules (Ernest's log, *The Review Documents Read Against the Rules*). The full review states the clone step and the sorting, which it took from `release.md`. A reader is an agent whose brief stands in place of `CLAUDE.md`. An agent runs a finding's program before it makes the fix. The release names the full review's readers, puts the note before the tag, and leaves the push and the release on GitHub to the user's word.
+
+## The template's v0.10.9
+
+*2026-11-16.* `docs/full_review.md` is the template's `v0.10.9`'s, tagged on `8520ec0`, but for the reader W. The tag changes that file alone since `v0.10.8`, by one clause: a reader's brief says in one line that it stands in place of `CLAUDE.md`, since `CLAUDE.md` says of itself that it overrides and a reader has it in its context (Ernest's log, *The Review Documents Read Against the Rules*). Ernest's session wrote it here.
