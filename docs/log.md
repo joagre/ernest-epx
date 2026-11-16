@@ -425,3 +425,15 @@ The review documents were read against the rules (Ernest's log, *The Review Docu
 ## The template's v0.10.10
 
 *2026-11-16.* `CLAUDE.md` is the template's `v0.10.10`'s, tagged on `4fbc638`, but for its title and the sentence under it. The tag changes that file alone since `v0.10.9`, and this copy had no difference of its own. It brings one rule, so that the repositories keep the same rules. Hard work is done, and stupid work is not: nothing is left, or recommended left, for its size or its difficulty, and work is left only where it would hold nothing, decide nothing and remove nothing (Ernest's log, *Hard Work and Stupid Work*).
+
+## The front page shows the library
+
+*2026-11-16.* The README's top is put in another order, in the manner Ernest's own took the same day (Ernest's log, *The Front Page in the Announcement's Manner*). Ernest's session wrote it here, on the user's word, while this repository's session was idle.
+
+**Why.** The collage was the page's best showing, and two paragraphs stood before it, the first saying what the library is not. The page showed no line of a program that uses the library.
+
+**What it holds.** One sentence of what the library is, then the collage. Then `subdivide`, quoted from `examples/sierpinski.ern`, as the gasket's whole definition, with two sentences on the pixmap changed in place and the window. Then three lines from a clone to `make examples`.
+
+**What moved, and what stayed.** The sentences on what the window leaves out, on the library being no program, and on the modules and their pages stand below the showing, word for word. *Using it* and everything after it are as they were. The sentence on the archive's floor stays too: the release at Ernest's launch, the plan's milestone 11, ends the difference between it and *Building*'s floor.
+
+**Checked.** A fresh clone from GitHub, with `--recursive`, ran `make examples` under `ern 0.10.0` in 27 seconds and wrote the six pictures. `make test` passed. The quoted lines were compared with the example by a script; the template's next tag has `make test` hold them.
