@@ -8,7 +8,7 @@ Read *Where we are* first; the milestones to come follow in order, and the table
 
 The library is done: a 2-D library of pixmaps, pixels and the drawing functions, with its six examples, and no more of it is planned. Its last release is 0.2.0, 2026-10-25. The floor is 0.10, and epx is pinned at `3fdacef`.
 
-What is left: the release at Ernest's launch, milestone 11, with the sentences for the report's §6.5; and the defects epx has not fixed, milestone 9, one decision of the user's among them.
+What is left: the release at Ernest's launch, milestone 11, with the sentences for the report's §6.5; and the defects epx has not fixed, milestone 9.
 
 ## Milestone 11: the release at Ernest's launch
 
@@ -24,7 +24,7 @@ Each defect of `epx_bugs.md` left, 33's clamp of a channel and 39 to 44, goes as
 
 42, a clip read half set, is asked of epx's author: the user carries it to epx's tracker, since it alone writes outside a pixmap within the library's bounds. Its fix changes §2, §4 and §11 first. Decided 2026-11-17 (the log's *A pixmap across nodes and under load*). The report is carried as `epx_bugs.md` has it since milestone 12, a read and two sets among what it names (the log's *The calls from many processes*).
 
-Decision, the user's: whether 44, two first shows of one pixmap that end the node, is carried to epx's tracker with 42. Recommended, since it ends the node within the library's bounds (the design's §12, the log's *The calls from many processes*). 43, a context's key read twice by one draw, writes wrong pixels alone and is not asked for.
+44, two first shows of one pixmap that end the node, is asked of epx's author too: the user carries it to epx's tracker with 42, since it ends the node within the library's bounds. Its fix changes §12 first. Decided 2026-11-17 (the log's *The calls from many processes*). 43, a context's key read twice by one draw, writes wrong pixels alone and is not asked for.
 
 Done 2026-11-08: the fixes of `3fdacef` verified, its sentences written and the pin moved to it, and `subPixmap` built (the log's *The second fixes verified*, *The sentences for 3fdacef*, *The sentences for subPixmap*, *The subPixmap built*).
 
