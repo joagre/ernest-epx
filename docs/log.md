@@ -511,3 +511,9 @@ So 43 is filed too, where *The calls from many processes* asked nothing for it.
 33 was weighed against: its author has had it since October and left it, the clamp reads as epx's choice, and the library never makes the call. Decided with the user that it is filed all the same, so that the tracker holds the bug file whole and the clamp is a choice on record. Its text says that nothing of the library depends on it.
 
 42 to 44 were seen from Ernest programs through the library, and their issues say so; no Erlang program was written for them.
+
+## The template's v0.10.14
+
+*2026-11-17.* `docs/agents.md` is the template's `v0.10.14`'s, tagged on `7e736ca`. The tag changes that file alone of those a copy takes since `v0.10.13`, and this copy had no difference of its own. It adds one sentence to *The brief*: agents whose work is bound by the processor, a race's probe, a run under a sanitizer or a load test, run one at a time, each its programs one after another.
+
+The rule came of this repository's milestone 12, whose three runs went to three agents side by side and took the machine's load past 200 for about an hour, where one run at a time would have found the same. It went to the template by its issue 2 (the template's log, *Agents bound by the processor run one at a time*). The template left out two parts of the ask, a clause on cores and duration in the first message to the user and a pointer in `CLAUDE.md`, which did not change.
