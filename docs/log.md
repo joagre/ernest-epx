@@ -529,3 +529,9 @@ The sentence of `v0.10.14` binds the agents of one session, and the machine is s
 *2026-11-17.* `CLAUDE.md` is the template's `v0.10.17`'s, tagged on `8df58f8`, but for its title and the sentence under it. The tags `v0.10.16` and `v0.10.17` change that file alone of those a copy takes since `v0.10.15`, and this copy had no difference of its own. Each adds one rule to *Tests*, taken whole from Ernest's file so that the repositories keep the same rules.
 
 A timing test that fails under another session's load is run again on a quiet machine and not hunted, the load said to the user (the template's log, *A timing test under another session's load*). A long run's first step, a pull or a build, is checked in a call of its own before the run starts (*A long run's first step is checked alone*). The first follows from the day's load: milestone 12's runs and another session's suite loaded each other.
+
+## The template's v0.10.18
+
+*2026-11-17.* `CLAUDE.md` is the template's `v0.10.18`'s, tagged on `ef5e4c4`, but for its title and the sentence under it. The tag changes that file alone of those a copy takes since `v0.10.17`, and this copy had no difference of its own. It rewords the rule of `v0.10.16` in *Tests*, before this copy had pushed the first wording.
+
+The rule now says what a timing test is, one whose failing assertion compares a measured time or a ratio of measured times, and has the failure's text read first: a test whose wait ran out of its deadline is a flake, whatever the load (the template's log, *What a timing test is*). The template asked each repository, and this one agreed. Milestone 12 had shown the same cut: 44's crash was first seen under load alone and crashed on a quiet machine too.
