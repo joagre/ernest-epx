@@ -47,7 +47,7 @@ Also closed: a pixmap `create` makes is filled, and a new context's border lies 
 
 A pixmap is a rectangle of pixels held by epx outside any process. Its width, its height and its format are fixed when it is made. Every pixel of a pixmap `create` makes is 0 in every channel its format holds.
 
-A pixmap is not a value. A function that writes it changes it in place, and every process that holds it sees the change, a process it was sent to or that captured it among them. Nothing orders the writes of two processes but the order in which they run. epx takes no lock: two calls on one pixmap from two processes may interleave pixel by pixel, and a read may see a write half done. `copy` makes a new pixmap, which shares nothing with the first.
+A pixmap is not a value. A function that writes it changes it in place, and every process that holds it sees the change, a process it was sent to or that captured it among them. Nothing orders the writes of two processes but the order in which they run. epx takes no lock: two calls on one pixmap from two processes may interleave pixel by pixel, a read may see a write half done, and a write may read a clip half set (§4). `copy` makes a new pixmap, which shares nothing with the first.
 
 A pixmap lives while a process holds it or a sub-pixmap of it lives, and the host frees it once neither does; there is no `close`. A pixmap is bound to the node that made it (report §3.8, §3.11).
 
@@ -95,6 +95,8 @@ A coordinate is from −16,777,216 to 16,777,216, and a width or a height at mos
 A row's bytes are the pixmap's width times its format's bytes a pixel, rounded up to a multiple of 16, or a sub-pixmap's parent's; a pixmap's bytes are its row's times its height. A pixmap's bytes are below 2,147,483,648, 2 GiB (§5).
 
 Each pixmap has a clip, a rectangle within it, which is the whole pixmap when the pixmap is made. `setClip` sets the clip to the part of its rectangle within the pixmap, which may be empty. The parent's clip does not reach a sub-pixmap, nor a sub-pixmap's its parent.
+
+A write that reads the clip while another process sets it may read it half set, part of the new clip with the rest of the old. Such a write may land outside both clips, and outside the pixmap, in the node's memory, which may crash the node (`epx_bugs.md` 42).
 
 The clip bounds what a function writes and what it reads:
 

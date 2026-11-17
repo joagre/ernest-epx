@@ -8,17 +8,25 @@ Read *Where we are* first; the milestones to come follow in order, and the table
 
 The library is done: a 2-D library of pixmaps, pixels and the drawing functions, with its six examples, and no more of it is planned. Its last release is 0.2.0, 2026-10-25. The floor is 0.10, and epx is pinned at `3fdacef`.
 
-What is left waits outside the library: the release at Ernest's launch, milestone 11, and the defects epx has not fixed, milestone 9.
+What is left: the library's calls run from many processes, milestone 12; the release at Ernest's launch, milestone 11, with the sentences for the report's §6.5; and the defects epx has not fixed, milestone 9.
+
+## Milestone 12: the calls from many processes
+
+The library's calls are run from many processes on one pixmap, one context and one window, under the host's memory checks, before the release 0.3.0. Three runs: the clip set against each function that writes; a context's setters against a draw; and a pixmap shown and then dropped while its draw waits in the backend's queue. The checks are the address sanitizer over epx or valgrind over the node, whichever the item's first probe finds to run. What a run finds becomes a report of `epx_bugs.md` and a sentence of the design, as 42 did. Decided 2026-11-17 (the log's *A pixmap across nodes and under load*).
 
 ## Milestone 11: the release at Ernest's launch
 
 The floor rises to the launch's minor, 0.11 or 0.12 as Ernest names it, when the reviews of Ernest's MVP 4.4 begin. Ernest's release is tagged; the same week ernest-template releases, then this library, then ernest-httpd; and the site, which lists the library, goes live last. Each step comes on the user's word. The release does not wait on milestone 9. Decided 2026-11-05 (the log's *The release at the launch*). The release is 0.3.0, since it adds `subPixmap`. Decided 2026-11-11 (the log's *The release read for readiness*).
 
+With the floor's rise, the sentences for the report's §6.5, which the launch's release brings. A pixmap, a context and a window each live while "a process of its node" holds it, in the design's §2, §7 and §11 and on the three pages. §5, §10 and §12 state that a function given one the host has freed faults with epx's `badarg` in the cause, citing §6.5. A test on two nodes holds both. Decided 2026-11-17 (the log's *A pixmap across nodes and under load*).
+
 Done 2026-11-10: the floor is 0.10, with the template's `v0.10.0` (the log's *The floor is 0.10*).
 
 ## Milestone 9: what epx has not fixed, after 0.2.0
 
-Each defect of `epx_bugs.md` left, 33's clamp of a channel and 39 to 41, goes as a commit of epx's fixes it and the pin moves; a fix that changes what the design states changes the design first, §4 or §5, then the page and the test. Nothing is asked of epx's author for them. Decided 2026-10-23 (the log's *The release waits on Ernest alone*). A release after the launch's follows a commit of epx's that moves the pin.
+Each defect of `epx_bugs.md` left, 33's clamp of a channel and 39 to 42, goes as a commit of epx's fixes it and the pin moves; a fix that changes what the design states changes the design first, §4 or §5, then the page and the test. Nothing is asked of epx's author for them. Decided 2026-10-23 (the log's *The release waits on Ernest alone*). A release after the launch's follows a commit of epx's that moves the pin.
+
+42, a clip read half set, is asked of epx's author: the user carries it to epx's tracker, since it alone writes outside a pixmap within the library's bounds. Its fix changes §2 and §4 first. Decided 2026-11-17 (the log's *A pixmap across nodes and under load*).
 
 Done 2026-11-08: the fixes of `3fdacef` verified, its sentences written and the pin moved to it, and `subPixmap` built (the log's *The second fixes verified*, *The sentences for 3fdacef*, *The sentences for subPixmap*, *The subPixmap built*).
 

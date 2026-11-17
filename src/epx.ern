@@ -27,8 +27,9 @@
 /// by a spawned function, is the same pixmap there. Nothing orders the
 /// writes of two processes but the order in which they run, and epx takes
 /// no lock: two calls on one pixmap from two processes may interleave pixel
-/// by pixel, and a read may see a write half done. `copy` makes a pixmap
-/// that shares nothing with the first.
+/// by pixel, a read may see a write half done, and a write may read a clip
+/// half set, as `setClip` says. `copy` makes a pixmap that shares nothing
+/// with the first.
 ///
 /// `subPixmap` makes a sub-pixmap, a pixmap over a rectangle of another's
 /// pixels, its parent, which the two share: a write to either is read in
@@ -1133,6 +1134,11 @@ foreign fn rawOperationArea(source : Pixmap,
 /// Sets the pixmap's clip to the part of the rectangle at `x`, `y` within
 /// the pixmap, which may be empty. The clip of the whole pixmap is set
 /// again with `setClip(pixmap, 0, 0, width(pixmap), height(pixmap))`.
+///
+/// A write that reads the clip while another process sets it may read it
+/// half set, part of the new clip with the rest of the old. Such a write
+/// may land outside both clips, and outside the pixmap, in the node's
+/// memory, which may crash the node.
 ///
 /// ### Errors
 ///
