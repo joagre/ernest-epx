@@ -2,7 +2,7 @@
 
 The defects the library met in epx that its pinned commit has not fixed, each written as a report for epx's tracker, as first filed and numbered 2026-10-20 to 2026-11-17 (`docs/log.md`, *The first cut built*, *The reports verified*, *The fixes verified*, *The sentences for 3fdacef*, *A pixmap across nodes and under load*, *The calls from many processes*). The numbers are those of the first filing, which the design and the log cite; a report goes when the submodule moves to a commit that has its fix (the log's *The pin moved*), so the gaps are what epx fixed.
 
-Each of these stays until a commit of epx the library builds has its fix.
+Each of these stays until a commit of epx the library builds has its fix. Each is an issue of epx's tracker, https://github.com/tonyrog/epx/issues, filed 2026-11-17: 42 is its 6, 44 its 7, 40 its 8, 39 its 9, 41 its 10, 43 its 11 and 33 its 12 (`docs/log.md`, *The reports filed at epx's tracker*).
 
 None blocks a function of the library: each is a wart the library ships around. 33 was found 2026-10-23 trying the edges of `sub`, `scroll`, the rounded rectangle and the polygon (`docs/log.md`, *The four functions*), 39 to 41 on 2026-11-08 at `3fdacef`, the commit the pin moved to that day (`docs/log.md`, *The sentences for 3fdacef*), 42 on 2026-11-17, with two processes on one pixmap (`docs/log.md`, *A pixmap across nodes and under load*), and 43 and 44 the same day, with many processes on one context and one window (`docs/log.md`, *The calls from many processes*).
 

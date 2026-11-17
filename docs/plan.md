@@ -20,11 +20,9 @@ Done 2026-11-10: the floor is 0.10, with the template's `v0.10.0` (the log's *Th
 
 ## Milestone 9: what epx has not fixed, after 0.2.0
 
-Each defect of `epx_bugs.md` left, 33's clamp of a channel and 39 to 44, goes as a commit of epx's fixes it and the pin moves; a fix that changes what the design states changes the design first, §4, §5, §9, §11 or §12, then the page and the test. Nothing is asked of epx's author for them. Decided 2026-10-23 (the log's *The release waits on Ernest alone*). A release after the launch's follows a commit of epx's that moves the pin.
+Each defect of `epx_bugs.md` left, 33's clamp of a channel and 39 to 44, goes as a commit of epx's fixes it and the pin moves; a fix that changes what the design states changes the design first, §4, §5, §9, §11 or §12, then the page and the test. No release waits on one. Decided 2026-10-23 (the log's *The release waits on Ernest alone*). A release after the launch's follows a commit of epx's that moves the pin.
 
-42, a clip read half set, is asked of epx's author: the user carries it to epx's tracker, since it alone writes outside a pixmap within the library's bounds. Its fix changes §2, §4 and §11 first. Decided 2026-11-17 (the log's *A pixmap across nodes and under load*). The report is carried as `epx_bugs.md` has it since milestone 12, a read and two sets among what it names (the log's *The calls from many processes*).
-
-44, two first shows of one pixmap that end the node, is asked of epx's author too: the user carries it to epx's tracker with 42, since it ends the node within the library's bounds. Its fix changes §12 first. Decided 2026-11-17 (the log's *The calls from many processes*). 43, a context's key read twice by one draw, writes wrong pixels alone and is not asked for.
+The seven are filed at epx's tracker, 2026-11-17, its issues 6 to 12 as `epx_bugs.md` names them, so that their author has each: 42 and 44 first, since each takes the node down within the library's bounds. A fix of 42 changes §2, §4 and §11 first, one of 44 §12, and one of 43 §9. Decided 2026-11-17 (the log's *A pixmap across nodes and under load*, *The calls from many processes*, *The reports filed at epx's tracker*).
 
 Done 2026-11-08: the fixes of `3fdacef` verified, its sentences written and the pin moved to it, and `subPixmap` built (the log's *The second fixes verified*, *The sentences for 3fdacef*, *The sentences for subPixmap*, *The subPixmap built*).
 

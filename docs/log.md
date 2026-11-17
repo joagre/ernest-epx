@@ -499,3 +499,15 @@ This is report 44, and §12 and the pages state it, principle 1: a reader of §1
 A `show` against a clip being set drew 48,000,000 rectangles with no report: Xlib cuts the rectangle to the image, and epx cuts the two formats it copies itself, so the read stays within the pixmap. It does leave the clips. With the clip set between columns 0 to 9 and column 100, and a marker in columns 101 to 120, the window held the marker in columns 101 to 109 after 400,000 shows, the new corner with the old width. §11 states both.
 
 Left, each with its reason. A process that waits on a message from epx alone is read as deadlocked (report §8.6); the library has no function that waits on one, so no program meets it through the library. No line of `language_feedback.md` came of the runs. No test holds the new sentences, as none holds 42's: a test of a race passes or fails by the scheduler.
+
+## The reports filed at epx's tracker
+
+*2026-11-17.* The seven reports of `epx_bugs.md` are issues 6 to 12 of epx's repository on GitHub, filed the day milestone 12 closed: 42 and 44, then 40, 39, 41, 43 and 33. They are the first issues there: the reports of October did not go through it.
+
+*The release waits on Ernest alone* asked nothing more of epx's author, and its reason was the release, which waits for nothing that has no date. That stands: no release waits on an issue. What changes is that the author has each report. Milestone 9 closes only as epx fixes them, 39 to 41 were found after the list the author was given, and an issue is a record to take up at will, where a message asks for an answer.
+
+So 43 is filed too, where *The calls from many processes* asked nothing for it.
+
+33 was weighed against: its author has had it since October and left it, the clamp reads as epx's choice, and the library never makes the call. Decided with the user that it is filed all the same, so that the tracker holds the bug file whole and the clamp is a choice on record. Its text says that nothing of the library depends on it.
+
+42 to 44 were seen from Ernest programs through the library, and their issues say so; no Erlang program was written for them.
