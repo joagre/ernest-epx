@@ -8,11 +8,7 @@ Read *Where we are* first; the milestones to come follow in order, and the table
 
 The library is done: a 2-D library of pixmaps, pixels and the drawing functions, with its six examples, and no more of it is planned. Its last release is 0.2.0, 2026-10-25. The floor is 0.10, and epx is pinned at `3fdacef`.
 
-What is left: the library's calls run from many processes, milestone 12; the release at Ernest's launch, milestone 11, with the sentences for the report's §6.5; and the defects epx has not fixed, milestone 9.
-
-## Milestone 12: the calls from many processes
-
-The library's calls are run from many processes on one pixmap, one context and one window, under the host's memory checks, before the release 0.3.0. Three runs: the clip set against each function that reads one, a source's clip and a `show` among them; a context's setters against a draw; and a pixmap shown and then dropped while its draw waits in the backend's queue. The checks are the address sanitizer over epx or valgrind over the node, whichever the item's first probe finds to run. What a run finds becomes a report of `epx_bugs.md` and a sentence of the design, as 42 did. Decided 2026-11-17 (the log's *A pixmap across nodes and under load*).
+What is left: the release at Ernest's launch, milestone 11, with the sentences for the report's §6.5; and the defects epx has not fixed, milestone 9, one decision of the user's among them.
 
 ## Milestone 11: the release at Ernest's launch
 
@@ -24,9 +20,11 @@ Done 2026-11-10: the floor is 0.10, with the template's `v0.10.0` (the log's *Th
 
 ## Milestone 9: what epx has not fixed, after 0.2.0
 
-Each defect of `epx_bugs.md` left, 33's clamp of a channel and 39 to 42, goes as a commit of epx's fixes it and the pin moves; a fix that changes what the design states changes the design first, §4 or §5, then the page and the test. Nothing is asked of epx's author for them. Decided 2026-10-23 (the log's *The release waits on Ernest alone*). A release after the launch's follows a commit of epx's that moves the pin.
+Each defect of `epx_bugs.md` left, 33's clamp of a channel and 39 to 44, goes as a commit of epx's fixes it and the pin moves; a fix that changes what the design states changes the design first, §4, §5, §9, §11 or §12, then the page and the test. Nothing is asked of epx's author for them. Decided 2026-10-23 (the log's *The release waits on Ernest alone*). A release after the launch's follows a commit of epx's that moves the pin.
 
-42, a clip read half set, is asked of epx's author: the user carries it to epx's tracker, since it alone writes outside a pixmap within the library's bounds. Its fix changes §2 and §4 first. Decided 2026-11-17 (the log's *A pixmap across nodes and under load*).
+42, a clip read half set, is asked of epx's author: the user carries it to epx's tracker, since it alone writes outside a pixmap within the library's bounds. Its fix changes §2, §4 and §11 first. Decided 2026-11-17 (the log's *A pixmap across nodes and under load*). The report is carried as `epx_bugs.md` has it since milestone 12, a read and two sets among what it names (the log's *The calls from many processes*).
+
+Decision, the user's: whether 44, two first shows of one pixmap that end the node, is carried to epx's tracker with 42. Recommended, since it ends the node within the library's bounds (the design's §12, the log's *The calls from many processes*). 43, a context's key read twice by one draw, writes wrong pixels alone and is not asked for.
 
 Done 2026-11-08: the fixes of `3fdacef` verified, its sentences written and the pin moved to it, and `subPixmap` built (the log's *The second fixes verified*, *The sentences for 3fdacef*, *The sentences for subPixmap*, *The subPixmap built*).
 
@@ -42,4 +40,5 @@ Done 2026-11-08: the fixes of `3fdacef` verified, its sentences written and the 
 | Milestone 5 | Whitted's spheres, the slow tracer | 2026-10-21 | the log's *Whitted's spheres decided*, *Cook's Sampling*, *Whitted's spheres built* |
 | Milestone 6 | what Ernest's MVP 3.28 brought: the foreign answers declared `Unit`, `Test.faults`, the doc examples under `ern test`, the rules read from Ernest's installation, `Epx.Window` named for itself, `List.mapFold` in Whitted's row, and the Makefile's `--libs-dir lib` with Ernest's libraries off `make lib` | 2026-10-22 | the log's *The window named for itself*, *What MVP 3.28 brought* |
 | Milestone 8 | a window that shows, `Epx.Window` | 2026-10-21 | the log's *A Window That Shows*, *The window decided*, *The window built*, *The window named for itself* |
+| Milestone 12 | the calls from many processes, run under the address sanitizer: the clip against each function that reads one, a context's setters against a draw, and a pixmap shown and dropped; 42 found wider, and 43 and 44 reported | 2026-11-17 | the log's *A pixmap across nodes and under load*, *The calls from many processes* |
 | Milestone 10 | the flock, `examples/boids.ern`, and the window at animation speed: no wait for the backend | 2026-11-06 | the log's *The flock* |

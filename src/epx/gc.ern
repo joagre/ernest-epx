@@ -30,11 +30,19 @@
 /// **In place and shared.** A context is not a value. A setter changes it
 /// in place, and every process that holds it sees the change: a context
 /// sent in a message, or captured by a spawned function, is the same
-/// context there. A drawing function reads the keys it needs as it runs, so
-/// that a key another process sets meanwhile is read before the change or
-/// after it. `copy` makes a context that shares nothing with the first. A
-/// context lives while a process holds it, and the host frees it once none
-/// does: there is no `close`. It stays on the node that made it.
+/// context there. `copy` makes a context that shares nothing with the
+/// first. A context lives while a process holds it, and the host frees it
+/// once none does: there is no `close`. It stays on the node that made it.
+///
+/// **Set while drawn.** A drawing function reads the keys it needs as it
+/// runs, and may read one more than once. A key another process sets
+/// meanwhile is read before the change or after it at each read, so that
+/// one draw may hold both values: a triangle's or a polygon's edges, each
+/// by the keys as it is drawn, and a filled polygon's rows. Three draws may
+/// then write what neither value draws: a point blended in one foreground's
+/// color by the other's alpha, an ellipse with no fill not drawn at all
+/// where the border's width is set to 0, and a row of a filled polygon
+/// written as `Solid` writes it where the fill's style is set to `None`.
 ///
 /// **Widths and colors.** A width below 0 is 0, and a setter given a width
 /// above 16777216 faults, with the cause `a width or height is beyond

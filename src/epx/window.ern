@@ -24,6 +24,11 @@
 /// and a write another process makes meanwhile may be seen half done. Any
 /// process that holds a window and a pixmap may show the one in the other.
 ///
+/// **The first show.** A pixmap is shown for its first time by one process
+/// before any other shows it. Two processes that show one pixmap for its
+/// first time at once may fault the one that comes second, or end the node
+/// with a segmentation fault.
+///
 /// **No flicker.** The backend draws into a copy of the window kept off the
 /// screen and puts the copy on the screen whole, so that a picture shown a
 /// row at a time does not flicker, and a window covered and uncovered keeps
@@ -167,11 +172,16 @@ foreign fn rawAdjust(window : Epx.Window, parameters : List(#(Foreign.Term, Bool
 /// shown, and a pixel outside the window is not. It answers before the
 /// pixmap is on the screen.
 ///
+/// Where another process sets the pixmap's clip meanwhile, pixels outside
+/// both clips may be shown, as `Epx.setClip` says, and none outside the
+/// pixmap.
+///
 /// ### Errors
 ///
 /// Faults where two processes show one pixmap for its first time at once,
 /// in the one that comes second, with epx's cause: `foreign function
-/// epx:pixmap_attach/1 raised error:badarg`.
+/// epx:pixmap_attach/1 raised error:badarg`. Two such shows may end the node
+/// with a segmentation fault instead.
 ///
 /// ### Examples
 ///
@@ -194,6 +204,10 @@ export fn show(window : Epx.Window, pixmap : Epx.Pixmap) : Unit =
 /// clip is shown, and a pixel outside the window is not. A width or a
 /// height below 0 is 0. It answers before the rectangle is on the screen.
 ///
+/// Where another process sets the pixmap's clip meanwhile, pixels outside
+/// both clips may be shown, as `Epx.setClip` says, and none outside the
+/// pixmap.
+///
 /// ### Errors
 ///
 /// Faults on a coordinate outside -16777216 to 16777216, with the cause `a
@@ -201,7 +215,8 @@ export fn show(window : Epx.Window, pixmap : Epx.Pixmap) : Unit =
 /// 16777216, with the cause `a width or height is beyond 16777216`. Faults
 /// where two processes show one pixmap for its first time at once, in the
 /// one that comes second, with epx's cause: `foreign function
-/// epx:pixmap_attach/1 raised error:badarg`.
+/// epx:pixmap_attach/1 raised error:badarg`. Two such shows may end the node
+/// with a segmentation fault instead.
 ///
 /// ### Examples
 ///

@@ -47,7 +47,7 @@ Also closed: a pixmap `create` makes is filled, and a new context's border lies 
 
 A pixmap is a rectangle of pixels held by epx outside any process. Its width, its height and its format are fixed when it is made. Every pixel of a pixmap `create` makes is 0 in every channel its format holds.
 
-A pixmap is not a value. A function that writes it changes it in place, and every process that holds it sees the change, a process it was sent to or that captured it among them. Nothing orders the writes of two processes but the order in which they run. epx takes no lock: two calls on one pixmap from two processes may interleave pixel by pixel, a read may see a write half done, and a write may read a clip half set (§4). `copy` makes a new pixmap, which shares nothing with the first.
+A pixmap is not a value. A function that writes it changes it in place, and every process that holds it sees the change, a process it was sent to or that captured it among them. Nothing orders the writes of two processes but the order in which they run. epx takes no lock: two calls on one pixmap from two processes may interleave pixel by pixel, a read may see a write half done, and a function may read a clip half set (§4). `copy` makes a new pixmap, which shares nothing with the first.
 
 A pixmap lives while a process holds it or a sub-pixmap of it lives, and the host frees it once neither does; there is no `close`. A pixmap is bound to the node that made it (report §3.8, §3.11).
 
@@ -96,7 +96,7 @@ A row's bytes are the pixmap's width times its format's bytes a pixel, rounded u
 
 Each pixmap has a clip, a rectangle within it, which is the whole pixmap when the pixmap is made. `setClip` sets the clip to the part of its rectangle within the pixmap, which may be empty. The parent's clip does not reach a sub-pixmap, nor a sub-pixmap's its parent.
 
-A write that reads the clip while another process sets it may read it half set, part of the new clip with the rest of the old. Such a write may land outside both clips, and outside the pixmap, in the node's memory, which may crash the node (`epx_bugs.md` 42).
+A function that reads the clip while another process sets it may read it half set, part of the new clip with the rest of the old, and two processes that set it at once may leave it so. Under such a clip a function may write outside both clips, or read there, and outside the pixmap, in the node's memory, which may crash the node (`epx_bugs.md` 42). A `show` reads within the pixmap all the same (§11).
 
 The clip bounds what a function writes and what it reads:
 
@@ -214,7 +214,9 @@ A polygon of no points draws nothing. With a fill, one point is that pixel and t
 
 A triangle with a fill is every pixel within its three corners, its edges among them, in the fill's color by the fill's style. With no fill it is its three edges, each a line from corner to corner in the foreground by the line's style, one pixel wide where the line's width is 0 or 1; where the width is above 1, which pixels the edges cover is not stated.
 
-A drawing function reads each key it needs as it runs. A key another process sets meanwhile is read before the change or after it (§2).
+A drawing function reads each key it needs as it runs, and may read one more than once. A key another process sets meanwhile is read before the change or after it at each read (§2), so that one draw may hold both values, each pixel one of them: a triangle's edges, each by the foreground and the line's style and width as it is drawn; a polygon's edges, each by the foreground and the line's width; and a polygon's fill, each row by the fill's style and color.
+
+Three draws put two reads of one key together into what neither value draws (`epx_bugs.md` 43). A point is blended in one foreground's color by the other's alpha. An ellipse with no fill draws nothing where it reads the border's width above 0 and then 0. A polygon with a fill writes a row as `Solid` does where it reads the fill's style `None` for that row.
 
 ## 10. What the context and the drawing functions fault
 
@@ -244,6 +246,8 @@ A getter of a style faults with `Fault("the context's style is none of Style's")
 
 The rectangle `showArea` shows is cut to the pixmap's clip, the cut moving its place in the window with it, and to the first 32,767 columns and rows, beyond which no window reaches. The pixmap's pixel at `x + i`, `y + j` is drawn at the window's pixel at `x + i`, `y + j`, and a pixel outside the window is not drawn. `show` is `showArea` of the rectangle at `0`, `0` of the pixmap's width and height.
 
+A `show` or a `showArea` that reads the clip half set (§4) may draw pixels outside both clips, and draws none outside the pixmap.
+
 `show` and `showArea` answer once the backend has the request, before the pixels are on the screen, and the backend draws the requests in the order it takes them, each on the screen without a sync. The backend reads the pixmap's pixels when it draws them, so that a write made after `show` answered may be shown, and, since epx takes no lock, a write half done may be seen (§2). A pixmap may be shown in a window by any process that holds both.
 
 The backend draws each request into a copy of the window kept off the screen, `use_off_screen` as epx starts it, and copies the copy to the screen whole. A row shown at a time is so seen without flicker, and a window covered and uncovered keeps its picture.
@@ -270,7 +274,7 @@ An argument the library refuses faults the calling process before epx is called 
 
 `open` where no display can be opened faults with epx's cause, `Fault("foreign function epx:window_attach/1 raised error:{no_backend,default}")`, and where tree_db, which epx's application depends on, is not on the load path, with epx's cause from `epx:start/0`, a `badmatch` naming `tree_db.app`.
 
-Two processes that make the first `show` of one pixmap at once may each find it not attached, and the second to attach it faults with `Fault("foreign function epx:pixmap_attach/1 raised error:badarg")`; a program shows a pixmap from one process before others show it. Nothing else faults.
+Two processes that make the first `show` of one pixmap at once may each find it not attached, and the second to attach it faults with `Fault("foreign function epx:pixmap_attach/1 raised error:badarg")`. Or one may find it attached and have its draw reach the backend before the other's attach, which ends the node with a segmentation fault (`epx_bugs.md` 44). A program shows a pixmap from one process before others show it. Nothing else faults.
 
 ## Glossary
 
