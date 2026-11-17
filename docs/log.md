@@ -517,3 +517,9 @@ So 43 is filed too, where *The calls from many processes* asked nothing for it.
 *2026-11-17.* `docs/agents.md` is the template's `v0.10.14`'s, tagged on `7e736ca`. The tag changes that file alone of those a copy takes since `v0.10.13`, and this copy had no difference of its own. It adds one sentence to *The brief*: agents whose work is bound by the processor, a race's probe, a run under a sanitizer or a load test, run one at a time, each its programs one after another.
 
 The rule came of this repository's milestone 12, whose three runs went to three agents side by side and took the machine's load past 200 for about an hour, where one run at a time would have found the same. It went to the template by its issue 2 (the template's log, *Agents bound by the processor run one at a time*). The template left out two parts of the ask, a clause on cores and duration in the first message to the user and a pointer in `CLAUDE.md`, which did not change.
+
+## The template's v0.10.15
+
+*2026-11-17.* `docs/agents.md` is the template's `v0.10.15`'s, tagged on `00aef74`. The tag changes that file alone of those a copy takes since `v0.10.14`, and this copy had no difference of its own. It adds one sentence after `v0.10.14`'s: a session reads the machine's load before it starts an agent bound by the processor, and a load another session makes is said to the user, who says whether the agent waits.
+
+The sentence of `v0.10.14` binds the agents of one session, and the machine is shared by several (the template's log, *The load another session makes*). Milestone 12 met that too: another session's suite ran beside its runs, and took the load to 231 during one of them.
