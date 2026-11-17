@@ -466,4 +466,6 @@ The bug file takes it as 42, and §2 and §4 state it as epx has it: principle 1
 
 42 is carried to epx's tracker, where *The release waits on Ernest alone* asked nothing more of epx's author. The defects left then and since write wrong pixels or lie beyond the library's bounds, and this one writes the node's memory within them.
 
-The run the review asked for is milestone 12, before 0.3.0. One probe of its kind found 42, so a run over every function that writes, the context's setters and a pixmap shown and dropped would hold or break §2's sentence where no reading has. A run that finds nothing ends the item, its result written here once.
+The run the review asked for is milestone 12, before 0.3.0. One probe of its kind found 42, so a run over every function that reads a clip, the context's setters and a pixmap shown and dropped would hold or break §2's sentence where no reading has. A run that finds nothing ends the item, its result written here once.
+
+The run's first part is wider than 42's probes. epx reads a source's clip too, where it copies, scales and blends, at four places in `epx_pixmap.c`, and its backend reads one at a `show`; a clip read half set there would read outside the pixmap, which no program here has tried. §4's sentence names a write alone, and follows what the run finds.

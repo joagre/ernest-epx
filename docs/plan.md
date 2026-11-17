@@ -12,7 +12,7 @@ What is left: the library's calls run from many processes, milestone 12; the rel
 
 ## Milestone 12: the calls from many processes
 
-The library's calls are run from many processes on one pixmap, one context and one window, under the host's memory checks, before the release 0.3.0. Three runs: the clip set against each function that writes; a context's setters against a draw; and a pixmap shown and then dropped while its draw waits in the backend's queue. The checks are the address sanitizer over epx or valgrind over the node, whichever the item's first probe finds to run. What a run finds becomes a report of `epx_bugs.md` and a sentence of the design, as 42 did. Decided 2026-11-17 (the log's *A pixmap across nodes and under load*).
+The library's calls are run from many processes on one pixmap, one context and one window, under the host's memory checks, before the release 0.3.0. Three runs: the clip set against each function that reads one, a source's clip and a `show` among them; a context's setters against a draw; and a pixmap shown and then dropped while its draw waits in the backend's queue. The checks are the address sanitizer over epx or valgrind over the node, whichever the item's first probe finds to run. What a run finds becomes a report of `epx_bugs.md` and a sentence of the design, as 42 did. Decided 2026-11-17 (the log's *A pixmap across nodes and under load*).
 
 ## Milestone 11: the release at Ernest's launch
 
