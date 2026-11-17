@@ -535,3 +535,11 @@ A timing test that fails under another session's load is run again on a quiet ma
 *2026-11-17.* `CLAUDE.md` is the template's `v0.10.18`'s, tagged on `ef5e4c4`, but for its title and the sentence under it. The tag changes that file alone of those a copy takes since `v0.10.17`, and this copy had no difference of its own. It rewords the rule of `v0.10.16` in *Tests*, before this copy had pushed the first wording.
 
 The rule now says what a timing test is, one whose failing assertion compares a measured time or a ratio of measured times, and has the failure's text read first: a test whose wait ran out of its deadline is a flake, whatever the load (the template's log, *What a timing test is*). The template asked each repository, and this one agreed. Milestone 12 had shown the same cut: 44's crash was first seen under load alone and crashed on a quiet machine too.
+
+## The suite on the 0.11.0 development archive
+
+*2026-11-17.* The suite was run on Ernest's development archive of 0.11.0, `ern 0.11.0+18f98a7a.dirty`, built that evening, ahead of the floor's rise (milestone 11). The archive was installed as a user installs it, under a scratch prefix, and the suite run in a fresh clone of `24bdaf1` with epx at the pin: `make test ERN=... ERN_VERSION=0.11`.
+
+It passed whole: the layout, 141 passing tests as on `ern 0.10.0`, the examples and the documents. Five of the six examples' pictures are byte for byte those of 0.10.0, and the clock face's differs as it does from run to run, since it draws the time. The pages of `make doc` are those of 0.10.0 but for the line naming the `ern` that made them. So nothing of the library changes with this archive, and the rise is the Makefile's floor and the sentences milestone 11 names.
+
+Two things the archive brings were looked for. `"a" ++ "b"` is refused with the help ``write `<>` to concatenate``, Ernest's 251; the line of `language_feedback.md` stays until a release brings it. The report's §6.5 holds the paragraph on an adapted address held on another node, which milestone 11's sentences cite.
