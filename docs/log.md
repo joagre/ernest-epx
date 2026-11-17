@@ -523,3 +523,9 @@ The rule came of this repository's milestone 12, whose three runs went to three 
 *2026-11-17.* `docs/agents.md` is the template's `v0.10.15`'s, tagged on `00aef74`. The tag changes that file alone of those a copy takes since `v0.10.14`, and this copy had no difference of its own. It adds one sentence after `v0.10.14`'s: a session reads the machine's load before it starts an agent bound by the processor, and a load another session makes is said to the user, who says whether the agent waits.
 
 The sentence of `v0.10.14` binds the agents of one session, and the machine is shared by several (the template's log, *The load another session makes*). Milestone 12 met that too: another session's suite ran beside its runs, and took the load to 231 during one of them.
+
+## The template's v0.10.17
+
+*2026-11-17.* `CLAUDE.md` is the template's `v0.10.17`'s, tagged on `8df58f8`, but for its title and the sentence under it. The tags `v0.10.16` and `v0.10.17` change that file alone of those a copy takes since `v0.10.15`, and this copy had no difference of its own. Each adds one rule to *Tests*, taken whole from Ernest's file so that the repositories keep the same rules.
+
+A timing test that fails under another session's load is run again on a quiet machine and not hunted, the load said to the user (the template's log, *A timing test under another session's load*). A long run's first step, a pull or a build, is checked in a call of its own before the run starts (*A long run's first step is checked alone*). The first follows from the day's load: milestone 12's runs and another session's suite loaded each other.
