@@ -6,7 +6,7 @@ Epx is a 2-D library for [Ernest](https://ernest-lang.org): pixmaps and their pi
 
 ![Six pictures the examples draw: Whitted's glass and mirror spheres, a flock of boids, a clock face, the Sierpinski gasket, the Mandelbrot set, and the Boing ball above a mirror floor](assets/collage.png)
 
-The six pictures are what the six programs of [`examples/`](examples/README.md) draw, each a page or two, the flock the last of its 200 steps; [`assets/README.md`](assets/README.md) says how a picture is made from a program's output.
+The six pictures are what the six programs of [`examples/`](examples/README.md) draw, the flock the last of its 200 steps, Whitted's spheres with sixteen samples where `make examples` takes one; [`assets/README.md`](assets/README.md) says how a picture is made from a program's output.
 
 The gasket is this function, from [`examples/sierpinski.ern`](examples/sierpinski.ern):
 
@@ -30,7 +30,7 @@ fn subdivide(pixmap : Epx.Pixmap,
     }
 ```
 
-A pixmap is changed in place, so the three calls write one picture and `subdivide` answers `Unit`. The window is there for the word `show`: with it the gasket grows on the screen in the order the recursion draws it.
+A pixmap is changed in place, so the three calls write one pixmap and `subdivide` answers `Unit`. The window is there when the program is run with the word `show` after its file: the gasket then grows on the screen in the order the recursion draws it.
 
 To draw all six, with what *Building* names in place:
 
@@ -40,7 +40,7 @@ cd ernest-epx
 make examples
 ```
 
-`make examples` builds the library and every example and runs each, writing its picture to `build/examples/<program>.ppm`, which an image viewer opens. On a machine with a screen the word `show` after the file opens a window of the picture while it is drawn, and the ray tracers take a count of workers first; [`examples/README.md`](examples/README.md) gives that line for each.
+`make examples` builds the library and every example and runs each, writing its picture to `build/examples/<program>.ppm`, which an image viewer opens. On a machine with a screen the word `show` after the file shows the picture in a window as well, and the ray tracers take a count of workers first; [`examples/README.md`](examples/README.md) gives that line for each.
 
 The window shows a pixmap on the screen and takes nothing back from it, nothing of epx's events. Epx is a library and not a program: a program adds it to its load path, as *Using it* says.
 

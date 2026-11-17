@@ -543,3 +543,13 @@ The rule now says what a timing test is, one whose failing assertion compares a 
 It passed whole: the layout, 141 passing tests as on `ern 0.10.0`, the examples and the documents. Five of the six examples' pictures are byte for byte those of 0.10.0, and the clock face's differs as it does from run to run, since it draws the time. The pages of `make doc` are those of 0.10.0 but for the line naming the `ern` that made them. So nothing of the library changes with this archive, and the rise is the Makefile's floor and the sentences milestone 11 names.
 
 Two things the archive brings were looked for. `"a" ++ "b"` is refused with the help ``write `<>` to concatenate``, Ernest's 251; the line of `language_feedback.md` stays until a release brings it. The report's §6.5 holds the paragraph on an adapted address held on another node, which milestone 11's sentences cite.
+
+## The front page read against the design
+
+*2026-11-17.* The README's top, reordered by Ernest's session (*The front page shows the library*), was read by this repository's session against the design's §1, §2, §3 and §11 and the glossary, and against the examples and the Makefile.
+
+**What held.** The first sentence is §1's. The quoted `subdivide` is the example's, which `make test` holds, and its calls are §3's and §11's. "Changed in place" is §2, and the order the gasket grows in is §11's, the backend drawing requests in the order it takes them. The design changes nothing.
+
+**What changed.** Five sentences, two of them older than the reordering. "Each a page or two" went: the six programs run from 130 lines to 675. The sentence under the collage says that Whitted's spheres are drawn with sixteen samples there, where `make examples` takes one, since the top then says "to draw all six". The word `show` "shows the picture in a window as well", where it opened a window "while it is drawn": `mandelbrot.ern` and `clock_face.ern` show the picture once drawn. Under `subdivide`, the word `show` is said to be the program's, after its file, since it stood beside `showArea` before the page had introduced it. And the three calls write one pixmap, the glossary's name and the example's own comment, where they wrote one picture.
+
+**What was left.** `subdivide` calls `showArea` once a pixel, 6,561 times, each of which §11 prices at a copy of the whole window and a round trip to the X server. It stays: the call is what makes the gasket grow, and the page teaches it as no pattern.
