@@ -553,3 +553,9 @@ Two things the archive brings were looked for. `"a" ++ "b"` is refused with the 
 **What changed.** Five sentences, two of them older than the reordering. "Each a page or two" went: the six programs run from 130 lines to 675. The sentence under the collage says that Whitted's spheres are drawn with sixteen samples there, where `make examples` takes one, since the top then says "to draw all six". The word `show` "shows the picture in a window as well", where it opened a window "while it is drawn": `mandelbrot.ern` and `clock_face.ern` show the picture once drawn. Under `subdivide`, the word `show` is said to be the program's, after its file, since it stood beside `showArea` before the page had introduced it. And the three calls write one pixmap, the glossary's name and the example's own comment, where they wrote one picture.
 
 **What was left.** `subdivide` calls `showArea` once a pixel, 6,561 times, each of which §11 prices at a copy of the whole window and a round trip to the X server. It stays: the call is what makes the gasket grow, and the page teaches it as no pattern.
+
+## The template's v0.10.19
+
+*2026-11-18.* `CLAUDE.md` and `docs/agents.md` are the template's `v0.10.19`'s, tagged on `c2a31b4`, the first but for its title and the sentence under it. The tag changes those two files alone of those a copy takes since `v0.10.18`, and this copy had no difference of its own.
+
+*Done* gains a run of items. Where the plan's next items stand alone, the session takes them one after another, an agent for each, and closes and commits each before the next starts. It stops at the first thing that needs the user, however small: a decision, a surprise, a departure from the brief, a check that fails. Where nothing stops it, it stops after three items, and one report to the user covers the run. `docs/agents.md` says that each item of a run has an agent of its own (the template's log, *A run of items*).
