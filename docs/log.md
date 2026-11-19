@@ -565,3 +565,9 @@ Two things the archive brings were looked for. `"a" ++ "b"` is refused with the 
 *2026-11-19.* `CLAUDE.md` is the template's `v0.10.20`'s, tagged on `ed0716d`, but for its title and the sentence under it. The tag changes that file alone of those a copy takes since `v0.10.19`, and this copy had no difference of its own.
 
 *Before code* gains a rule: an item is read against the items left when it is written. Before an item is written into the plan, moved or changed there, the plan is searched for each section, file and name the item names. Each item left that names the same is read beside it: whether one needs what the other shows, builds or decides, whether both write one sentence, and whether a condition one states of the other can still be met. The item's paragraph names each item it follows, with the reason (the template's log, *An item read against the items left*).
+
+## The template's v0.10.21
+
+*2026-11-19.* `docs/agents.md` is the template's `v0.10.21`'s, tagged on `6396318`. The tag changes that file alone of those a copy takes since `v0.10.20`, and this copy had no difference of its own.
+
+*The brief* gains a sentence. A brief sorts its agent's runs: a race's probe and a run whose time is measured are bound by the processor and run one at a time, and a run that only waits, a test that fails by running out its deadline among them, goes side by side (the template's log, *A brief sorts its runs*).
