@@ -559,3 +559,9 @@ Two things the archive brings were looked for. `"a" ++ "b"` is refused with the 
 *2026-11-18.* `CLAUDE.md` and `docs/agents.md` are the template's `v0.10.19`'s, tagged on `c2a31b4`, the first but for its title and the sentence under it. The tag changes those two files alone of those a copy takes since `v0.10.18`, and this copy had no difference of its own.
 
 *Done* gains a run of items. Where the plan's next items stand alone, the session takes them one after another, an agent for each, and closes and commits each before the next starts. It stops at the first thing that needs the user, however small: a decision, a surprise, a departure from the brief, a check that fails. Where nothing stops it, it stops after three items, and one report to the user covers the run. `docs/agents.md` says that each item of a run has an agent of its own (the template's log, *A run of items*).
+
+## The template's v0.10.20
+
+*2026-11-19.* `CLAUDE.md` is the template's `v0.10.20`'s, tagged on `ed0716d`, but for its title and the sentence under it. The tag changes that file alone of those a copy takes since `v0.10.19`, and this copy had no difference of its own.
+
+*Before code* gains a rule: an item is read against the items left when it is written. Before an item is written into the plan, moved or changed there, the plan is searched for each section, file and name the item names. Each item left that names the same is read beside it: whether one needs what the other shows, builds or decides, whether both write one sentence, and whether a condition one states of the other can still be met. The item's paragraph names each item it follows, with the reason (the template's log, *An item read against the items left*).
