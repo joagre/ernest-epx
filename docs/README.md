@@ -9,7 +9,8 @@ What each document of this repository is. [`README.md`](../README.md) says what 
 - **[`full_review.md`](full_review.md)**: what a review of the whole repository runs, on the user's word alone.
 - **[`agents.md`](agents.md)**: how a session works with its agents: the brief, an agent's report, what is checked before and after, and the model each job gets.
 - **`proposals/`**: what is designed, a directory for each proposal while one is open; none is open.
-- **`language_feedback.md`**, under `docs/` from its first line and absent while it is empty: what writing Ernest felt against the principles, a queue, carried to Ernest as `CLAUDE.md`'s *Defects and gaps* says.
+- **`language_feedback.md`**, under `docs/` from its first line and absent while it is empty: what writing Ernest felt against the principles, a queue, carried to Ernest as `CLAUDE.md`'s *The work* says.
+- **`known_issues.md`**, from its first line: what is known to be wrong or missing and not planned, a line each, until the user takes one up.
 - **`findings.md`**, while a review's findings are open: the findings, a line each.
 - **[`CLAUDE.md`](../CLAUDE.md)**: the working rules.
 - **[`epx_bugs.md`](epx_bugs.md)**: the defects found in epx that its pinned commit has not fixed, each a report for its tracker.
